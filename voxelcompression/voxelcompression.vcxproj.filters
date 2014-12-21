@@ -1,0 +1,196 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="dependencies">
+      <UniqueIdentifier>{ee5b7442-ca66-4b11-a24c-88f2f2b95d8b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source">
+      <UniqueIdentifier>{8c989451-29d8-4b6f-8002-0ce222c5e24b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\Time">
+      <UniqueIdentifier>{77e19167-d5d6-4a8e-ac5a-f738b4827751}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\Time\Implementation">
+      <UniqueIdentifier>{55c68fe8-12a5-48e4-8459-8b0ecd4fa303}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\utilities">
+      <UniqueIdentifier>{6e2cb07b-d275-44c2-95cc-7b9630795f68}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dependencies\glhelper">
+      <UniqueIdentifier>{041f6cf5-bfc8-444c-b9f5-f3a2c400b684}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dependencies\glhelper\utils">
+      <UniqueIdentifier>{bab5b3fd-6577-4bff-b5d0-d555ea052d79}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="outputwindow.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="Time\Implementation\Time.cpp">
+      <Filter>source\Time\Implementation</Filter>
+    </ClCompile>
+    <ClCompile Include="Time\Implementation\Stopwatch.cpp">
+      <Filter>source\Time\Implementation</Filter>
+    </ClCompile>
+    <ClCompile Include="utilities\logger.cpp">
+      <Filter>source\utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="utilities\policy.cpp">
+      <Filter>source\utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="utilities\random.cpp">
+      <Filter>source\utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="utilities\assert.cpp">
+      <Filter>source\utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="utilities\color.cpp">
+      <Filter>source\utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\glhelper\glhelper\framebufferobject.cpp">
+      <Filter>dependencies\glhelper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\glhelper\glhelper\gl.cpp">
+      <Filter>dependencies\glhelper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\glhelper\glhelper\samplerobject.cpp">
+      <Filter>dependencies\glhelper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\glhelper\glhelper\screenalignedtriangle.cpp">
+      <Filter>dependencies\glhelper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\glhelper\glhelper\shaderobject.cpp">
+      <Filter>dependencies\glhelper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\glhelper\glhelper\shaderstoragebuffer.cpp">
+      <Filter>dependencies\glhelper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\glhelper\glhelper\texture.cpp">
+      <Filter>dependencies\glhelper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\glhelper\glhelper\texture2d.cpp">
+      <Filter>dependencies\glhelper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\glhelper\glhelper\texturebuffer.cpp">
+      <Filter>dependencies\glhelper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\glhelper\glhelper\textureformats.cpp">
+      <Filter>dependencies\glhelper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\glhelper\glhelper\uniformbuffer.cpp">
+      <Filter>dependencies\glhelper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\glhelper\glhelper\buffer.cpp">
+      <Filter>dependencies\glhelper</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\glhelper\glhelper\utils\pathutils.cpp">
+      <Filter>dependencies\glhelper\utils</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="outputwindow.hpp">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="Time\Time.h">
+      <Filter>source\Time</Filter>
+    </ClInclude>
+    <ClInclude Include="Time\Stopwatch.h">
+      <Filter>source\Time</Filter>
+    </ClInclude>
+    <ClInclude Include="Time\Implementation\Time_inl.h">
+      <Filter>source\Time\Implementation</Filter>
+    </ClInclude>
+    <ClInclude Include="utilities\flagoperators.hpp">
+      <Filter>source\utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="utilities\logger.hpp">
+      <Filter>source\utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="utilities\loggerinit.hpp">
+      <Filter>source\utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="utilities\policy.hpp">
+      <Filter>source\utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="utilities\random.hpp">
+      <Filter>source\utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="utilities\utils.hpp">
+      <Filter>source\utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="utilities\variant.hpp">
+      <Filter>source\utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="utilities\assert.hpp">
+      <Filter>source\utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="utilities\color.hpp">
+      <Filter>source\utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\glhelper\glhelper\buffer.hpp">
+      <Filter>dependencies\glhelper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\glhelper\glhelper\framebufferobject.hpp">
+      <Filter>dependencies\glhelper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\glhelper\glhelper\gl.hpp">
+      <Filter>dependencies\glhelper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\glhelper\glhelper\samplerobject.hpp">
+      <Filter>dependencies\glhelper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\glhelper\glhelper\screenalignedtriangle.hpp">
+      <Filter>dependencies\glhelper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\glhelper\glhelper\shaderdatametainfo.hpp">
+      <Filter>dependencies\glhelper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\glhelper\glhelper\shaderobject.hpp">
+      <Filter>dependencies\glhelper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\glhelper\glhelper\shaderstoragebuffer.hpp">
+      <Filter>dependencies\glhelper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\glhelper\glhelper\texture.hpp">
+      <Filter>dependencies\glhelper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\glhelper\glhelper\texture2d.hpp">
+      <Filter>dependencies\glhelper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\glhelper\glhelper\texturebuffer.hpp">
+      <Filter>dependencies\glhelper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\glhelper\glhelper\textureformats.hpp">
+      <Filter>dependencies\glhelper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\glhelper\glhelper\uniformbuffer.hpp">
+      <Filter>dependencies\glhelper</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\glhelper\glhelper\utils\pathutils.hpp">
+      <Filter>dependencies\glhelper\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\glhelper\glhelper\utils\flagoperators.hpp">
+      <Filter>dependencies\glhelper\utils</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="utilities\note.txt">
+      <Filter>source\utilities</Filter>
+    </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\dependencies\glhelper\glhelper\glhelper.vcxproj.filters">
+      <Filter>dependencies\glhelper</Filter>
+    </None>
+    <None Include="..\dependencies\glhelper\glhelper\shaderdatametainfo.inl">
+      <Filter>dependencies\glhelper</Filter>
+    </None>
+    <None Include="..\dependencies\glhelper\glhelper\uniformbuffer.inl">
+      <Filter>dependencies\glhelper</Filter>
+    </None>
+  </ItemGroup>
+</Project>

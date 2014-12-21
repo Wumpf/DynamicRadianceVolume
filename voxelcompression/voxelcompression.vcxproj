@@ -1,0 +1,218 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{64C74BF8-97D4-454C-890C-56C91130F0FD}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>voxelcompression</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>..\dependencies\glhelper\glfw;../dependencies/epsilon\include;..\dependencies\glhelper;..\dependencies\glhelper\defaultconfig;..\dependencies\glhelper\dependencies\glew\include;../dependencies\glfw\include;$(IncludePath)</IncludePath>
+    <LibraryPath>..\dependencies\glhelper/dependencies/glew\lib-msvc120;..\dependencies\glfw\lib-msvc120\;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <IncludePath>..\dependencies\glhelper\glfw;../dependencies/epsilon\include;..\dependencies\glhelper;..\dependencies\glhelper\defaultconfig;..\dependencies\glhelper\dependencies\glew\include;../dependencies\glfw\include;$(IncludePath)</IncludePath>
+    <LibraryPath>..\dependencies\glhelper/dependencies/glew\lib-msvc120;..\dependencies\glfw\lib-msvc120\;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;GLEW_STATIC;WIN32;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <TreatWarningAsError>true</TreatWarningAsError>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>glfw3.lib;opengl32.lib;glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>GLEW_STATIC;_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <TreatWarningAsError>true</TreatWarningAsError>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>glfw3.lib;opengl32.lib;glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\dependencies\glhelper\glhelper\buffer.cpp" />
+    <ClCompile Include="..\dependencies\glhelper\glhelper\framebufferobject.cpp" />
+    <ClCompile Include="..\dependencies\glhelper\glhelper\gl.cpp" />
+    <ClCompile Include="..\dependencies\glhelper\glhelper\samplerobject.cpp" />
+    <ClCompile Include="..\dependencies\glhelper\glhelper\screenalignedtriangle.cpp" />
+    <ClCompile Include="..\dependencies\glhelper\glhelper\shaderobject.cpp" />
+    <ClCompile Include="..\dependencies\glhelper\glhelper\shaderstoragebuffer.cpp" />
+    <ClCompile Include="..\dependencies\glhelper\glhelper\texture.cpp" />
+    <ClCompile Include="..\dependencies\glhelper\glhelper\texture2d.cpp" />
+    <ClCompile Include="..\dependencies\glhelper\glhelper\texturebuffer.cpp" />
+    <ClCompile Include="..\dependencies\glhelper\glhelper\textureformats.cpp" />
+    <ClCompile Include="..\dependencies\glhelper\glhelper\uniformbuffer.cpp" />
+    <ClCompile Include="..\dependencies\glhelper\glhelper\utils\pathutils.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="outputwindow.cpp" />
+    <ClCompile Include="Time\Implementation\Stopwatch.cpp" />
+    <ClCompile Include="Time\Implementation\Time.cpp" />
+    <ClCompile Include="utilities\assert.cpp" />
+    <ClCompile Include="utilities\color.cpp" />
+    <ClCompile Include="utilities\logger.cpp" />
+    <ClCompile Include="utilities\policy.cpp" />
+    <ClCompile Include="utilities\random.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\dependencies\glhelper\glhelper\buffer.hpp" />
+    <ClInclude Include="..\dependencies\glhelper\glhelper\framebufferobject.hpp" />
+    <ClInclude Include="..\dependencies\glhelper\glhelper\gl.hpp" />
+    <ClInclude Include="..\dependencies\glhelper\glhelper\samplerobject.hpp" />
+    <ClInclude Include="..\dependencies\glhelper\glhelper\screenalignedtriangle.hpp" />
+    <ClInclude Include="..\dependencies\glhelper\glhelper\shaderdatametainfo.hpp" />
+    <ClInclude Include="..\dependencies\glhelper\glhelper\shaderobject.hpp" />
+    <ClInclude Include="..\dependencies\glhelper\glhelper\shaderstoragebuffer.hpp" />
+    <ClInclude Include="..\dependencies\glhelper\glhelper\texture.hpp" />
+    <ClInclude Include="..\dependencies\glhelper\glhelper\texture2d.hpp" />
+    <ClInclude Include="..\dependencies\glhelper\glhelper\texturebuffer.hpp" />
+    <ClInclude Include="..\dependencies\glhelper\glhelper\textureformats.hpp" />
+    <ClInclude Include="..\dependencies\glhelper\glhelper\uniformbuffer.hpp" />
+    <ClInclude Include="..\dependencies\glhelper\glhelper\utils\flagoperators.hpp" />
+    <ClInclude Include="..\dependencies\glhelper\glhelper\utils\pathutils.hpp" />
+    <ClInclude Include="outputwindow.hpp" />
+    <ClInclude Include="Time\Implementation\Time_inl.h" />
+    <ClInclude Include="Time\Stopwatch.h" />
+    <ClInclude Include="Time\Time.h" />
+    <ClInclude Include="utilities\assert.hpp" />
+    <ClInclude Include="utilities\color.hpp" />
+    <ClInclude Include="utilities\flagoperators.hpp" />
+    <ClInclude Include="utilities\logger.hpp" />
+    <ClInclude Include="utilities\loggerinit.hpp" />
+    <ClInclude Include="utilities\policy.hpp" />
+    <ClInclude Include="utilities\random.hpp" />
+    <ClInclude Include="utilities\utils.hpp" />
+    <ClInclude Include="utilities\variant.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="utilities\note.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\dependencies\glhelper\glhelper\glhelper.vcxproj.filters" />
+    <None Include="..\dependencies\glhelper\glhelper\shaderdatametainfo.inl" />
+    <None Include="..\dependencies\glhelper\glhelper\uniformbuffer.inl" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
