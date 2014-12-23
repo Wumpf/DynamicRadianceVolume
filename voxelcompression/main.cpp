@@ -3,10 +3,14 @@
 #include <algorithm>
 
 #include "outputwindow.hpp"
+
 #include "utilities/utils.hpp"
 #include "Time/Stopwatch.h"
 
 #include "utilities/loggerinit.hpp"
+
+#include "scene.hpp"
+#include "camera/interactivecamera.hpp"
 
 #include <glhelper/texture2d.hpp>
 
@@ -29,8 +33,14 @@ public:
 		m_window.reset(new OutputWindow());
 
 		// Create "global" camera.
-		/*m_camera.reset(new InteractiveCamera(m_window->GetGLFWWindow(), ei::Vec3(0.0f), ei::Vec3(0.0f, 0.0f, 1.0f), 
-							GlobalConfig::GetParameter("resolution")[0].As<float>() / GlobalConfig::GetParameter("resolution")[1].As<int>(), 70.0f)); */
+		auto resolution = m_window->GetResolution();
+		m_camera.reset(new InteractiveCamera(m_window->GetGLFWWindow(), ei::Vec3(0.0f, 5.0f, 10.0f), ei::Vec3(0.0f),
+			static_cast<float>(resolution.x) / resolution.y, 80.0f, ei::Vec3(0,1,0)));
+
+		// Scene
+		LOG_INFO("Load scene ...");
+		m_scene.reset(new Scene());
+		m_scene->AddModel("../models/san-miguel.obj");
 	}
 
 	~Application()
@@ -63,6 +73,7 @@ private:
 	{
 		m_window->PollWindowEvents();
 
+		m_camera->Update(timeSinceLastUpdate);
 		Input();
 
 		m_window->SetTitle("time per frame " +
@@ -71,6 +82,8 @@ private:
 
 	void Draw()
 	{
+		GL_CALL(glClear, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		m_scene->Draw(*m_camera);
 		m_window->Present();
 	}
 
@@ -87,6 +100,8 @@ private:
 
 	std::string m_screenShotName;
 	std::unique_ptr<OutputWindow> m_window;
+	std::unique_ptr<Scene> m_scene;
+	std::unique_ptr<InteractiveCamera> m_camera;
 };
 
 
@@ -117,14 +132,14 @@ int main(int argc, char** argv)
 		Application application(argc, argv);
 		application.Run();
 	}
-	catch(std::exception e)
+	catch(const std::exception& e)
 	{
 		std::cerr << "Unhandled exception:\n";
 		std::cerr << "Message: " << e.what() << std::endl;
 		__debugbreak();
 		return 1;
 	}
-	catch(std::string str)
+	catch(const std::string& str)
 	{
 		std::cerr << "Unhandled exception:\n";
 		std::cerr << "Message: " << str << std::endl;

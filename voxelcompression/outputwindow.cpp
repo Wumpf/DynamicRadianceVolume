@@ -37,7 +37,7 @@ OutputWindow::OutputWindow() :
 #endif
 
 	int width = 1024;
-	int height = 786;
+	int height = 768;
 
 	window = glfwCreateWindow(width, height, "<Add fancy title here>", nullptr, nullptr);
 	if (!window)
@@ -66,13 +66,12 @@ OutputWindow::OutputWindow() :
 	// Disable V-Sync
 	glfwSwapInterval(0);
 
+	// General GL settings
 	GL_CALL(glViewport, 0, 0, width, height);
+	GL_CALL(glEnable, GL_DEPTH_TEST);
+	//GL_CALL(glEnable, GL_CULL_FACE);
+	//GL_CALL(glFrontFace, GL_CW);
 
-	// There must be a non-zero VAO at all times.
-	// http://stackoverflow.com/questions/21767467/glvertexattribpointer-raising-impossible-gl-invalid-operation
-	GLuint vao;
-	GL_CALL(glGenVertexArrays, 1, &vao);
-	GL_CALL(glBindVertexArray, vao);
 
 	GetGLFWKeystates();
 }

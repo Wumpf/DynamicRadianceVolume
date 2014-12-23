@@ -22,6 +22,12 @@
     <Filter Include="dependencies\glhelper\utils">
       <UniqueIdentifier>{bab5b3fd-6577-4bff-b5d0-d555ea052d79}</UniqueIdentifier>
     </Filter>
+    <Filter Include="shader">
+      <UniqueIdentifier>{48ce1dbd-3d9c-47e0-b2ae-43ed3153c914}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\camera">
+      <UniqueIdentifier>{e72fca81-7c0c-46e9-970b-7cc6c8f274a1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="outputwindow.cpp">
@@ -89,6 +95,18 @@
     </ClCompile>
     <ClCompile Include="..\dependencies\glhelper\glhelper\utils\pathutils.cpp">
       <Filter>dependencies\glhelper\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="scene.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="model.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="camera\camera.cpp">
+      <Filter>source\camera</Filter>
+    </ClCompile>
+    <ClCompile Include="camera\interactivecamera.cpp">
+      <Filter>source\camera</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -176,6 +194,21 @@
     <ClInclude Include="..\dependencies\glhelper\glhelper\utils\flagoperators.hpp">
       <Filter>dependencies\glhelper\utils</Filter>
     </ClInclude>
+    <ClInclude Include="scene.hpp">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="model.hpp">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="camera\interactivecamera.hpp">
+      <Filter>source\camera</Filter>
+    </ClInclude>
+    <ClInclude Include="camera\camera.hpp">
+      <Filter>source\camera</Filter>
+    </ClInclude>
+    <ClInclude Include="glhelperconfig.hpp">
+      <Filter>source</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="utilities\note.txt">
@@ -191,6 +224,12 @@
     </None>
     <None Include="..\dependencies\glhelper\glhelper\uniformbuffer.inl">
       <Filter>dependencies\glhelper</Filter>
+    </None>
+    <None Include="shader\simple.frag">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\simple.vert">
+      <Filter>shader</Filter>
     </None>
   </ItemGroup>
 </Project>
