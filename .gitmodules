@@ -1,0 +1,3 @@
+[submodule "dependencies/glhelper"]
+	path = dependencies/glhelper
+	url = https://github.com/Wumpf/glhelper.git
