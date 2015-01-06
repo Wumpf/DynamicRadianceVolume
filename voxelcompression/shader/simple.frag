@@ -6,7 +6,9 @@ in vec2 Texcoord;
 
 out vec4 OutputColor;
 
+uniform sampler2D DiffuseTexture;
+
 void main()
 {
-  OutputColor = vec4(abs(Normal), 1.0);     
+  OutputColor = texture(DiffuseTexture, Texcoord);//vec4(abs(Normal), 1.0);     
 }

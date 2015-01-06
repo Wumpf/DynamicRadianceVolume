@@ -28,6 +28,12 @@
     <Filter Include="source\camera">
       <UniqueIdentifier>{e72fca81-7c0c-46e9-970b-7cc6c8f274a1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="dependencies\stb">
+      <UniqueIdentifier>{a87bab1d-b0cc-474e-b656-287467639cd0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\scene">
+      <UniqueIdentifier>{83bf86e5-5e1e-4e01-854f-9816fa8039d7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="outputwindow.cpp">
@@ -96,17 +102,20 @@
     <ClCompile Include="..\dependencies\glhelper\glhelper\utils\pathutils.cpp">
       <Filter>dependencies\glhelper\utils</Filter>
     </ClCompile>
-    <ClCompile Include="scene.cpp">
-      <Filter>source</Filter>
-    </ClCompile>
-    <ClCompile Include="model.cpp">
-      <Filter>source</Filter>
-    </ClCompile>
     <ClCompile Include="camera\camera.cpp">
       <Filter>source\camera</Filter>
     </ClCompile>
     <ClCompile Include="camera\interactivecamera.cpp">
       <Filter>source\camera</Filter>
+    </ClCompile>
+    <ClCompile Include="scene\texturemanager.cpp">
+      <Filter>source\scene</Filter>
+    </ClCompile>
+    <ClCompile Include="scene\scene.cpp">
+      <Filter>source\scene</Filter>
+    </ClCompile>
+    <ClCompile Include="scene\model.cpp">
+      <Filter>source\scene</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -194,12 +203,6 @@
     <ClInclude Include="..\dependencies\glhelper\glhelper\utils\flagoperators.hpp">
       <Filter>dependencies\glhelper\utils</Filter>
     </ClInclude>
-    <ClInclude Include="scene.hpp">
-      <Filter>source</Filter>
-    </ClInclude>
-    <ClInclude Include="model.hpp">
-      <Filter>source</Filter>
-    </ClInclude>
     <ClInclude Include="camera\interactivecamera.hpp">
       <Filter>source\camera</Filter>
     </ClInclude>
@@ -208,6 +211,15 @@
     </ClInclude>
     <ClInclude Include="glhelperconfig.hpp">
       <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="scene\texturemanager.hpp">
+      <Filter>source\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="scene\scene.hpp">
+      <Filter>source\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="scene\model.hpp">
+      <Filter>source\scene</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

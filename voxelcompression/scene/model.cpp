@@ -1,6 +1,9 @@
 #include "model.hpp"
+#include "texturemanager.hpp"
+
 #include "utilities/assert.hpp"
 #include "utilities/logger.hpp"
+#include "utilities/pathutils.hpp"
 
 #include <glhelper/buffer.hpp>
 
@@ -24,6 +27,8 @@ Model::~Model()
 
 std::shared_ptr<Model> Model::FromFile(const std::string& filename)
 {
+	std::string directory(PathUtils::GetDirectory(filename));
+
 	// Ignore line/point primitives
 	Assimp::Importer importer;
 	importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_POINT | aiPrimitiveType_LINE);
@@ -42,8 +47,8 @@ std::shared_ptr<Model> Model::FromFile(const std::string& filename)
 		aiProcess_GenUVCoords |
 		aiProcess_TransformUVCoords |
 		aiProcess_ImproveCacheLocality |
-		aiProcess_JoinIdenticalVertices
-		//aiProcess_FlipUVs
+		aiProcess_JoinIdenticalVertices |
+		aiProcess_FlipUVs
 		);
 
 	if(!scene)
@@ -65,7 +70,8 @@ std::shared_ptr<Model> Model::FromFile(const std::string& filename)
 			output->m_numTriangles += mesh.mNumFaces;
 		}
 	}
-	
+	output->m_meshes.resize(scene->mNumMeshes);
+
 	// Load vertices
 	std::unique_ptr<Vertex[]> vertices(new Vertex[output->m_numVertices]);
 	Vertex* currentVertex = vertices.get();
@@ -108,6 +114,10 @@ std::shared_ptr<Model> Model::FromFile(const std::string& filename)
 		if(scene->mMeshes[i])
 		{
 			auto& mesh = *scene->mMeshes[i];
+
+			output->m_meshes[i].numIndices = mesh.mNumFaces * 3;
+			output->m_meshes[i].startIndex = static_cast<unsigned int>(currentIndex - indices.get());
+			
 			for(unsigned int f = 0; f < mesh.mNumFaces; ++f)
 			{
 				Assert(mesh.mFaces[f].mNumIndices == 3, "Mesh contains non-triangles!");
@@ -129,6 +139,27 @@ std::shared_ptr<Model> Model::FromFile(const std::string& filename)
 	}
 	output->m_indexBuffer.reset(new gl::Buffer(sizeof(std::uint32_t) * output->m_numTriangles * 3, gl::Buffer::Usage::IMMUTABLE, indices.get()));
 	indices.release();
+
+	// Load textures
+	if (scene->HasMaterials())
+	{
+		for (unsigned int i = 0; i < scene->mNumMeshes; ++i)
+		{
+			if (scene->mMeshes[i])
+			{
+				auto& mesh = *scene->mMeshes[i];
+
+				aiString diffuseTexture;
+				scene->mMaterials[mesh.mMaterialIndex]->GetTexture(aiTextureType_DIFFUSE, 0, &diffuseTexture);
+				if (diffuseTexture.length)
+				{
+					std::string textureFilename = PathUtils::AppendPath(directory, diffuseTexture.C_Str());
+					output->m_meshes[i].diffuseTexture = TextureManager::GetInstance().GetTexture(textureFilename, true, true);
+
+				}
+			}
+		}
+	}
 
 	importer.FreeScene();
 

@@ -39,9 +39,14 @@ void Scene::Draw(Camera& camera)
 	m_simpleShader->Activate();
 	Model::BindVAO();
 
-	for(auto model : models)
+	for (const std::shared_ptr<Model>& model : models)
 	{
 		model->BindBuffers();
-		GL_CALL(glDrawElements, GL_TRIANGLES, model->GetNumTriangles() * 3, GL_UNSIGNED_INT, nullptr);
+		for (const Model::Mesh& mesh : model->GetMeshes())
+		{
+			if (mesh.diffuseTexture)
+				mesh.diffuseTexture->Bind(0);
+			GL_CALL(glDrawElements, GL_TRIANGLES, mesh.numIndices, GL_UNSIGNED_INT, reinterpret_cast<const void*>(sizeof(std::uint32_t) * mesh.startIndex));
+		}
 	}
 }

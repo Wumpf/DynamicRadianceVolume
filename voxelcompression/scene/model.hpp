@@ -7,6 +7,7 @@
 #include <ei/matrix.hpp>
 
 #include <glhelper/gl.hpp>
+#include <glhelper/texture2d.hpp>
 
 namespace gl
 {
@@ -25,6 +26,11 @@ public:
 
 	struct Mesh
 	{
+		Mesh() : startIndex(0), numIndices(0) {}
+		
+		unsigned int startIndex;
+		unsigned int numIndices;
+		std::shared_ptr<gl::Texture2D> diffuseTexture;
 	};
 
 	struct Vertex
@@ -36,6 +42,7 @@ public:
 
 	unsigned int GetNumTriangles() const { return m_numTriangles; }
 	unsigned int GetNumVertices() const { return m_numVertices; }
+	const std::vector<Mesh>& GetMeshes() const { return m_meshes; }
 
 	static void CreateVAO();
 	static void DestroyVAO();
@@ -50,7 +57,7 @@ private:
 	/// Creates a vertex/index buffer independent VAO (vertex format only)
 	static gl::VertexArrayObjectId m_vertexArrayObject;
 
-	std::vector<Mesh> meshes;
+	std::vector<Mesh> m_meshes;
 
 	unsigned int m_numTriangles;
 	unsigned int m_numVertices;

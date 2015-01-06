@@ -9,7 +9,7 @@
 
 #include "utilities/loggerinit.hpp"
 
-#include "scene.hpp"
+#include "scene/scene.hpp"
 #include "camera/interactivecamera.hpp"
 
 #include <glhelper/texture2d.hpp>
@@ -40,7 +40,7 @@ public:
 		// Scene
 		LOG_INFO("Load scene ...");
 		m_scene.reset(new Scene());
-		m_scene->AddModel("../models/san-miguel.obj");
+		m_scene->AddModel("../models/san-miguel.obj"); // cryteksponza/sponza.obj");
 	}
 
 	~Application()
