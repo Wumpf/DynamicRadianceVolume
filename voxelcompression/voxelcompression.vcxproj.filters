@@ -117,6 +117,9 @@
     <ClCompile Include="scene\model.cpp">
       <Filter>source\scene</Filter>
     </ClCompile>
+    <ClCompile Include="..\dependencies\glhelper\glhelper\vertexarrayobject.cpp">
+      <Filter>dependencies\glhelper</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="outputwindow.hpp">
@@ -220,6 +223,9 @@
     </ClInclude>
     <ClInclude Include="scene\model.hpp">
       <Filter>source\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\glhelper\glhelper\vertexarrayobject.hpp">
+      <Filter>dependencies\glhelper</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

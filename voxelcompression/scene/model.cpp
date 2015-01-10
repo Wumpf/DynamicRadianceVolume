@@ -6,13 +6,14 @@
 #include "utilities/pathutils.hpp"
 
 #include <glhelper/buffer.hpp>
+#include <glhelper/vertexarrayobject.hpp>
 
 #include <assimp/importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/mesh.h>
 #include <assimp/postprocess.h>
 
-gl::VertexArrayObjectId Model::m_vertexArrayObject = 0;
+std::unique_ptr<gl::VertexArrayObject> Model::m_vertexArrayObject;
 
 Model::Model() :
 	m_numTriangles(0),
@@ -22,7 +23,6 @@ Model::Model() :
 
 Model::~Model()
 {
-	GL_CALL(glDeleteVertexArrays, 1, &m_vertexArrayObject);
 }
 
 std::shared_ptr<Model> Model::FromFile(const std::string& filename)
@@ -170,36 +170,22 @@ void Model::CreateVAO()
 {
 	DestroyVAO();
 
-	// Thanks to OpenGL 4.3 + bindless we are able to define a vertex array object very similar to a directX vertex declaration.
-	// Later on we need to use glBindVertexBuffer instead of the classic glBindBuffer
-
-	GL_CALL(glCreateVertexArrays, 1, &m_vertexArrayObject);
-	
-	// Activate attributes
-	GL_CALL(glEnableVertexArrayAttrib, m_vertexArrayObject, 0);
-	GL_CALL(glEnableVertexArrayAttrib, m_vertexArrayObject, 1);
-	GL_CALL(glEnableVertexArrayAttrib, m_vertexArrayObject, 2);
-
-	// Define attributes to be from vertex buffer 0.
-	GL_CALL(glVertexArrayAttribBinding, m_vertexArrayObject, 0, 0);
-	GL_CALL(glVertexArrayAttribBinding, m_vertexArrayObject, 1, 0);
-	GL_CALL(glVertexArrayAttribBinding, m_vertexArrayObject, 2, 0);
-
-	// Vertex attributes.
-	GL_CALL(glVertexArrayAttribFormat, m_vertexArrayObject, 0, 3, GL_FLOAT, GL_FALSE, static_cast<GLuint>(0)); // position
-	GL_CALL(glVertexArrayAttribFormat, m_vertexArrayObject, 1, 3, GL_FLOAT, GL_FALSE, static_cast<GLuint>(sizeof(float) * 3)); // normal
-	GL_CALL(glVertexArrayAttribFormat, m_vertexArrayObject, 2, 2, GL_FLOAT, GL_FALSE, static_cast<GLuint>(sizeof(float) * 6)); // texcoord
+	using Attribute = gl::VertexArrayObject::Attribute;
+	m_vertexArrayObject.reset(new gl::VertexArrayObject({
+		Attribute(Attribute::Type::FLOAT, 3),
+		Attribute(Attribute::Type::FLOAT, 3),
+		Attribute(Attribute::Type::FLOAT, 2),
+	}));
 }
 
 void Model::DestroyVAO()
 {
-	if(m_vertexArrayObject != 0)
-		GL_CALL(glDeleteVertexArrays,1, &m_vertexArrayObject);
+	m_vertexArrayObject.reset();
 }
 
 void Model::BindVAO()
 {
-	GL_CALL(glBindVertexArray, m_vertexArrayObject);
+	m_vertexArrayObject->BindVertexArray();
 }
 
 void Model::BindBuffers()

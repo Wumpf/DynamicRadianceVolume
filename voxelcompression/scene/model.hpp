@@ -54,8 +54,7 @@ public:
 private:
 	Model();
 
-	/// Creates a vertex/index buffer independent VAO (vertex format only)
-	static gl::VertexArrayObjectId m_vertexArrayObject;
+	static std::unique_ptr<gl::VertexArrayObject> m_vertexArrayObject;
 
 	std::vector<Mesh> m_meshes;
 
