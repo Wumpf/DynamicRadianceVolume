@@ -27,7 +27,7 @@ std::shared_ptr<gl::Texture2D> TextureManager::GetTexture(const std::string& fil
 		if (newTexture)
 		{
 			m_textures.insert(std::make_pair(filename, newTexture));
-			LOG_INFO("Loaded texture \"" << filename << "\"");
+			LOG_INFO("Loaded texture \"" << filename << "\" " << std::to_string(newTexture->GetWidth()) << "x" << std::to_string(newTexture->GetHeight()));
 		}
 		else
 		{
