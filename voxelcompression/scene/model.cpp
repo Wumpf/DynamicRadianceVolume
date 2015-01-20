@@ -185,7 +185,7 @@ void Model::DestroyVAO()
 
 void Model::BindVAO()
 {
-	m_vertexArrayObject->BindVertexArray();
+	m_vertexArrayObject->Bind();
 }
 
 void Model::BindBuffers()

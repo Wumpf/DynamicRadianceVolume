@@ -10,6 +10,8 @@
 namespace gl
 {
 	class ShaderObject;
+	class Texture3D;
+	class ScreenAlignedTriangle;
 }
 class Model;
 class Camera;
@@ -25,8 +27,22 @@ public:
 	void Draw(Camera& camera);
 
 private:
+	void DrawScene();
+	void DrawVoxelRepresentation();
+
+	std::unique_ptr<gl::ScreenAlignedTriangle> m_screenTriangle;
+
 	std::unique_ptr<gl::ShaderObject> m_simpleShader;
+	std::unique_ptr<gl::ShaderObject> m_voxelDebugShader;
+
+
+
+	gl::UniformBufferView m_constantUniformBuffer;
 	gl::UniformBufferView m_perFrameUniformBuffer;
+
+
+
+	std::unique_ptr<gl::Texture3D> m_voxelSceneTexture;
 
 	std::vector<std::shared_ptr<Model>> models;
 };
