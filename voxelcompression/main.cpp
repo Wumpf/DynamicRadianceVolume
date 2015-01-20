@@ -35,7 +35,7 @@ public:
 		// Create "global" camera.
 		auto resolution = m_window->GetResolution();
 		m_camera.reset(new InteractiveCamera(m_window->GetGLFWWindow(), ei::Vec3(0.0f, 5.0f, 10.0f), ei::Vec3(0.0f),
-			static_cast<float>(resolution.x) / resolution.y, 80.0f, ei::Vec3(0,1,0)));
+			static_cast<float>(resolution.x) / resolution.y, 60.0f, ei::Vec3(0,1,0)));
 
 		// Scene
 		LOG_INFO("Load scene ...");

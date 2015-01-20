@@ -37,11 +37,38 @@ Scene::Scene()
 	for (unsigned int i = 0; i < voxelDataSize; ++i)
 		voxelData[i] = i % 255;
 	m_voxelSceneTexture->SetData(0, gl::TextureSetDataFormat::RED, gl::TextureSetDataType::UNSIGNED_BYTE, voxelData.get());
+
+
+	UpdateConstantUBO();
 }
 
 Scene::~Scene()
 {
 	Model::DestroyVAO();
+}
+
+void Scene::UpdateConstantUBO()
+{
+	ei::Vec3 voxelVolumeWorldMin(0.0f);
+	ei::Vec3 voxelVolumeWorldMax(1.0f);
+	ei::Vec3 voxelVolumeSizePix(static_cast<float>(m_voxelSceneTexture->GetWidth()), static_cast<float>(m_voxelSceneTexture->GetHeight()), static_cast<float>(m_voxelSceneTexture->GetDepth()));
+
+	m_constantUniformBuffer.GetBuffer()->Map();
+	m_constantUniformBuffer["VoxelVolumeWorldMin"].Set(voxelVolumeWorldMin);
+	m_constantUniformBuffer["VoxelVolumeWorldMax"].Set(voxelVolumeWorldMax);
+	m_constantUniformBuffer["VoxelSizeInWorld"].Set((voxelVolumeWorldMax - voxelVolumeWorldMin) / voxelVolumeSizePix);
+	m_constantUniformBuffer.GetBuffer()->Unmap();
+}
+
+void Scene::UpdatePerFrameUBO(Camera& camera)
+{
+	auto viewProjection = camera.ComputeViewProjection();
+
+	m_perFrameUniformBuffer.GetBuffer()->Map();
+	m_perFrameUniformBuffer["ViewProjection"].Set(viewProjection);
+	m_perFrameUniformBuffer["InverseViewProjection"].Set(ei::invert(viewProjection));
+	m_perFrameUniformBuffer["CameraPosition"].Set(camera.GetPosition());
+	m_perFrameUniformBuffer.GetBuffer()->Unmap();
 }
 
 void Scene::AddModel(const std::string& filename)
@@ -54,13 +81,7 @@ void Scene::AddModel(const std::string& filename)
 
 void Scene::Draw(Camera& camera)
 {
-	auto viewProjection = camera.ComputeViewProjection();
-
-	m_perFrameUniformBuffer.GetBuffer()->Map();
-	m_perFrameUniformBuffer["ViewProjection"].Set(viewProjection);
-	m_perFrameUniformBuffer["InverseViewProjection"].Set(ei::invert(viewProjection));
-	m_perFrameUniformBuffer["CameraPosition"].Set(camera.GetPosition());
-	m_perFrameUniformBuffer.GetBuffer()->Unmap();
+	UpdatePerFrameUBO(camera);
 
 	DrawVoxelRepresentation();
 }

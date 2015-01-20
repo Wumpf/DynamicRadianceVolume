@@ -14,7 +14,4 @@ void main()
 	gl_Position.xy = inPosition;
 	gl_Position.zw = vec2(1.0, 1.0);
 	Texcoord = inPosition*0.5 + 0.5;
-
-	vec4 rayDir4D = vec4(inPosition, 0.0f, 1.0f) * InverseViewProjection;
-	RayDirection = rayDir4D.xyz - CameraPosition;
 }

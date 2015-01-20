@@ -1,6 +1,8 @@
 // UBO for values that change very rarely (max every few seconds or even minutes)
 layout(binding = 0, shared) uniform Constant
 {
+	vec3 VoxelVolumeWorldMin; // World min coordinate of voxel volume (currently assumed to be scene-static)
+	vec3 VoxelVolumeWorldMax; // || max
 	vec3 VoxelSizeInWorld;
 };
 

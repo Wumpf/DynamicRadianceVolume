@@ -27,6 +27,9 @@ public:
 	void Draw(Camera& camera);
 
 private:
+	void UpdateConstantUBO();
+	void UpdatePerFrameUBO(Camera& camera);
+
 	void DrawScene();
 	void DrawVoxelRepresentation();
 
