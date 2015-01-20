@@ -1,0 +1,10 @@
+Tue Jan 20 22:18:06 2015 Initialized Logger
+Level 1  < 00000003 ms > [Application::Application @ main.cpp : 32]      Init window ...
+Level 1  < 00000409 ms > [Application::Application @ main.cpp : 41]      Load scene ...
+Level 1  < 00000417 ms > [gl::ShaderObject::PrintShaderInfoLog @ shaderobject.cpp : 624]      ShaderObject "simple draw ": Shader shader/simple.vert compiled successfully
+Level 1  < 00000428 ms > [gl::ShaderObject::PrintShaderInfoLog @ shaderobject.cpp : 624]      ShaderObject "simple draw ": Shader shader/simple.frag compiled successfully
+Level 1  < 00000439 ms > [gl::ShaderObject::PrintProgramInfoLog @ shaderobject.cpp : 647]      Program "simple draw " linked successfully
+Level 1  < 00000448 ms > [gl::ShaderObject::PrintShaderInfoLog @ shaderobject.cpp : 624]      ShaderObject "voxel debug ": Shader shader/screenTri.vert compiled successfully
+Level 1  < 00000460 ms > [gl::ShaderObject::PrintShaderInfoLog @ shaderobject.cpp : 624]      ShaderObject "voxel debug ": Shader shader/voxeldebug.frag compiled successfully
+Level 1  < 00000472 ms > [gl::ShaderObject::PrintProgramInfoLog @ shaderobject.cpp : 647]      Program "voxel debug " linked successfully
+Tue Jan 20 22:20:46 2015 Closing Logger
