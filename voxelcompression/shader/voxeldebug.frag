@@ -30,9 +30,34 @@ void main()
 	vec4 rayDir4D = vec4(Texcoord * 2.0 - vec2(1.0), 0.0f, 1.0f) * InverseViewProjection;
 	vec3 rayDirection = normalize(rayDir4D.xyz / rayDir4D.w - CameraPosition);
 
+	FragColor = vec4(abs(rayDirection), 1.0);
+
 	float rayHit = 0.0;
 	if(IntersectBox(CameraPosition, rayDirection, VoxelVolumeWorldMin, VoxelVolumeWorldMax, rayHit))
-		FragColor = vec4(1.0);
-	else
-		FragColor = vec4(abs(rayDirection), 1.0);
+	{
+		float stepSize = VoxelSizeInWorld.x;
+
+		vec3 voxelHitPos = (CameraPosition + (rayHit + stepSize) * rayDirection) / VoxelSizeInWorld;
+		float totalIntensity = 0.0f;
+
+		// Simple raycast
+		vec3 voxelVolumeSize = vec3(textureSize(VoxelScene, 0));
+		while(all(greaterThanEqual(voxelHitPos, vec3(0))) && 
+					all(lessThan(voxelHitPos, voxelVolumeSize)))
+		{
+			// Check current voxel.
+			
+			totalIntensity += texelFetch(VoxelScene, ivec3(voxelHitPos), 0).r;	
+			if(totalIntensity > 1)
+			{
+				FragColor = vec4(1.0);
+				break;
+			}
+
+			voxelHitPos += rayDirection * stepSize;
+			stepSize *= 1.01;
+		}
+
+		FragColor = vec4(mix(FragColor.xyz, vec3(1.0), totalIntensity), 0);
+	}
 }
