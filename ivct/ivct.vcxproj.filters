@@ -267,5 +267,11 @@
     <None Include="shader\voxelize.frag">
       <Filter>shader</Filter>
     </None>
+    <None Include="shader\voxelize.vert">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\voxelize.geom">
+      <Filter>shader</Filter>
+    </None>
   </ItemGroup>
 </Project>

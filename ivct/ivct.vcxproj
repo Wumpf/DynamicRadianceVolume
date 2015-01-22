@@ -238,6 +238,8 @@
     <None Include="shader\simple.vert" />
     <None Include="shader\voxeldebug.frag" />
     <None Include="shader\voxelize.frag" />
+    <None Include="shader\voxelize.geom" />
+    <None Include="shader\voxelize.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
