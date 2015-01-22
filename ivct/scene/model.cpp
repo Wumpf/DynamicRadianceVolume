@@ -17,7 +17,10 @@ std::unique_ptr<gl::VertexArrayObject> Model::m_vertexArrayObject;
 
 Model::Model() :
 	m_numTriangles(0),
-	m_numVertices(0)
+	m_numVertices(0),
+
+	m_boundingBoxMin(std::numeric_limits<float>::max()),
+	m_boundingBoxMax(std::numeric_limits<float>::min())
 {
 }
 
@@ -84,6 +87,8 @@ std::shared_ptr<Model> Model::FromFile(const std::string& filename)
 			{
 				memcpy(&currentVertex->position, &mesh.mVertices[v], sizeof(float) * 3);
 				memcpy(&currentVertex->normal, &mesh.mNormals[v], sizeof(float) * 3);
+				output->m_boundingBoxMin = ei::min(output->m_boundingBoxMin, currentVertex->position);
+				output->m_boundingBoxMax = ei::max(output->m_boundingBoxMax, currentVertex->position);
 				++currentVertex;
 			}
 

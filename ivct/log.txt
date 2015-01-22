@@ -1,10 +1,15 @@
-Tue Jan 20 22:18:06 2015 Initialized Logger
-Level 1  < 00000003 ms > [Application::Application @ main.cpp : 32]      Init window ...
-Level 1  < 00000409 ms > [Application::Application @ main.cpp : 41]      Load scene ...
-Level 1  < 00000417 ms > [gl::ShaderObject::PrintShaderInfoLog @ shaderobject.cpp : 624]      ShaderObject "simple draw ": Shader shader/simple.vert compiled successfully
-Level 1  < 00000428 ms > [gl::ShaderObject::PrintShaderInfoLog @ shaderobject.cpp : 624]      ShaderObject "simple draw ": Shader shader/simple.frag compiled successfully
-Level 1  < 00000439 ms > [gl::ShaderObject::PrintProgramInfoLog @ shaderobject.cpp : 647]      Program "simple draw " linked successfully
-Level 1  < 00000448 ms > [gl::ShaderObject::PrintShaderInfoLog @ shaderobject.cpp : 624]      ShaderObject "voxel debug ": Shader shader/screenTri.vert compiled successfully
-Level 1  < 00000460 ms > [gl::ShaderObject::PrintShaderInfoLog @ shaderobject.cpp : 624]      ShaderObject "voxel debug ": Shader shader/voxeldebug.frag compiled successfully
-Level 1  < 00000472 ms > [gl::ShaderObject::PrintProgramInfoLog @ shaderobject.cpp : 647]      Program "voxel debug " linked successfully
-Tue Jan 20 22:20:46 2015 Closing Logger
+Thu Jan 22 10:15:41 2015 Initialized Logger
+Level 1  < 00000015 ms > [Application::Application @ main.cpp : 32]      Init window ...
+Level 1  < 00000156 ms > [Application::Application @ main.cpp : 41]      Load scene ...
+Level 1  < 00000171 ms > [gl::ShaderObject::PrintShaderInfoLog @ shaderobject.cpp : 624]      ShaderObject "simple draw ": Shader shader/simple.vert compiled successfully
+Level 1  < 00000171 ms > [gl::ShaderObject::PrintShaderInfoLog @ shaderobject.cpp : 624]      ShaderObject "simple draw ": Shader shader/simple.frag compiled successfully
+Level 1  < 00000187 ms > [gl::ShaderObject::PrintProgramInfoLog @ shaderobject.cpp : 647]      Program "simple draw " linked successfully
+Level 1  < 00000187 ms > [gl::ShaderObject::PrintShaderInfoLog @ shaderobject.cpp : 624]      ShaderObject "voxelization ": Shader shader/voxelize.vert compiled successfully
+Level 1  < 00000203 ms > [gl::ShaderObject::PrintShaderInfoLog @ shaderobject.cpp : 624]      ShaderObject "voxelization ": Shader shader/voxelize.frag compiled successfully
+Level 1  < 00000218 ms > [gl::ShaderObject::PrintProgramInfoLog @ shaderobject.cpp : 647]      Program "voxelization " linked successfully
+Level 1  < 00000218 ms > [gl::ShaderObject::PrintShaderInfoLog @ shaderobject.cpp : 624]      ShaderObject "voxel debug ": Shader shader/screenTri.vert compiled successfully
+Level 1  < 00000234 ms > [gl::ShaderObject::PrintShaderInfoLog @ shaderobject.cpp : 624]      ShaderObject "voxel debug ": Shader shader/voxeldebug.frag compiled successfully
+Level 1  < 00000250 ms > [gl::ShaderObject::PrintProgramInfoLog @ shaderobject.cpp : 647]      Program "voxel debug " linked successfully
+Level 1  < 00000265 ms > [Scene::AddModel @ scene.cpp : 77]      Loading ../models/teapot/teapot.obj ...
+Level 1  < 00000296 ms > [TextureManager::GetTexture @ texturemanager.cpp : 30]      Loaded texture "../models/teapot/default.png" 128x128
+Thu Jan 22 10:15:53 2015 Closing Logger

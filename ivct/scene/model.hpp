@@ -44,6 +44,9 @@ public:
 	unsigned int GetNumVertices() const { return m_numVertices; }
 	const std::vector<Mesh>& GetMeshes() const { return m_meshes; }
 
+	const ei::Vec3& GetBoundingBoxMin() const { return m_boundingBoxMin; }
+	const ei::Vec3& GetBoundingBoxMax() const { return m_boundingBoxMax; }
+
 	static void CreateVAO();
 	static void DestroyVAO();
 	static void BindVAO();
@@ -63,5 +66,8 @@ private:
 
 	std::unique_ptr<gl::Buffer> m_vertexBuffer;
 	std::unique_ptr<gl::Buffer> m_indexBuffer;
+
+	ei::Vec3 m_boundingBoxMin;
+	ei::Vec3 m_boundingBoxMax;
 };
 

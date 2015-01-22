@@ -40,7 +40,7 @@ public:
 		// Scene
 		LOG_INFO("Load scene ...");
 		m_scene.reset(new Scene());
-	//	m_scene->AddModel("../models/cryteksponza/sponza.obj");
+		m_scene->AddModel("../models/teapot/teapot.obj");
 	}
 
 	~Application()

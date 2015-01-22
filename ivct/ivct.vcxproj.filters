@@ -264,5 +264,8 @@
     <None Include="shader\globalubos.glsl">
       <Filter>shader</Filter>
     </None>
+    <None Include="shader\voxelize.frag">
+      <Filter>shader</Filter>
+    </None>
   </ItemGroup>
 </Project>
