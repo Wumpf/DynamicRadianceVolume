@@ -34,6 +34,9 @@
     <Filter Include="source\scene">
       <UniqueIdentifier>{83bf86e5-5e1e-4e01-854f-9816fa8039d7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\FileWatcher">
+      <UniqueIdentifier>{76f7dea4-7c20-4d98-9898-ac637c4871f6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="outputwindow.cpp">
@@ -122,6 +125,15 @@
     </ClCompile>
     <ClCompile Include="..\dependencies\glhelper\glhelper\texture3d.cpp">
       <Filter>dependencies\glhelper</Filter>
+    </ClCompile>
+    <ClCompile Include="FileWatcher\FileWatcherWin32.cpp">
+      <Filter>source\FileWatcher</Filter>
+    </ClCompile>
+    <ClCompile Include="FileWatcher\FileWatcher.cpp">
+      <Filter>source\FileWatcher</Filter>
+    </ClCompile>
+    <ClCompile Include="application.cpp">
+      <Filter>source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -233,10 +245,25 @@
     <ClInclude Include="..\dependencies\glhelper\glhelper\texture3d.hpp">
       <Filter>dependencies\glhelper</Filter>
     </ClInclude>
+    <ClInclude Include="FileWatcher\FileWatcherWin32.h">
+      <Filter>source\FileWatcher</Filter>
+    </ClInclude>
+    <ClInclude Include="FileWatcher\FileWatcher.h">
+      <Filter>source\FileWatcher</Filter>
+    </ClInclude>
+    <ClInclude Include="FileWatcher\FileWatcherImpl.h">
+      <Filter>source\FileWatcher</Filter>
+    </ClInclude>
+    <ClInclude Include="application.hpp">
+      <Filter>source</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="utilities\note.txt">
       <Filter>source\utilities</Filter>
+    </Text>
+    <Text Include="FileWatcher\License.txt">
+      <Filter>source\FileWatcher</Filter>
     </Text>
   </ItemGroup>
   <ItemGroup>

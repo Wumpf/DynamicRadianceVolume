@@ -41,7 +41,7 @@ Scene::Scene() :
 	m_perFrameUniformBuffer.BindBuffer(1);
 
 	// size for testing only. R8 sounds also like a bad idea since quite everything works in (at least) 32bytes on gpu
-	m_voxelSceneTexture = std::make_unique<gl::Texture3D>(128, 128, 128, gl::TextureFormat::R8, 1);
+	m_voxelSceneTexture = std::make_unique<gl::Texture3D>(512, 256, 256, gl::TextureFormat::R8, 1);
 }
 
 Scene::~Scene()
