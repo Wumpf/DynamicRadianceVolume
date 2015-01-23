@@ -135,6 +135,9 @@
     <ClCompile Include="application.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="shaderfilewatcher.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="outputwindow.hpp">
@@ -255,6 +258,9 @@
       <Filter>source\FileWatcher</Filter>
     </ClInclude>
     <ClInclude Include="application.hpp">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="shaderfilewatcher.hpp">
       <Filter>source</Filter>
     </ClInclude>
   </ItemGroup>

@@ -182,6 +182,7 @@
     <ClCompile Include="scene\model.cpp" />
     <ClCompile Include="scene\scene.cpp" />
     <ClCompile Include="scene\texturemanager.cpp" />
+    <ClCompile Include="shaderfilewatcher.cpp" />
     <ClCompile Include="Time\Implementation\Stopwatch.cpp" />
     <ClCompile Include="Time\Implementation\Time.cpp" />
     <ClCompile Include="utilities\assert.cpp" />
@@ -219,6 +220,7 @@
     <ClInclude Include="scene\model.hpp" />
     <ClInclude Include="scene\scene.hpp" />
     <ClInclude Include="scene\texturemanager.hpp" />
+    <ClInclude Include="shaderfilewatcher.hpp" />
     <ClInclude Include="Time\Implementation\Time_inl.h" />
     <ClInclude Include="Time\Stopwatch.h" />
     <ClInclude Include="Time\Time.h" />

@@ -7,6 +7,8 @@
 #include <glhelper/texture3d.hpp>
 #include <glhelper/screenalignedtriangle.hpp>
 
+#include "../shaderfilewatcher.hpp"
+
 
 Scene::Scene() :
 	m_boundingBoxMin(std::numeric_limits<float>::max()),
@@ -42,10 +44,20 @@ Scene::Scene() :
 
 	// size for testing only. R8 sounds also like a bad idea since quite everything works in (at least) 32bytes on gpu
 	m_voxelSceneTexture = std::make_unique<gl::Texture3D>(512, 256, 256, gl::TextureFormat::R8, 1);
+
+
+	// Register all shader for auto reload on change.
+	ShaderFileWatcher::Instance().RegisterShaderForReloadOnChange(m_simpleShader.get());
+	ShaderFileWatcher::Instance().RegisterShaderForReloadOnChange(m_voxelDebugShader.get());
+	ShaderFileWatcher::Instance().RegisterShaderForReloadOnChange(m_voxelizationShader.get());
 }
 
 Scene::~Scene()
 {
+	ShaderFileWatcher::Instance().UnregisterShaderForReloadOnChange(m_simpleShader.get());
+	ShaderFileWatcher::Instance().UnregisterShaderForReloadOnChange(m_voxelDebugShader.get());
+	ShaderFileWatcher::Instance().UnregisterShaderForReloadOnChange(m_voxelizationShader.get());
+
 	Model::DestroyVAO();
 }
 

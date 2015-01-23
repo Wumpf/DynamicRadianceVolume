@@ -9,6 +9,8 @@
 #include "scene/scene.hpp"
 #include "camera/interactivecamera.hpp"
 
+#include "shaderfilewatcher.hpp"
+
 #ifdef _WIN32
 #undef APIENTRY
 #include <windows.h>
@@ -32,6 +34,9 @@ Application::Application(int argc, char** argv)
 	LOG_INFO("Load scene ...");
 	m_scene.reset(new Scene());
 	m_scene->AddModel("../models/cryteksponza/sponza.obj");
+
+	// Watch shader dir.
+	ShaderFileWatcher::Instance().SetShaderWatchDirectory("shader");
 }
 
 Application::~Application()
@@ -63,6 +68,8 @@ void Application::Run()
 void Application::Update(ezTime timeSinceLastUpdate)
 {
 	m_window->PollWindowEvents();
+
+	ShaderFileWatcher::Instance().Update();
 
 	m_camera->Update(timeSinceLastUpdate);
 	Input();
