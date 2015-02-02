@@ -16,6 +16,7 @@ namespace gl
 	class SamplerObject;
 }
 class Scene;
+class Voxelization;
 
 class Renderer
 {
@@ -36,22 +37,16 @@ private:
 	void UpdatePerFrameUBO(const Camera& camera);
 
 	void DrawScene();
-	void DrawVoxelRepresentation();
-	void VoxelizeScene();
-
 
 	std::unique_ptr<gl::ScreenAlignedTriangle> m_screenTriangle;
+	std::unique_ptr<Voxelization> m_voxelization;
+
 
 	std::unique_ptr<gl::ShaderObject> m_simpleShader;
-	std::unique_ptr<gl::ShaderObject> m_voxelizationShader;
-	std::unique_ptr<gl::ShaderObject> m_voxelDebugShader;
 
 	gl::UniformBufferView m_constantUniformBuffer;
 	gl::UniformBufferView m_perFrameUniformBuffer;
 
-	std::unique_ptr<gl::Texture3D> m_voxelSceneTexture;
-
 	const gl::SamplerObject& m_samplerLinear;
-	const gl::SamplerObject& m_samplerLinearMipNearest;
 };
 

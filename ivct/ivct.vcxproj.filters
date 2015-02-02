@@ -165,6 +165,9 @@
     <ClCompile Include="..\dependencies\epsilon\src\3dfunctions.cpp">
       <Filter>dependencies\epsilon</Filter>
     </ClCompile>
+    <ClCompile Include="rendering\voxelization.cpp">
+      <Filter>source\rendering</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="outputwindow.hpp">
@@ -291,6 +294,9 @@
       <Filter>source</Filter>
     </ClInclude>
     <ClInclude Include="rendering\renderer.hpp">
+      <Filter>source\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="rendering\voxelization.hpp">
       <Filter>source\rendering</Filter>
     </ClInclude>
   </ItemGroup>

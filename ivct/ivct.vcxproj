@@ -186,6 +186,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="outputwindow.cpp" />
     <ClCompile Include="rendering\renderer.cpp" />
+    <ClCompile Include="rendering\voxelization.cpp" />
     <ClCompile Include="scene\model.cpp" />
     <ClCompile Include="scene\scene.cpp" />
     <ClCompile Include="scene\texturemanager.cpp" />
@@ -225,6 +226,7 @@
     <ClInclude Include="glhelperconfig.hpp" />
     <ClInclude Include="outputwindow.hpp" />
     <ClInclude Include="rendering\renderer.hpp" />
+    <ClInclude Include="rendering\voxelization.hpp" />
     <ClInclude Include="scene\model.hpp" />
     <ClInclude Include="scene\scene.hpp" />
     <ClInclude Include="scene\texturemanager.hpp" />
