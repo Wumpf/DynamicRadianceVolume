@@ -160,7 +160,13 @@ std::shared_ptr<Model> Model::FromFile(const std::string& filename)
 				{
 					std::string textureFilename = PathUtils::AppendPath(directory, diffuseTexture.C_Str());
 					output->m_meshes[i].diffuseTexture = TextureManager::GetInstance().GetTexture(textureFilename, true, true);
-
+				}
+				else
+				{
+					aiColor3D aiColor = aiColor3D(0.0f, 0.0f, 0.0f);
+					scene->mMaterials[mesh.mMaterialIndex]->Get(AI_MATKEY_COLOR_DIFFUSE, aiColor);
+					ei::Vec3 diffuseColor(aiColor.r, aiColor.g, aiColor.b);
+					output->m_meshes[i].diffuseTexture = TextureManager::GetInstance().GetTexture(diffuseColor, true);
 				}
 			}
 		}

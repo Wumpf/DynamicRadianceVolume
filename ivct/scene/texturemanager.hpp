@@ -3,11 +3,13 @@
 #include <memory>
 #include <unordered_map>
 #include <string>
+#include <ei/matrix.hpp>
 
 namespace gl
 {
 	class Texture2D;
 }
+
 
 /// Super easy texture manager to avoid loading a texture twice.
 /// \todo Texture hashing should be sensible to ALL parameters.
@@ -21,6 +23,9 @@ public:
 	/// \attention Only filename will be used for lookup!
 	/// \param nullptr if texture loading failed.
 	std::shared_ptr<gl::Texture2D> GetTexture(const std::string& filename, bool genMipMaps, bool srgb);
+
+	/// Creates 1x1 pixel from color.
+	std::shared_ptr<gl::Texture2D> GetTexture(const ei::Vec3& color, bool srgb);
 
 private:
 	TextureManager();
