@@ -9,7 +9,7 @@ layout(binding = 0, r8) restrict writeonly uniform image3D VoxelVolume;
 void main()
 {
   ivec3 voxelVolumeSize = imageSize(VoxelVolume);
-  imageStore(VoxelVolume, ivec3(gs_out_VoxelPos * voxelVolumeSize + vec3(0.5)), vec4(1.0));
+  imageStore(VoxelVolume, ivec3(gs_out_VoxelPos * voxelVolumeSize), vec4(1.0));
 
   //FragColor = vec4(1.0);
 }

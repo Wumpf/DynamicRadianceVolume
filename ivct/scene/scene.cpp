@@ -104,11 +104,11 @@ void Scene::Draw(Camera& camera)
 {
 	UpdatePerFrameUBO(camera);
 
-	VoxelizeScene();
-	DrawVoxelRepresentation();
+	//VoxelizeScene();
+	//DrawVoxelRepresentation();
 
-	//m_simpleShader->Activate();
-	//DrawScene();
+	m_simpleShader->Activate();
+	DrawScene();
 }
 
 void Scene::DrawScene()
@@ -146,15 +146,18 @@ void Scene::DrawVoxelRepresentation()
 
 void Scene::VoxelizeScene()
 {
-	// Disable depthbuffering.
+	// Disable depthbuffering & culling
 	GL_CALL(glDisable, GL_DEPTH_TEST);
 	GL_CALL(glDepthMask, GL_FALSE);
+	GL_CALL(glDisable, GL_CULL_FACE);
 
 	// Disable color write
 	GL_CALL(glColorMask, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 
 	// Viewport in size of voxel volume.
-	GL_CALL(glViewport, 0, 0, m_voxelSceneTexture->GetWidth(), m_voxelSceneTexture->GetHeight());
+	// Using max on all dimensions may lead to simultaneous overwrites, but allows the geometry shader to flip triangles around much easier.
+	auto maxDim = std::max(std::max(m_voxelSceneTexture->GetWidth(), m_voxelSceneTexture->GetHeight()), m_voxelSceneTexture->GetDepth());
+	GL_CALL(glViewport, 0, 0, maxDim, maxDim);
 
 	// Clear volume.
 	m_voxelSceneTexture->ClearToZero();
@@ -167,9 +170,10 @@ void Scene::VoxelizeScene()
 	// Reset viewport
 	GL_CALL(glViewport, 0, 0, 1024, 768); // TODO
 
-	// Reenable depth buffer.
+	// Reenable depth buffer & culling
 	GL_CALL(glEnable, GL_DEPTH_TEST);
 	GL_CALL(glDepthMask, GL_TRUE);
+	GL_CALL(glEnable, GL_CULL_FACE);
 
 	// Reenable color write
 	GL_CALL(glColorMask, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);

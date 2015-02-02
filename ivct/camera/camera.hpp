@@ -20,7 +20,7 @@ public:
 	const float GetHFov() const  { return m_hfov; }
 	const float GetAspectRatio() const  { return m_aspectRatio; }
 
-	ei::Mat4x4 ComputeViewProjection() { return ei::perspectiveGL(m_hfov * (ei::PI / 180.0f), m_aspectRatio, 1.0f, 1000.0f) * ei::camera(m_position, m_lookat, m_up); }
+	ei::Mat4x4 ComputeViewProjection() { return ei::perspectiveGL(m_hfov * (ei::PI / 180.0f), m_aspectRatio, 0.1f, 1000.0f) * ei::camera(m_position, m_lookat, m_up); }
 
 protected:
 	ei::Vec3 m_position;
