@@ -6,6 +6,7 @@
 
 #include "utilities/utils.hpp"
 
+#include "rendering/renderer.hpp"
 #include "scene/scene.hpp"
 #include "camera/interactivecamera.hpp"
 
@@ -31,9 +32,13 @@ Application::Application(int argc, char** argv)
 		static_cast<float>(resolution.x) / resolution.y, 60.0f, ei::Vec3(0, 1, 0)));
 
 	// Scene
-	LOG_INFO("Load scene ...");
+	LOG_INFO("\nLoad scene ...");
 	m_scene.reset(new Scene());
-	m_scene->AddModel("../models/cryteksponza/sponza.obj");
+	m_scene->AddModel("../models/test0/test0.obj");
+
+	// Renderer.
+	LOG_INFO("\nSetup renderer ...");
+	m_renderer.reset(new Renderer(m_scene, m_window->GetResolution()));
 
 	// Watch shader dir.
 	ShaderFileWatcher::Instance().SetShaderWatchDirectory("shader");
@@ -81,7 +86,7 @@ void Application::Update(ezTime timeSinceLastUpdate)
 void Application::Draw()
 {
 	GL_CALL(glClear, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	m_scene->Draw(*m_camera);
+	m_renderer->Draw(*m_camera);
 	m_window->Present();
 }
 

@@ -157,6 +157,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\dependencies\epsilon\src\2dfunctions.cpp" />
+    <ClCompile Include="..\dependencies\epsilon\src\2dintersection.cpp" />
+    <ClCompile Include="..\dependencies\epsilon\src\2dtypes.cpp" />
+    <ClCompile Include="..\dependencies\epsilon\src\3dfunctions.cpp" />
+    <ClCompile Include="..\dependencies\epsilon\src\3dintersection.cpp" />
+    <ClCompile Include="..\dependencies\epsilon\src\3dtypes.cpp" />
     <ClCompile Include="..\dependencies\glhelper\glhelper\buffer.cpp" />
     <ClCompile Include="..\dependencies\glhelper\glhelper\framebufferobject.cpp" />
     <ClCompile Include="..\dependencies\glhelper\glhelper\gl.cpp" />
@@ -179,6 +185,7 @@
     <ClCompile Include="FileWatcher\FileWatcherWin32.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="outputwindow.cpp" />
+    <ClCompile Include="rendering\renderer.cpp" />
     <ClCompile Include="scene\model.cpp" />
     <ClCompile Include="scene\scene.cpp" />
     <ClCompile Include="scene\texturemanager.cpp" />
@@ -217,6 +224,7 @@
     <ClInclude Include="FileWatcher\FileWatcherWin32.h" />
     <ClInclude Include="glhelperconfig.hpp" />
     <ClInclude Include="outputwindow.hpp" />
+    <ClInclude Include="rendering\renderer.hpp" />
     <ClInclude Include="scene\model.hpp" />
     <ClInclude Include="scene\scene.hpp" />
     <ClInclude Include="scene\texturemanager.hpp" />

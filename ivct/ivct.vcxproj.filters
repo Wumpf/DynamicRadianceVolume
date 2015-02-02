@@ -37,6 +37,12 @@
     <Filter Include="source\FileWatcher">
       <UniqueIdentifier>{76f7dea4-7c20-4d98-9898-ac637c4871f6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\rendering">
+      <UniqueIdentifier>{25952a48-ef22-44d0-abb0-7098fdd6e16d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dependencies\epsilon">
+      <UniqueIdentifier>{c47b33d1-9344-4518-b1ca-31c4dae66e84}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="outputwindow.cpp">
@@ -137,6 +143,27 @@
     </ClCompile>
     <ClCompile Include="shaderfilewatcher.cpp">
       <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="rendering\renderer.cpp">
+      <Filter>source\rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\epsilon\src\3dintersection.cpp">
+      <Filter>dependencies\epsilon</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\epsilon\src\3dtypes.cpp">
+      <Filter>dependencies\epsilon</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\epsilon\src\2dfunctions.cpp">
+      <Filter>dependencies\epsilon</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\epsilon\src\2dintersection.cpp">
+      <Filter>dependencies\epsilon</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\epsilon\src\2dtypes.cpp">
+      <Filter>dependencies\epsilon</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\epsilon\src\3dfunctions.cpp">
+      <Filter>dependencies\epsilon</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -262,6 +289,9 @@
     </ClInclude>
     <ClInclude Include="shaderfilewatcher.hpp">
       <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="rendering\renderer.hpp">
+      <Filter>source\rendering</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

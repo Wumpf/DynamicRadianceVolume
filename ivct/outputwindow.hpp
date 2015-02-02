@@ -2,7 +2,7 @@
 
 #include <glhelper/shaderobject.hpp>
 #include <GLFW/glfw3.h>
-#include <ei/matrix.hpp>
+#include <ei/vector.hpp>
 
 struct GLFWwindow;
 namespace gl
@@ -18,7 +18,7 @@ public:
 	OutputWindow();
 	~OutputWindow();
 
-	void ChangeWindowSize(const ei::IVec2& newResolution);
+	void ChangeWindowSize(const ei::UVec2& newResolution);
 	
 	/// Polls events to keep the window responsive.
 	void PollWindowEvents();
@@ -35,7 +35,7 @@ public:
 
 	void SetTitle(const std::string& windowTitle);
 
-	ei::IVec2 GetResolution();
+	ei::UVec2 GetResolution();
 
 private:
 	void GetGLFWKeystates();

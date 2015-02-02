@@ -27,7 +27,7 @@ OutputWindow::OutputWindow() :
 
 	// OpenGL 4.5 with forward compatibility (removed deprecated stuff)
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
@@ -85,7 +85,7 @@ OutputWindow::~OutputWindow(void)
 	glfwTerminate();
 }	
 
-void OutputWindow::ChangeWindowSize(const ei::IVec2& newResolution)
+void OutputWindow::ChangeWindowSize(const ei::UVec2& newResolution)
 {
 	glfwSetWindowSize(window, newResolution.x, newResolution.y);
 	GL_CALL(glViewport, 0, 0, newResolution.x, newResolution.y);
@@ -128,9 +128,9 @@ void OutputWindow::Present()
 }
 
 
-ei::IVec2 OutputWindow::GetResolution()
+ei::UVec2 OutputWindow::GetResolution()
 {
 	ei::IVec2 resolution;
 	glfwGetWindowSize(window, &resolution.x, &resolution.y);
-	return resolution;
+	return ei::UVec2(resolution);
 }

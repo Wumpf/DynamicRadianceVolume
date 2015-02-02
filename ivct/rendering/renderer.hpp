@@ -1,7 +1,7 @@
 #pragma once
 
 #include <memory>
-#include <ei/matrix.hpp>
+#include <ei/vector.hpp>
 #include "camera/camera.hpp"
 
 // Directly included for convenience: Not having uniform buffer as pointer enables nicer [] syntax for vars.
@@ -11,32 +11,47 @@ namespace gl
 {
 	class FramebufferObject;
 	class ShaderObject;
+	class ScreenAlignedTriangle;
+	class Texture3D;
+	class SamplerObject;
 }
 class Scene;
 
 class Renderer
 {
 public:
-	Renderer();
+	Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& resolution);
 	~Renderer();
 
-	enum class Mode
-	{
-		NORMAL
-	};
+	void OnScreenResize(const ei::UVec2& newResolution);
 
-	void OnScreenResize(ei::UVec2 newResolution);
-
-	void SetScene(std::shared_ptr<const Scene> scene);
+	void SetScene(const std::shared_ptr<const Scene>& scene);
 
 	void Draw(const Camera& camera);
 
 private:
 	std::shared_ptr<const Scene> m_scene;
 	
-	Mode m_currentMode;
-	std::unique_ptr<gl::ShaderObject> m_debugShader;
+	void UpdateConstantUBO();
+	void UpdatePerFrameUBO(const Camera& camera);
 
+	void DrawScene();
+	void DrawVoxelRepresentation();
+	void VoxelizeScene();
+
+
+	std::unique_ptr<gl::ScreenAlignedTriangle> m_screenTriangle;
+
+	std::unique_ptr<gl::ShaderObject> m_simpleShader;
+	std::unique_ptr<gl::ShaderObject> m_voxelizationShader;
+	std::unique_ptr<gl::ShaderObject> m_voxelDebugShader;
+
+	gl::UniformBufferView m_constantUniformBuffer;
 	gl::UniformBufferView m_perFrameUniformBuffer;
+
+	std::unique_ptr<gl::Texture3D> m_voxelSceneTexture;
+
+	const gl::SamplerObject& m_samplerLinear;
+	const gl::SamplerObject& m_samplerLinearMipNearest;
 };
 

@@ -3,7 +3,7 @@
 #include <memory>
 #include <unordered_map>
 #include <string>
-#include <ei/matrix.hpp>
+#include <ei/vector.hpp>
 
 namespace gl
 {

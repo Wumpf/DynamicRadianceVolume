@@ -4,7 +4,8 @@
 #include <string>
 #include <vector>
 
-#include <ei/matrix.hpp>
+#include <ei/vector.hpp>
+#include <ei/3dtypes.hpp>
 
 #include <glhelper/gl.hpp>
 #include <glhelper/texture2d.hpp>
@@ -44,8 +45,7 @@ public:
 	unsigned int GetNumVertices() const { return m_numVertices; }
 	const std::vector<Mesh>& GetMeshes() const { return m_meshes; }
 
-	const ei::Vec3& GetBoundingBoxMin() const { return m_boundingBoxMin; }
-	const ei::Vec3& GetBoundingBoxMax() const { return m_boundingBoxMax; }
+	const ei::Box& GetBoundingBox() const { return m_boundingBox; }
 
 	static void CreateVAO();
 	static void DestroyVAO();
@@ -67,7 +67,6 @@ private:
 	std::unique_ptr<gl::Buffer> m_vertexBuffer;
 	std::unique_ptr<gl::Buffer> m_indexBuffer;
 
-	ei::Vec3 m_boundingBoxMin;
-	ei::Vec3 m_boundingBoxMax;
+	ei::Box m_boundingBox;
 };
 
