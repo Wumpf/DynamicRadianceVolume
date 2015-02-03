@@ -11,7 +11,7 @@
 #include <glhelper/shaderobject.hpp>
 #include <glhelper/texture3d.hpp>
 #include <glhelper/screenalignedtriangle.hpp>
-#include <glhelper/uniformbuffer.hpp>
+#include <glhelper/uniformbufferview.hpp>
 
 
 Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& resolution) :
@@ -25,11 +25,11 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	m_simpleShader->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/simple.frag");
 	m_simpleShader->CreateProgram();
 
-	m_constantUniformBuffer.Init(*m_simpleShader, "Constant");
-	m_constantUniformBuffer.BindBuffer(0);
+	m_constantUniformBuffer = std::make_unique<gl::UniformBufferView>(*m_simpleShader, "Constant");
+	m_constantUniformBuffer->BindBuffer(0);
 
-	m_perFrameUniformBuffer.Init(*m_simpleShader, "PerFrame");
-	m_perFrameUniformBuffer.BindBuffer(1);
+	m_perFrameUniformBuffer = std::make_unique<gl::UniformBufferView>(*m_simpleShader, "PerFrame");
+	m_perFrameUniformBuffer->BindBuffer(1);
 
 	// Register all shader for auto reload on change.
 	ShaderFileWatcher::Instance().RegisterShaderForReloadOnChange(m_simpleShader.get());
@@ -55,22 +55,22 @@ void Renderer::UpdateConstantUBO()
 								static_cast<float>(m_voxelization->GetVoxelTexture().GetDepth()));
 	
 
-	m_constantUniformBuffer.GetBuffer()->Map();
-	m_constantUniformBuffer["VoxelVolumeWorldMin"].Set(voxelVolumeWorldMin);
-	m_constantUniformBuffer["VoxelVolumeWorldMax"].Set(voxelVolumeWorldMax);
-	m_constantUniformBuffer["VoxelSizeInWorld"].Set((voxelVolumeWorldMax - voxelVolumeWorldMin) / voxelVolumeSizePix);
-	m_constantUniformBuffer.GetBuffer()->Unmap();
+	m_constantUniformBuffer->GetBuffer()->Map();
+	(*m_constantUniformBuffer)["VoxelVolumeWorldMin"].Set(voxelVolumeWorldMin);
+	(*m_constantUniformBuffer)["VoxelVolumeWorldMax"].Set(voxelVolumeWorldMax);
+	(*m_constantUniformBuffer)["VoxelSizeInWorld"].Set((voxelVolumeWorldMax - voxelVolumeWorldMin) / voxelVolumeSizePix);
+	m_constantUniformBuffer->GetBuffer()->Unmap();
 }
 
 void Renderer::UpdatePerFrameUBO(const Camera& camera)
 {
 	auto viewProjection = camera.ComputeViewProjection();
 
-	m_perFrameUniformBuffer.GetBuffer()->Map();
-	m_perFrameUniformBuffer["ViewProjection"].Set(viewProjection);
-	m_perFrameUniformBuffer["InverseViewProjection"].Set(ei::invert(viewProjection));
-	m_perFrameUniformBuffer["CameraPosition"].Set(camera.GetPosition());
-	m_perFrameUniformBuffer.GetBuffer()->Unmap();
+	m_perFrameUniformBuffer->GetBuffer()->Map();
+	(*m_perFrameUniformBuffer)["ViewProjection"].Set(viewProjection);
+	(*m_perFrameUniformBuffer)["InverseViewProjection"].Set(ei::invert(viewProjection));
+	(*m_perFrameUniformBuffer)["CameraPosition"].Set(camera.GetPosition());
+	m_perFrameUniformBuffer->GetBuffer()->Unmap();
 }
 
 void Renderer::OnScreenResize(const ei::UVec2& newResolution)

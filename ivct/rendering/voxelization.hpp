@@ -4,9 +4,6 @@
 #include <ei/vector.hpp>
 #include "camera/camera.hpp"
 
-// Directly included for convenience: Not having uniform buffer as pointer enables nicer [] syntax for vars.
-#include <glhelper/uniformbuffer.hpp>
-
 namespace gl
 {
 	class FramebufferObject;

@@ -2,16 +2,15 @@
 
 #include "../scene/model.hpp"
 #include "../scene/scene.hpp"
-#include "../camera/camera.hpp"
 
 #include "../shaderfilewatcher.hpp"
 
+#include <algorithm>
 
 #include <glhelper/samplerobject.hpp>
 #include <glhelper/shaderobject.hpp>
 #include <glhelper/texture3d.hpp>
 #include <glhelper/screenalignedtriangle.hpp>
-#include <glhelper/uniformbuffer.hpp>
 
 
 Voxelization::Voxelization(const ei::UVec3& resolution) :

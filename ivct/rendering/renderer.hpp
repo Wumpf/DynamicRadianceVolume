@@ -4,9 +4,6 @@
 #include <ei/vector.hpp>
 #include "camera/camera.hpp"
 
-// Directly included for convenience: Not having uniform buffer as pointer enables nicer [] syntax for vars.
-#include <glhelper/uniformbuffer.hpp>
-
 namespace gl
 {
 	class FramebufferObject;
@@ -14,6 +11,7 @@ namespace gl
 	class ScreenAlignedTriangle;
 	class Texture3D;
 	class SamplerObject;
+	class UniformBufferView;
 }
 class Scene;
 class Voxelization;
@@ -44,8 +42,8 @@ private:
 
 	std::unique_ptr<gl::ShaderObject> m_simpleShader;
 
-	gl::UniformBufferView m_constantUniformBuffer;
-	gl::UniformBufferView m_perFrameUniformBuffer;
+	std::unique_ptr<gl::UniformBufferView> m_constantUniformBuffer;
+	std::unique_ptr<gl::UniformBufferView> m_perFrameUniformBuffer;
 
 	const gl::SamplerObject& m_samplerLinear;
 };
