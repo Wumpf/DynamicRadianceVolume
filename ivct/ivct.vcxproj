@@ -72,8 +72,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(ProjectDir);..\dependencies\glhelper\glfw;../dependencies/epsilon\include;..\dependencies\glhelper;..\dependencies\glew\include;../dependencies\glfw\include;../dependencies\assimp3.1.1\include;../dependencies/stb;$(IncludePath)</IncludePath>
-    <LibraryPath>..\dependencies\glew\lib-msvc120;..\dependencies\glfw\src\Debug;../dependencies\assimp3.1.1\lib64;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProjectDir);..\dependencies\glhelper\glfw;../dependencies/epsilon\include;..\dependencies\glhelper;..\dependencies\glew\include;../dependencies\glfw\include;../dependencies\assimp\include;../dependencies/stb;$(IncludePath)</IncludePath>
+    <LibraryPath>..\dependencies\glew\lib-msvc120;..\dependencies\glfw\src\Debug;../dependencies\assimp\lib\Debug;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -81,8 +81,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(ProjectDir);..\dependencies\glhelper\glfw;../dependencies/epsilon\include;..\dependencies\glhelper;..\dependencies\glew\include;../dependencies\glfw\include;../dependencies\assimp3.1.1\include;../dependencies/stb;$(IncludePath)</IncludePath>
-    <LibraryPath>..\dependencies\glew\lib-msvc120;..\dependencies\glfw\src\Release;../dependencies\assimp3.1.1\lib64;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProjectDir);..\dependencies\glhelper\glfw;../dependencies/epsilon\include;..\dependencies\glhelper;..\dependencies\glew\include;../dependencies\glfw\include;../dependencies\assimp\include;../dependencies/stb;$(IncludePath)</IncludePath>
+    <LibraryPath>..\dependencies\glew\lib-msvc120;..\dependencies\glfw\src\Release;../dependencies\assimp\lib\Release;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -113,7 +113,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>assimp.lib;glfw3.lib;opengl32.lib;glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>assimpd.lib;glfw3.lib;opengl32.lib;glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
