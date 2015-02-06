@@ -5,7 +5,7 @@
 class Camera
 {
 public:
-	Camera(const ei::Vec3& position, const ei::Vec3& lookat, float aspectRatio, float hfov = 60.0f, const ei::Vec3& up = ei::Vec3(0.0f, 1.0f, 0.0f));
+	Camera(const ei::Vec3& position, const ei::Vec3& lookat, float aspectRatio, float nearPlane, float farPlane, float hfov = 60.0f, const ei::Vec3& up = ei::Vec3(0.0f, 1.0f, 0.0f));
 	virtual ~Camera();
 
 	const ei::Vec3& GetPosition() const  { return m_position; }
@@ -15,12 +15,19 @@ public:
 	virtual void SetHFov(float hfov)						{ m_hfov = hfov; }
 	virtual void SetPosition(const ei::Vec3& position)		{ m_position = position; }
 	virtual void SetLookAt(const ei::Vec3& lookat)			{ m_lookat = lookat; }
-	
-	const ei::Vec3& GetUp() const  { return m_up; }
-	const float GetHFov() const  { return m_hfov; }
-	const float GetAspectRatio() const  { return m_aspectRatio; }
+	void SetNearPlane(float nearPlane)						{ m_nearPlane = nearPlane; }
+	void SetFarPlane(float farPlane)						{ m_farPlane = farPlane; }
 
-	ei::Mat4x4 ComputeViewProjection() const { return ei::perspectiveGL(m_hfov * (ei::PI / 180.0f), m_aspectRatio, 0.1f, 1000.0f) * ei::camera(m_position, m_lookat, m_up); }
+	const ei::Vec3& GetUp() const  { return m_up; }
+	float GetHFov() const  { return m_hfov; }
+	float GetAspectRatio() const  { return m_aspectRatio; }
+	float GetNearPlane() const { return m_nearPlane; }
+	float GetFarPlane() const { return m_farPlane; }
+
+	/// Computes perspective projection matrix in <b>DIRECTX</b> style with <b>flipped near & far plane</b>.
+	ei::Mat4x4 ComputeProjectionMatrix() const { return ei::perspectiveDX(m_hfov * (ei::PI / 180.0f), m_aspectRatio, m_farPlane, m_nearPlane); }
+
+	ei::Mat4x4 ComputeViewMatrix() const { return ei::camera(m_position, m_lookat, m_up); }
 
 protected:
 	ei::Vec3 m_position;
@@ -28,5 +35,7 @@ protected:
 	ei::Vec3 m_up;
 	float m_hfov;
 	float m_aspectRatio;
+	float m_nearPlane;
+	float m_farPlane;
 };
 

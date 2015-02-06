@@ -2,7 +2,7 @@
 #include <GLFW/glfw3.h>
 
 InteractiveCamera::InteractiveCamera(GLFWwindow* window, const Camera& camera) :
-	Camera(camera.GetPosition(), camera.GetLookAt(), camera.GetAspectRatio(), camera.GetHFov(), camera.GetUp()),
+	Camera(camera.GetPosition(), camera.GetLookAt(), camera.GetAspectRatio(), camera.GetNearPlane(), camera.GetFarPlane(), camera.GetHFov(), camera.GetUp()),
 	m_window(m_window),
 	m_rotSpeed(0.01f),
 	m_moveSpeed(16.0f),
@@ -19,14 +19,13 @@ void InteractiveCamera::Reset(const Camera& camera)
 	m_up = camera.GetUp();
 }
 
-InteractiveCamera::InteractiveCamera(GLFWwindow* window, const ei::Vec3& position, const ei::Vec3& lookat, float aspectRatio, float hfov, const ei::Vec3& up) : 
-	Camera(position, lookat, aspectRatio, hfov, up),
+InteractiveCamera::InteractiveCamera(GLFWwindow* window, const ei::Vec3& position, const ei::Vec3& lookat, float aspectRatio, float nearPlane, float farPlane, float hfov, const ei::Vec3& up) :
+	Camera(position, lookat, aspectRatio, nearPlane, farPlane, hfov, up),
 	m_window(window),
 	m_rotSpeed(0.01f),
 	m_moveSpeed(4.0f)
 {
 }
-
 
 bool InteractiveCamera::Update(ezTime timeSinceLastFrame)
 {

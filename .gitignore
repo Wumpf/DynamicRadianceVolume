@@ -43,7 +43,6 @@
 # Non-submodule dependencies
 /dependencies/assimp3.1.1
 /dependencies/glew
-/dependencies/glfw
 
 # Data
 /models/

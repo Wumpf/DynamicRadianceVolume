@@ -7,3 +7,6 @@
 [submodule "dependencies/epsilon"]
 	path = dependencies/epsilon
 	url = https://github.com/Jojendersie/Epsilon-Intersection.git
+[submodule "dependencies/glfw"]
+	path = dependencies/glfw
+	url = https://github.com/glfw/glfw.git

@@ -31,6 +31,9 @@ OutputWindow::OutputWindow() :
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
+	glfwWindowHint(GLFW_SRGB_CAPABLE, GL_TRUE);
+	glfwWindowHint(GLFW_DEPTH_BITS, GLFW_DONT_CARE); // no need for depth buffer
+
 	// OpenGL Debug context.
 #ifdef _DEBUG
 	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
@@ -65,14 +68,6 @@ OutputWindow::OutputWindow() :
 	
 	// Disable V-Sync
 	glfwSwapInterval(0);
-
-	// General GL settings
-	GL_CALL(glViewport, 0, 0, width, height);
-	GL_CALL(glEnable, GL_DEPTH_TEST);
-	GL_CALL(glDisable, GL_DITHER);
-	//GL_CALL(glEnable, GL_CULL_FACE);
-	//GL_CALL(glFrontFace, GL_CW);
-
 
 	GetGLFWKeystates();
 }

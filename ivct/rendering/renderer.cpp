@@ -48,6 +48,26 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 
 	SetScene(scene);
 	OnScreenResize(resolution);
+
+
+	// General GL settings
+	GL_CALL(glEnable, GL_DEPTH_TEST);
+	GL_CALL(glDisable, GL_DITHER);
+	//GL_CALL(glEnable, GL_CULL_FACE);
+	//GL_CALL(glFrontFace, GL_CW);
+
+	// A quick note on depth:
+	// http://www.gamedev.net/topic/568014-linear-or-non-linear-shadow-maps/#entry4633140
+	// - Outputing depth manually (separate target or gl_FragDepth) can hurt performance in several ways
+	// -> need to use real depthbuffer
+	// --> precision issues
+	// --> better precision with flipped depth test + R32F depthbuffers
+	GL_CALL(glDepthFunc, GL_GREATER);
+	GL_CALL(glClearDepth, 0.0f);
+
+	// The OpenGL clip space convention uses depth -1 to 1 which is remapped again. In GL4.5 it is possible to disable this
+	glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
+
 }
 
 Renderer::~Renderer()
@@ -74,7 +94,10 @@ void Renderer::UpdateConstantUBO()
 
 void Renderer::UpdatePerFrameUBO(const Camera& camera)
 {
-	auto viewProjection = camera.ComputeViewProjection();
+	auto view = camera.ComputeViewMatrix();
+	auto projection = camera.ComputeProjectionMatrix();
+	auto viewProjection = projection * view;
+
 
 	m_uboPerFrame->GetBuffer()->Map();
 	(*m_uboPerFrame)["ViewProjection"].Set(viewProjection);
@@ -94,6 +117,8 @@ void Renderer::OnScreenResize(const ei::UVec2& newResolution)
 
 	m_GBuffer.reset(new gl::FramebufferObject({ gl::FramebufferObject::Attachment(m_GBuffer_diffuse.get()), gl::FramebufferObject::Attachment(m_GBuffer_normal.get()) },
 									gl::FramebufferObject::Attachment(m_GBuffer_depth.get())));
+
+	GL_CALL(glViewport, 0, 0, newResolution.x, newResolution.y);
 }
 
 void Renderer::SetScene(const std::shared_ptr<const Scene>& scene)

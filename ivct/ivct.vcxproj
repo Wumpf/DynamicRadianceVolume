@@ -73,7 +73,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>$(ProjectDir);..\dependencies\glhelper\glfw;../dependencies/epsilon\include;..\dependencies\glhelper;..\dependencies\glew\include;../dependencies\glfw\include;../dependencies\assimp3.1.1\include;../dependencies/stb;$(IncludePath)</IncludePath>
-    <LibraryPath>..\dependencies\glew\lib-msvc120;..\dependencies\glfw\lib-msvc120\;../dependencies\assimp3.1.1\lib64;$(LibraryPath)</LibraryPath>
+    <LibraryPath>..\dependencies\glew\lib-msvc120;..\dependencies\glfw\src\Debug;../dependencies\assimp3.1.1\lib64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -82,7 +82,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>$(ProjectDir);..\dependencies\glhelper\glfw;../dependencies/epsilon\include;..\dependencies\glhelper;..\dependencies\glew\include;../dependencies\glfw\include;../dependencies\assimp3.1.1\include;../dependencies/stb;$(IncludePath)</IncludePath>
-    <LibraryPath>..\dependencies\glew\lib-msvc120;..\dependencies\glfw\lib-msvc120\;../dependencies\assimp3.1.1\lib64;$(LibraryPath)</LibraryPath>
+    <LibraryPath>..\dependencies\glew\lib-msvc120;..\dependencies\glfw\src\Release;../dependencies\assimp3.1.1\lib64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
