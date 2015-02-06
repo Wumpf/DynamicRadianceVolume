@@ -9,7 +9,7 @@ namespace gl
 	class FramebufferObject;
 	class ShaderObject;
 	class ScreenAlignedTriangle;
-	class Texture3D;
+	class Texture2D;
 	class SamplerObject;
 	class UniformBufferView;
 }
@@ -31,19 +31,27 @@ public:
 private:
 	std::shared_ptr<const Scene> m_scene;
 	
-	void UpdateConstantUBO();
+	void UpdateConstantUBO(); 
 	void UpdatePerFrameUBO(const Camera& camera);
 
+	void DrawSceneToGBuffer();
 	void DrawScene();
 
 	std::unique_ptr<gl::ScreenAlignedTriangle> m_screenTriangle;
 	std::unique_ptr<Voxelization> m_voxelization;
 
 
-	std::unique_ptr<gl::ShaderObject> m_simpleShader;
+	std::unique_ptr<gl::ShaderObject> m_shaderDebugGBuffer;
+	std::unique_ptr<gl::ShaderObject> m_shaderFillGBuffer_noskinning;
+	
 
-	std::unique_ptr<gl::UniformBufferView> m_constantUniformBuffer;
-	std::unique_ptr<gl::UniformBufferView> m_perFrameUniformBuffer;
+	std::unique_ptr<gl::UniformBufferView> m_uboConstant;
+	std::unique_ptr<gl::UniformBufferView> m_uboPerFrame;
+
+	std::unique_ptr<gl::Texture2D> m_GBuffer_diffuse;
+	std::unique_ptr<gl::Texture2D> m_GBuffer_normal;
+	std::unique_ptr<gl::Texture2D> m_GBuffer_depth;
+	std::unique_ptr<gl::FramebufferObject> m_GBuffer;
 
 	const gl::SamplerObject& m_samplerLinear;
 };

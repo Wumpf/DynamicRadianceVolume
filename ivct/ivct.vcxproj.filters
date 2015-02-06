@@ -299,6 +299,9 @@
     <ClInclude Include="..\dependencies\glhelper\glhelper\framebufferobject.hpp">
       <Filter>dependencies\glhelper</Filter>
     </ClInclude>
+    <ClInclude Include="scene\light.hpp">
+      <Filter>source\scene</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="utilities\note.txt">
@@ -312,35 +315,38 @@
     <None Include="..\dependencies\glhelper\glhelper\glhelper.vcxproj.filters">
       <Filter>dependencies\glhelper</Filter>
     </None>
-    <None Include="shader\simple.vert">
-      <Filter>shader</Filter>
-    </None>
-    <None Include="shader\simple.frag">
-      <Filter>shader</Filter>
-    </None>
-    <None Include="shader\screenTri.vert">
-      <Filter>shader</Filter>
-    </None>
-    <None Include="shader\voxeldebug.frag">
-      <Filter>shader</Filter>
-    </None>
-    <None Include="shader\globalubos.glsl">
-      <Filter>shader</Filter>
-    </None>
-    <None Include="shader\voxelize.frag">
-      <Filter>shader</Filter>
-    </None>
-    <None Include="shader\voxelize.vert">
-      <Filter>shader</Filter>
-    </None>
-    <None Include="shader\voxelize.geom">
-      <Filter>shader</Filter>
-    </None>
     <None Include="..\dependencies\glhelper\glhelper\shaderdatametainfo.inl">
       <Filter>dependencies\glhelper</Filter>
     </None>
     <None Include="..\dependencies\glhelper\glhelper\uniformbuffer.inl">
       <Filter>dependencies\glhelper</Filter>
+    </None>
+    <None Include="shader\voxeldebug.frag">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\voxelize.frag">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\voxelize.geom">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\voxelize.vert">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\debuggbuffer.frag">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\defaultmodel_noskinning.vert">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\fillgbuffer.frag">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\globalubos.glsl">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\screenTri.vert">
+      <Filter>shader</Filter>
     </None>
   </ItemGroup>
 </Project>

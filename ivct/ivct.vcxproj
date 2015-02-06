@@ -227,6 +227,7 @@
     <ClInclude Include="outputwindow.hpp" />
     <ClInclude Include="rendering\renderer.hpp" />
     <ClInclude Include="rendering\voxelization.hpp" />
+    <ClInclude Include="scene\light.hpp" />
     <ClInclude Include="scene\model.hpp" />
     <ClInclude Include="scene\scene.hpp" />
     <ClInclude Include="scene\texturemanager.hpp" />
@@ -252,10 +253,11 @@
     <None Include="..\dependencies\glhelper\glhelper\glhelper.vcxproj.filters" />
     <None Include="..\dependencies\glhelper\glhelper\shaderdatametainfo.inl" />
     <None Include="..\dependencies\glhelper\glhelper\uniformbuffer.inl" />
+    <None Include="shader\debuggbuffer.frag" />
+    <None Include="shader\defaultmodel_noskinning.vert" />
+    <None Include="shader\fillgbuffer.frag" />
     <None Include="shader\globalubos.glsl" />
     <None Include="shader\screenTri.vert" />
-    <None Include="shader\simple.frag" />
-    <None Include="shader\simple.vert" />
     <None Include="shader\voxeldebug.frag" />
     <None Include="shader\voxelize.frag" />
     <None Include="shader\voxelize.geom" />

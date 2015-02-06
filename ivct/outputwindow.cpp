@@ -69,6 +69,7 @@ OutputWindow::OutputWindow() :
 	// General GL settings
 	GL_CALL(glViewport, 0, 0, width, height);
 	GL_CALL(glEnable, GL_DEPTH_TEST);
+	GL_CALL(glDisable, GL_DITHER);
 	//GL_CALL(glEnable, GL_CULL_FACE);
 	//GL_CALL(glFrontFace, GL_CW);
 

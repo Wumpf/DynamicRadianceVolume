@@ -85,7 +85,6 @@ void Application::Update(ezTime timeSinceLastUpdate)
 
 void Application::Draw()
 {
-	GL_CALL(glClear, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	m_renderer->Draw(*m_camera);
 	m_window->Present();
 }
