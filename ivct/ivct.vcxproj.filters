@@ -348,5 +348,11 @@
     <None Include="shader\screenTri.vert">
       <Filter>shader</Filter>
     </None>
+    <None Include="shader\utils.glsl">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\directdeferredlighting.frag">
+      <Filter>shader</Filter>
+    </None>
   </ItemGroup>
 </Project>

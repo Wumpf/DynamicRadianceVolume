@@ -16,39 +16,29 @@
 
 
 Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& resolution) :
-	m_samplerLinear(gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR,
-																				gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Border::REPEAT)))
+m_samplerLinear(gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR,
+gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Border::REPEAT)))
 {
 	m_screenTriangle = std::make_unique<gl::ScreenAlignedTriangle>();
 
-	m_shaderDebugGBuffer = std::make_unique<gl::ShaderObject>("gbuffer debug");
-	m_shaderDebugGBuffer->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
-	m_shaderDebugGBuffer->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/debuggbuffer.frag");
-	m_shaderDebugGBuffer->CreateProgram();
+	LoadShader();
 
-	m_shaderFillGBuffer_noskinning = std::make_unique<gl::ShaderObject>("fill gbuffer noskinning");
-	m_shaderFillGBuffer_noskinning->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/defaultmodel_noskinning.vert");
-	m_shaderFillGBuffer_noskinning->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/fillgbuffer.frag");
-	m_shaderFillGBuffer_noskinning->CreateProgram();
+	// Init global ubos.
+	m_uboConstant = std::make_unique<gl::UniformBufferView>(*m_allShaders[0], "Constant");
+	m_allShaders[0]->BindUBO(*m_uboConstant);
+	m_uboPerFrame = std::make_unique<gl::UniformBufferView>(*m_allShaders[0], "PerFrame");
+	m_allShaders[0]->BindUBO(*m_uboPerFrame);
 
-	std::initializer_list<const gl::ShaderObject*> shaderList = { m_shaderDebugGBuffer.get(), m_shaderFillGBuffer_noskinning.get() };
+	// Init specific ubos.
+	m_uboDeferredDirectLighting = std::make_unique<gl::UniformBufferView>(*m_shaderDeferredDirectLighting_Spot, "Light");
+	m_shaderDeferredDirectLighting_Spot->BindUBO(*m_uboDeferredDirectLighting);
 
-	m_uboConstant = std::make_unique<gl::UniformBufferView>(shaderList, "Constant");
-	m_uboConstant->BindBuffer(0);
-
-	m_uboPerFrame = std::make_unique<gl::UniformBufferView>(shaderList, "PerFrame");
-	m_uboPerFrame->BindBuffer(1);
-
-	// Register all shader for auto reload on change.
-	ShaderFileWatcher::Instance().RegisterShaderForReloadOnChange(m_shaderDebugGBuffer.get());
-	ShaderFileWatcher::Instance().RegisterShaderForReloadOnChange(m_shaderFillGBuffer_noskinning.get());
-
-
+	// Create voxelization module.
 	m_voxelization = std::make_unique<Voxelization>(ei::UVec3(256, 256, 256));
 
+	// Basic settings.
 	SetScene(scene);
 	OnScreenResize(resolution);
-
 
 	// General GL settings
 	GL_CALL(glEnable, GL_DEPTH_TEST);
@@ -72,8 +62,33 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 
 Renderer::~Renderer()
 {
-	ShaderFileWatcher::Instance().UnregisterShaderForReloadOnChange(m_shaderDebugGBuffer.get());
-	ShaderFileWatcher::Instance().UnregisterShaderForReloadOnChange(m_shaderFillGBuffer_noskinning.get());
+	// Unregister all shader for auto reload on change.
+	for (auto it : m_allShaders)
+		ShaderFileWatcher::Instance().UnregisterShaderForReloadOnChange(it);
+}
+
+void Renderer::LoadShader()
+{
+	m_shaderDebugGBuffer = std::make_unique<gl::ShaderObject>("gbuffer debug");
+	m_shaderDebugGBuffer->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
+	m_shaderDebugGBuffer->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/debuggbuffer.frag");
+	m_shaderDebugGBuffer->CreateProgram();
+
+	m_shaderFillGBuffer_noskinning = std::make_unique<gl::ShaderObject>("fill gbuffer noskinning");
+	m_shaderFillGBuffer_noskinning->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/defaultmodel_noskinning.vert");
+	m_shaderFillGBuffer_noskinning->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/fillgbuffer.frag");
+	m_shaderFillGBuffer_noskinning->CreateProgram();
+
+	m_shaderDeferredDirectLighting_Spot = std::make_unique<gl::ShaderObject>("direct lighting - spot");
+	m_shaderDeferredDirectLighting_Spot->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
+	m_shaderDeferredDirectLighting_Spot->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/directdeferredlighting.frag");
+	m_shaderDeferredDirectLighting_Spot->CreateProgram();
+
+	// Register all shader for auto reload on change.
+	m_allShaders = { m_shaderDebugGBuffer.get(), m_shaderFillGBuffer_noskinning.get(), m_shaderDeferredDirectLighting_Spot.get() };
+	for (auto it : m_allShaders)
+		ShaderFileWatcher::Instance().RegisterShaderForReloadOnChange(it);
+
 }
 
 void Renderer::UpdateConstantUBO()
@@ -138,9 +153,26 @@ void Renderer::Draw(const Camera& camera)
 	GL_CALL(glViewport, 0, 0, 1024, 768); // TODO
 	m_voxelization->DrawVoxelRepresentation();*/
 
-	
 	DrawSceneToGBuffer();
+	
+	gl::FramebufferObject::BindBackBuffer();
+	GL_CALL(glClear, GL_COLOR_BUFFER_BIT);
 
+	DrawLights();
+}
+
+void Renderer::DrawSceneToGBuffer()
+{
+	glEnable(GL_DEPTH_TEST);
+
+	m_shaderFillGBuffer_noskinning->Activate();
+	m_GBuffer->Bind(false);
+	GL_CALL(glClear, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	DrawScene();
+}
+
+void Renderer::DrawGBufferDebug()
+{
 	glDisable(GL_DEPTH_TEST);
 
 	m_shaderDebugGBuffer->Activate();
@@ -149,16 +181,36 @@ void Renderer::Draw(const Camera& camera)
 	m_GBuffer_normal->Bind(1);
 	m_GBuffer_depth->Bind(2);
 	m_screenTriangle->Draw();
-
-	glEnable(GL_DEPTH_TEST);
 }
 
-void Renderer::DrawSceneToGBuffer()
+void Renderer::DrawLights()
 {
-	m_shaderFillGBuffer_noskinning->Activate();
-	m_GBuffer->Bind(false);
-	GL_CALL(glClear, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	DrawScene();
+	glDisable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_ONE, GL_ONE);
+
+	m_shaderDeferredDirectLighting_Spot->Activate();
+
+	gl::FramebufferObject::BindBackBuffer();
+	m_GBuffer_diffuse->Bind(0);
+	m_GBuffer_normal->Bind(1);
+	m_GBuffer_depth->Bind(2);
+
+	for (auto light : m_scene->GetLights())
+	{
+		Assert(light.type == Light::Type::SPOT, "Only spot lights are supported so far!");
+
+		m_uboDeferredDirectLighting->GetBuffer()->Map();
+		(*m_uboDeferredDirectLighting)["LightIntensity"].Set(light.intensity);
+		(*m_uboDeferredDirectLighting)["LightPosition"].Set(light.position);
+		(*m_uboDeferredDirectLighting)["LightDirection"].Set(light.direction);
+		(*m_uboDeferredDirectLighting)["LightCosHalfAngle"].Set(cosf(light.halfAngle));
+		m_uboDeferredDirectLighting->GetBuffer()->Unmap();
+
+		m_screenTriangle->Draw();
+	}
+
+	glDisable(GL_BLEND);
 }
 
 void Renderer::DrawScene()

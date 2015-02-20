@@ -37,7 +37,7 @@ namespace Logger {
 		void Write(const char* _severity, const std::string& _message);
 
 	private:
-    bool m_initialized;
+		bool m_initialized;
 		Policy* m_policy;
 		std::mutex m_mutex;
 
@@ -56,7 +56,7 @@ namespace Logger {
 #else
 #	define LOG_INFO(_message) do {\
 		std::stringstream str; str << _message; \
-		Logger::g_logger.Write(__FILE__, __FUNCTION__, __LINE__, "Level 1 ", str.str()); } while(false)
+		Logger::g_logger.Write(__FILE__, __FUNCTION__, __LINE__, "Info ", str.str()); } while(false)
 #endif
 
 
@@ -68,7 +68,7 @@ namespace Logger {
 #else
 #	define LOG_WARNING(_message) do {\
 		std::stringstream str; str << _message; \
-		Logger::g_logger.Write(__FILE__, __FUNCTION__, __LINE__, "Level 2 ", str.str()); } while(false)
+		Logger::g_logger.Write(__FILE__, __FUNCTION__, __LINE__, "Warning ", str.str()); } while(false)
 #endif
 
 /// \brief Write an error message - active on all levels.
@@ -79,5 +79,5 @@ namespace Logger {
 #else
 #	define LOG_ERROR(_message) do {\
 		std::stringstream str; str << _message; \
-		Logger::g_logger.Write(__FILE__, __FUNCTION__, __LINE__, "Error   ", str.str()); } while(false)
+		Logger::g_logger.Write(__FILE__, __FUNCTION__, __LINE__, "Error ", str.str()); } while(false)
 #endif

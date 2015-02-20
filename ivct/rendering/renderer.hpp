@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 #include <ei/vector.hpp>
 #include "camera/camera.hpp"
 
@@ -30,11 +31,22 @@ public:
 
 private:
 	std::shared_ptr<const Scene> m_scene;
-	
+
+	void LoadShader();
+
 	void UpdateConstantUBO(); 
 	void UpdatePerFrameUBO(const Camera& camera);
 
+	/// Fills GBuffer.
 	void DrawSceneToGBuffer();
+	/// Draws GBuffer directly to the (hardware) backbuffer.
+	void DrawGBufferDebug();
+	/// Performs direct lighting for all lights.
+	void DrawLights();
+
+	/// Draws scene, mesh by mesh.
+	///
+	/// Does set VAO, VBO and index buffers but nothing else. No culling!
 	void DrawScene();
 
 	std::unique_ptr<gl::ScreenAlignedTriangle> m_screenTriangle;
@@ -43,7 +55,9 @@ private:
 
 	std::unique_ptr<gl::ShaderObject> m_shaderDebugGBuffer;
 	std::unique_ptr<gl::ShaderObject> m_shaderFillGBuffer_noskinning;
-	
+
+	std::unique_ptr<gl::ShaderObject> m_shaderDeferredDirectLighting_Spot;
+	std::unique_ptr<gl::UniformBufferView> m_uboDeferredDirectLighting;
 
 	std::unique_ptr<gl::UniformBufferView> m_uboConstant;
 	std::unique_ptr<gl::UniformBufferView> m_uboPerFrame;
@@ -54,5 +68,9 @@ private:
 	std::unique_ptr<gl::FramebufferObject> m_GBuffer;
 
 	const gl::SamplerObject& m_samplerLinear;
+
+
+	/// List of all shaders for convenience purposes.
+	std::vector<gl::ShaderObject*> m_allShaders;
 };
 

@@ -255,9 +255,11 @@
     <None Include="..\dependencies\glhelper\glhelper\uniformbuffer.inl" />
     <None Include="shader\debuggbuffer.frag" />
     <None Include="shader\defaultmodel_noskinning.vert" />
+    <None Include="shader\directdeferredlighting.frag" />
     <None Include="shader\fillgbuffer.frag" />
     <None Include="shader\globalubos.glsl" />
     <None Include="shader\screenTri.vert" />
+    <None Include="shader\utils.glsl" />
     <None Include="shader\voxeldebug.frag" />
     <None Include="shader\voxelize.frag" />
     <None Include="shader\voxelize.geom" />

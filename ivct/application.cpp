@@ -28,13 +28,26 @@ Application::Application(int argc, char** argv)
 
 	// Create "global" camera.
 	auto resolution = m_window->GetResolution();
-	m_camera.reset(new InteractiveCamera(m_window->GetGLFWWindow(), ei::Vec3(0.0f, 5.0f, 10.0f), ei::Vec3(0.0f),
+	m_camera.reset(new InteractiveCamera(m_window->GetGLFWWindow(), ei::Vec3(0.0f, 2.5f, -5.0f), ei::Vec3(0.0f),
 		static_cast<float>(resolution.x) / resolution.y, 0.1f, 10000.0f, 60.0f, ei::Vec3(0, 1, 0)));
 
 	// Scene
 	LOG_INFO("\nLoad scene ...");
 	m_scene.reset(new Scene());
+
+	// TODO: Some kind of runtime/data system is needed here.
 	m_scene->AddModel("../models/test0/test0.obj");
+	Light spot;
+	spot.type = Light::Type::SPOT;
+	spot.intensity = ei::Vec3(100.0f, 90.0f, 90.0f); 
+	spot.position = ei::Vec3(0.0f, 2.5f, -2.5f);
+	spot.direction = ei::normalize(-spot.position);
+	spot.halfAngle = 30.0f * (ei::PI / 180.0f);
+	m_scene->AddLight(spot);
+	spot.position = ei::Vec3(1.0f, 2.5f, -2.5f);
+	spot.intensity = ei::Vec3(70.0f, 70.0f, 80.0f);
+	spot.direction = ei::normalize(ei::Vec3(1.0f, 2.5f, 0.0f) - spot.position);
+	m_scene->AddLight(spot);
 
 	// Renderer.
 	LOG_INFO("\nSetup renderer ...");
