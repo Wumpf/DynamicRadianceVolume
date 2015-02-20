@@ -84,8 +84,16 @@ void Renderer::LoadShader()
 	m_shaderDeferredDirectLighting_Spot->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/directdeferredlighting.frag");
 	m_shaderDeferredDirectLighting_Spot->CreateProgram();
 
+	m_shaderTonemap = std::make_unique<gl::ShaderObject>("texture output");
+	m_shaderTonemap->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
+	m_shaderTonemap->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/tonemapping.frag");
+	m_shaderTonemap->CreateProgram();
+
+	
+
+
 	// Register all shader for auto reload on change.
-	m_allShaders = { m_shaderDebugGBuffer.get(), m_shaderFillGBuffer_noskinning.get(), m_shaderDeferredDirectLighting_Spot.get() };
+	m_allShaders = { m_shaderDebugGBuffer.get(), m_shaderFillGBuffer_noskinning.get(), m_shaderDeferredDirectLighting_Spot.get(), m_shaderTonemap.get() };
 	for (auto it : m_allShaders)
 		ShaderFileWatcher::Instance().RegisterShaderForReloadOnChange(it);
 
@@ -133,6 +141,10 @@ void Renderer::OnScreenResize(const ei::UVec2& newResolution)
 	m_GBuffer.reset(new gl::FramebufferObject({ gl::FramebufferObject::Attachment(m_GBuffer_diffuse.get()), gl::FramebufferObject::Attachment(m_GBuffer_normal.get()) },
 									gl::FramebufferObject::Attachment(m_GBuffer_depth.get())));
 
+
+	m_HDRBackbufferTexture = std::make_unique<gl::Texture2D>(newResolution.x, newResolution.y, gl::TextureFormat::RGBA16F, 1, 0);
+	m_HDRBackbuffer.reset(new gl::FramebufferObject(gl::FramebufferObject::Attachment(m_HDRBackbufferTexture.get())));
+
 	GL_CALL(glViewport, 0, 0, newResolution.x, newResolution.y);
 }
 
@@ -155,10 +167,19 @@ void Renderer::Draw(const Camera& camera)
 
 	DrawSceneToGBuffer();
 	
-	gl::FramebufferObject::BindBackBuffer();
+	m_HDRBackbuffer->Bind(false);
 	GL_CALL(glClear, GL_COLOR_BUFFER_BIT);
-
+	
 	DrawLights();
+
+
+	// Output HDR texture to backbuffer.
+	gl::FramebufferObject::BindBackBuffer();
+	glEnable(GL_FRAMEBUFFER_SRGB);
+	m_shaderTonemap->Activate();
+	m_HDRBackbufferTexture->Bind(0);
+	m_screenTriangle->Draw();
+	glDisable(GL_FRAMEBUFFER_SRGB);
 }
 
 void Renderer::DrawSceneToGBuffer()
@@ -191,7 +212,6 @@ void Renderer::DrawLights()
 
 	m_shaderDeferredDirectLighting_Spot->Activate();
 
-	gl::FramebufferObject::BindBackBuffer();
 	m_GBuffer_diffuse->Bind(0);
 	m_GBuffer_normal->Bind(1);
 	m_GBuffer_depth->Bind(2);

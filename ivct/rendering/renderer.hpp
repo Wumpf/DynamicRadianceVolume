@@ -67,6 +67,10 @@ private:
 	std::unique_ptr<gl::Texture2D> m_GBuffer_depth;
 	std::unique_ptr<gl::FramebufferObject> m_GBuffer;
 
+	std::unique_ptr<gl::Texture2D> m_HDRBackbufferTexture;
+	std::unique_ptr<gl::FramebufferObject> m_HDRBackbuffer;
+	std::unique_ptr<gl::ShaderObject> m_shaderTonemap;
+
 	const gl::SamplerObject& m_samplerLinear;
 
 
