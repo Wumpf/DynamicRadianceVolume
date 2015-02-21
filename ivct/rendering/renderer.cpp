@@ -13,6 +13,7 @@
 #include <glhelper/screenalignedtriangle.hpp>
 #include <glhelper/uniformbufferview.hpp>
 #include <glhelper/framebufferobject.hpp>
+#include <glhelper/statemanagement.hpp>
 
 
 Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& resolution) :
@@ -41,9 +42,9 @@ gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Border::REPEAT)))
 	OnScreenResize(resolution);
 
 	// General GL settings
-	GL_CALL(glEnable, GL_DEPTH_TEST);
-	GL_CALL(glDisable, GL_DITHER);
-	//GL_CALL(glEnable, GL_CULL_FACE);
+	gl::Enable(gl::Cap::DEPTH_TEST);
+	gl::Disable(gl::Cap::DITHER);
+	//gl::Enable(gl::Cap::CULL_FACE);
 	//GL_CALL(glFrontFace, GL_CW);
 
 	// A quick note on depth:
@@ -175,16 +176,16 @@ void Renderer::Draw(const Camera& camera)
 
 	// Output HDR texture to backbuffer.
 	gl::FramebufferObject::BindBackBuffer();
-	glEnable(GL_FRAMEBUFFER_SRGB);
+	gl::Enable(gl::Cap::FRAMEBUFFER_SRGB);
 	m_shaderTonemap->Activate();
 	m_HDRBackbufferTexture->Bind(0);
 	m_screenTriangle->Draw();
-	glDisable(GL_FRAMEBUFFER_SRGB);
+	gl::Disable(gl::Cap::FRAMEBUFFER_SRGB);
 }
 
 void Renderer::DrawSceneToGBuffer()
 {
-	glEnable(GL_DEPTH_TEST);
+	gl::Enable(gl::Cap::DEPTH_TEST);
 
 	m_shaderFillGBuffer_noskinning->Activate();
 	m_GBuffer->Bind(false);
@@ -194,7 +195,7 @@ void Renderer::DrawSceneToGBuffer()
 
 void Renderer::DrawGBufferDebug()
 {
-	glDisable(GL_DEPTH_TEST);
+	gl::Disable(gl::Cap::DEPTH_TEST);
 
 	m_shaderDebugGBuffer->Activate();
 	gl::FramebufferObject::BindBackBuffer();
@@ -206,8 +207,8 @@ void Renderer::DrawGBufferDebug()
 
 void Renderer::DrawLights()
 {
-	glDisable(GL_DEPTH_TEST);
-	glEnable(GL_BLEND);
+	gl::Disable(gl::Cap::DEPTH_TEST);
+	gl::Enable(gl::Cap::BLEND);
 	glBlendFunc(GL_ONE, GL_ONE);
 
 	m_shaderDeferredDirectLighting_Spot->Activate();
@@ -230,7 +231,7 @@ void Renderer::DrawLights()
 		m_screenTriangle->Draw();
 	}
 
-	glDisable(GL_BLEND);
+	gl::Disable(gl::Cap::BLEND);
 }
 
 void Renderer::DrawScene()

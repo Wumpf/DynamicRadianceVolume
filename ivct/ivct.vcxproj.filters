@@ -168,6 +168,9 @@
     <ClCompile Include="..\dependencies\glhelper\glhelper\framebufferobject.cpp">
       <Filter>dependencies\glhelper</Filter>
     </ClCompile>
+    <ClCompile Include="..\dependencies\glhelper\glhelper\statemanagement.cpp">
+      <Filter>dependencies\glhelper</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="outputwindow.hpp">
@@ -302,6 +305,9 @@
     <ClInclude Include="scene\light.hpp">
       <Filter>source\scene</Filter>
     </ClInclude>
+    <ClInclude Include="..\dependencies\glhelper\glhelper\statemanagement.hpp">
+      <Filter>dependencies\glhelper</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="utilities\note.txt">
@@ -353,6 +359,9 @@
     </None>
     <None Include="shader\directdeferredlighting.frag">
       <Filter>shader</Filter>
+    </None>
+    <None Include="..\dependencies\glhelper\glhelper\statemanagement.inl">
+      <Filter>dependencies\glhelper</Filter>
     </None>
   </ItemGroup>
 </Project>

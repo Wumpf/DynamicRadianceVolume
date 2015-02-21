@@ -11,6 +11,7 @@
 #include <glhelper/shaderobject.hpp>
 #include <glhelper/texture3d.hpp>
 #include <glhelper/screenalignedtriangle.hpp>
+#include <glhelper/statemanagement.hpp>
 
 
 Voxelization::Voxelization(const ei::UVec3& resolution) :
@@ -48,7 +49,7 @@ Voxelization::~Voxelization()
 void Voxelization::DrawVoxelRepresentation()
 {
 	// Disable depthbuffering.
-	GL_CALL(glDisable, GL_DEPTH_TEST);
+	gl::Disable(gl::Cap::DEPTH_TEST);
 	GL_CALL(glDepthMask, GL_FALSE);
 
 	m_samplerLinearMipNearest.BindSampler(0);
@@ -58,16 +59,16 @@ void Voxelization::DrawVoxelRepresentation()
 	m_screenTriangle->Draw();
 
 	// Reenable depth buffer.
-	GL_CALL(glEnable, GL_DEPTH_TEST);
+	gl::Enable(gl::Cap::DEPTH_TEST);
 	GL_CALL(glDepthMask, GL_TRUE);
 }
 
 void Voxelization::VoxelizeScene(const Scene& scene)
 {
 	// Disable depthbuffering & culling
-	GL_CALL(glDisable, GL_DEPTH_TEST);
+	gl::Disable(gl::Cap::DEPTH_TEST);
 	GL_CALL(glDepthMask, GL_FALSE);
-	GL_CALL(glDisable, GL_CULL_FACE);
+	gl::Disable(gl::Cap::CULL_FACE);
 
 	// Disable color write
 	GL_CALL(glColorMask, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
@@ -91,9 +92,9 @@ void Voxelization::VoxelizeScene(const Scene& scene)
 	}
 
 	// Reenable depth buffer & culling
-	GL_CALL(glEnable, GL_DEPTH_TEST);
+	gl::Enable(gl::Cap::DEPTH_TEST);
 	GL_CALL(glDepthMask, GL_TRUE);
-	GL_CALL(glEnable, GL_CULL_FACE);
+	gl::Enable(gl::Cap::CULL_FACE);
 
 	// Reenable color write
 	GL_CALL(glColorMask, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
