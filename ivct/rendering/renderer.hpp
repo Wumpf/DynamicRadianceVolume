@@ -72,6 +72,7 @@ private:
 	std::unique_ptr<gl::ShaderObject> m_shaderTonemap;
 
 	const gl::SamplerObject& m_samplerLinear;
+	const gl::SamplerObject& m_samplerNearest;
 
 
 	/// List of all shaders for convenience purposes.

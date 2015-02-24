@@ -17,8 +17,9 @@
 
 
 Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& resolution) :
-m_samplerLinear(gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR,
-gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Border::REPEAT)))
+	m_samplerLinear(gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Border::REPEAT))),
+	m_samplerNearest(gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::NEAREST, gl::SamplerObject::Filter::NEAREST, gl::SamplerObject::Filter::NEAREST, gl::SamplerObject::Border::REPEAT)))
+
 {
 	m_screenTriangle = std::make_unique<gl::ScreenAlignedTriangle>();
 
@@ -173,19 +174,23 @@ void Renderer::Draw(const Camera& camera)
 	
 	DrawLights();
 
-
 	// Output HDR texture to backbuffer.
 	gl::FramebufferObject::BindBackBuffer();
 	gl::Enable(gl::Cap::FRAMEBUFFER_SRGB);
 	m_shaderTonemap->Activate();
+
+	m_samplerNearest.BindSampler(0);
 	m_HDRBackbufferTexture->Bind(0);
+
 	m_screenTriangle->Draw();
-	gl::Disable(gl::Cap::FRAMEBUFFER_SRGB);
+	gl::Disable(gl::Cap::FRAMEBUFFER_SRGB);	
 }
 
 void Renderer::DrawSceneToGBuffer()
 {
 	gl::Enable(gl::Cap::DEPTH_TEST);
+
+	m_samplerLinear.BindSampler(0);
 
 	m_shaderFillGBuffer_noskinning->Activate();
 	m_GBuffer->Bind(false);
@@ -199,9 +204,15 @@ void Renderer::DrawGBufferDebug()
 
 	m_shaderDebugGBuffer->Activate();
 	gl::FramebufferObject::BindBackBuffer();
+
 	m_GBuffer_diffuse->Bind(0);
 	m_GBuffer_normal->Bind(1);
 	m_GBuffer_depth->Bind(2);
+
+	m_samplerNearest.BindSampler(0);
+	m_samplerNearest.BindSampler(1);
+	m_samplerNearest.BindSampler(2);
+
 	m_screenTriangle->Draw();
 }
 
@@ -245,6 +256,8 @@ void Renderer::DrawScene()
 		{
 			if (mesh.diffuseTexture)
 				mesh.diffuseTexture->Bind(0);
+			else
+				gl::Texture2D::ResetBinding(0);
 			GL_CALL(glDrawElements, GL_TRIANGLES, mesh.numIndices, GL_UNSIGNED_INT, reinterpret_cast<const void*>(sizeof(std::uint32_t) * mesh.startIndex));
 		}
 	}
