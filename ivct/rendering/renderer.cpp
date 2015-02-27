@@ -235,7 +235,7 @@ void Renderer::DrawLights()
 		m_uboDeferredDirectLighting->GetBuffer()->Map();
 		(*m_uboDeferredDirectLighting)["LightIntensity"].Set(light.intensity);
 		(*m_uboDeferredDirectLighting)["LightPosition"].Set(light.position);
-		(*m_uboDeferredDirectLighting)["LightDirection"].Set(light.direction);
+		(*m_uboDeferredDirectLighting)["LightDirection"].Set(ei::normalize(light.direction));
 		(*m_uboDeferredDirectLighting)["LightCosHalfAngle"].Set(cosf(light.halfAngle));
 		m_uboDeferredDirectLighting->GetBuffer()->Unmap();
 

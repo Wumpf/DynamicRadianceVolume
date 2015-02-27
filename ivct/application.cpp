@@ -74,9 +74,66 @@ Application::~Application()
 void Application::SetupTweakBarBinding()
 {
 	m_tweakBar = std::make_unique<AntTweakBarInterface>(m_window->GetGLFWWindow());
+
+
+	// Define light type
+	TwEnumVal lightTypes[] = // array used to describe the Scene::AnimMode enum values
+	{
+		{ static_cast<int>(Light::Type::SPOT), "Spot" }
+	};
+	TwType lightEnumType = TwDefineEnum("LightType", lightTypes, ArraySize(lightTypes));  // create a new TwType associated to the enum defined by the modeEV array
+
+	// Type for HDR color
+	TwStructMember hdrColorRGBMembers[] =
+	{
+		{ "R", TW_TYPE_FLOAT, 0, " step=0.1" },
+		{ "G", TW_TYPE_FLOAT, sizeof(float), " step=0.1" },
+		{ "B", TW_TYPE_FLOAT, sizeof(float) * 2, " step=0.1" },
+	};
+	TwType hdrColorRGBStructType = TwDefineStruct("HDR Color", hdrColorRGBMembers, ArraySize(hdrColorRGBMembers), sizeof(ei::Vec3), nullptr, nullptr);
+
+	// Type for position
+	TwStructMember positionMembers[] =
+	{
+		{ "X", TW_TYPE_FLOAT, 0, " step=0.1" },
+		{ "Y", TW_TYPE_FLOAT, sizeof(float), " step=0.1" },
+		{ "Z", TW_TYPE_FLOAT, sizeof(float) * 2, " step=0.1" },
+	};
+	TwType positionStructType = TwDefineStruct("Position", positionMembers, ArraySize(positionMembers), sizeof(ei::Vec3), nullptr, nullptr);
+
+	// Define light struct
+	TwStructMember lightMembers[] =
+	{
+		{ "Type", lightEnumType, offsetof(Light, type), " " },
+		{ "Intensity", hdrColorRGBStructType, offsetof(Light, intensity), " " },
+		{ "Position", positionStructType, offsetof(Light, position), " " },
+		{ "Direction", TW_TYPE_DIR3F, offsetof(Light, direction), " " },
+		{ "HalfAngle", TW_TYPE_FLOAT, offsetof(Light, halfAngle), " min=0 max=1.57 step=0.01" },
+	};
+	TwType lightStructType = TwDefineStruct("Light", lightMembers, ArraySize(lightMembers), sizeof(Light), nullptr, nullptr);
+
+
+
 	m_tweakBar->AddReadOnly("Frametime (ms)", std::function<std::string(void)>([&](){ return std::to_string(m_timeSinceLastUpdate.GetMilliseconds()); }));
-	m_tweakBar->AddReadWrite("Light0 Dir", std::function<ei::Vec3(void)>([&](){ return m_scene->GetLights()[0].direction; }),
-		std::function<void(const ei::Vec3&)>([&](const ei::Vec3& dir){ m_scene->GetLights()[0].direction = dir; }));
+
+	// Light settings
+	m_tweakBar->AddReadWrite("Light Count", std::function<std::uint32_t(void)>([&](){ return static_cast<std::uint32_t>(m_scene->GetLights().size()); }),
+		std::function<void(const std::uint32_t&)>([&, lightStructType](const std::uint32_t& lightCount)
+		{
+			// The light structs do not work properly with the callback version.
+			// Therefore we must use the variable-reference version. 
+			// This is super dangerous, as we give away pointer so elements of std::vector. On each resize of std::vector, the list must be rebuilt!
+			// Changes to the light count from outside are however not handled at all!
+			for (size_t i = 0; i < m_scene->GetLights().size(); ++i)
+				m_tweakBar->Remove("Light" + std::to_string(i));
+
+			m_scene->GetLights().resize(lightCount);
+
+			for (size_t i = 0; i < m_scene->GetLights().size(); ++i)
+				m_tweakBar->AddReadWrite("Light" + std::to_string(i), m_scene->GetLights()[i], " group=Lights", lightStructType);
+		}), " min=1 max=16 step=1");
+	for (size_t i = 0; i < m_scene->GetLights().size(); ++i)
+		m_tweakBar->AddReadWrite("Light" + std::to_string(i), m_scene->GetLights()[i], " group=Lights", lightStructType);
 }
 
 void Application::Run()

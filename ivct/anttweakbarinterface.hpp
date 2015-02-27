@@ -10,6 +10,9 @@
 
 struct GLFWwindow;
 
+/// Wrapper for generic AntTweakbar Interface.
+///
+/// Provides several interop helpers, especially for some type safety and use with std::function callbacks.
 class AntTweakBarInterface
 {
 public:
@@ -22,10 +25,20 @@ public:
 	void AddButton(const std::string& name, std::function<void()>& triggerCallback, const std::string& twDefines = "");
 	void AddReadOnly(const std::string& name, std::function<std::string()>& getValue, const std::string& twDefines = "");
 
+	/// \forceType
+	///		If TW_TYPE_UNDEF, type will be derived using AntTweakBarInterface::GetTwType, otherwise given type will be used.
 	template<typename T>
-	void AddReadWrite(const std::string& name, std::function<T()> &getValue, std::function<void(const T&)>& setValue, const std::string& twDefines = "");
+	void AddReadWrite(const std::string& name, std::function<T()> &getValue, std::function<void(const T&)>& setValue, const std::string& twDefines = "", ETwType forceType = TW_TYPE_UNDEF);
+
+	/// \forceType
+	///		If TW_TYPE_UNDEF, type will be derived using AntTweakBarInterface::GetTwType, otherwise given type will be use
+	template<typename T>
+	void AddReadWrite(const std::string& name, T& variable, const std::string& twDefines = "", ETwType forceType = TW_TYPE_UNDEF);
 
 	void AddSeperator(const std::string& name, const std::string& twDefines = "");
+
+	/// Removes an element from AntTweakBar
+	void Remove(const std::string& name);
 
 private:
 	void CheckTwError();
@@ -38,7 +51,6 @@ private:
 	struct EntryBase
 	{
 		std::string name;
-		std::string category;
 	};
 	struct EntryButton : public EntryBase
 	{
@@ -60,7 +72,7 @@ private:
 };
 
 template<typename T>
-inline void AntTweakBarInterface::AddReadWrite(const std::string& name, std::function<T()> &getValue, std::function<void(const T&)>& setValue, const std::string& twDefines)
+inline void AntTweakBarInterface::AddReadWrite(const std::string& name, std::function<T()> &getValue, std::function<void(const T&)>& setValue, const std::string& twDefines, TwType forceType)
 {
 	typedef EntryReadWrite<T> EntryType;
 
@@ -78,8 +90,22 @@ inline void AntTweakBarInterface::AddReadWrite(const std::string& name, std::fun
 
 	m_entries.push_back(entry);
 
-	TwAddVarCB(m_tweakBar, name.c_str(), AntTweakBarInterface::GetTwType<T>(), setFkt, getFkt, m_entries.back(), twDefines.c_str());
-	CheckTwError();
+	TwType type = forceType;
+	if (type == TW_TYPE_UNDEF)
+		type = AntTweakBarInterface::GetTwType<T>();
+
+	if(!TwAddVarCB(m_tweakBar, name.c_str(), type, setFkt, getFkt, m_entries.back(), twDefines.c_str()))
+		CheckTwError();
+}
+template<typename T>
+inline void AntTweakBarInterface::AddReadWrite(const std::string& name, T& variable, const std::string& twDefines, ETwType forceType)
+{
+	TwType type = forceType;
+	if (type == TW_TYPE_UNDEF)
+		type = AntTweakBarInterface::GetTwType<T>();
+
+	if(!TwAddVarRW(m_tweakBar, name.c_str(), type, &variable, twDefines.c_str()))
+		CheckTwError();
 }
 
 
@@ -88,3 +114,4 @@ template<> inline static ETwType AntTweakBarInterface::GetTwType<float>() { retu
 template<> inline static ETwType AntTweakBarInterface::GetTwType<bool>() { return TW_TYPE_BOOLCPP; }
 template<> inline static ETwType AntTweakBarInterface::GetTwType<std::int32_t>() { return TW_TYPE_INT32; }
 template<> inline static ETwType AntTweakBarInterface::GetTwType<std::uint32_t>() { return TW_TYPE_UINT32; }
+template<typename T> inline static ETwType AntTweakBarInterface::GetTwType() { return TW_TYPE_UNDEF; }

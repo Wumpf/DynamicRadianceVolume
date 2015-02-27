@@ -36,15 +36,8 @@ AntTweakBarInterface::AntTweakBarInterface(GLFWwindow* glfwWindow) :
 		// Create a tweak bar
 		m_tweakBar = TwNewBar("TweakBar");
 
-	/*	static const ezSizeU32 tweakBarSize(330, 600);
-		std::stringBuilder stringBuilder;
-		stringBuilder.Format(" TweakBar size='330 600' ", tweakBarSize.width, tweakBarSize.height);
-		TwDefine(stringBuilder.GetData());
-		stringBuilder.Format(" TweakBar position='%i %i' ", GeneralConfig::g_ResolutionWidth - tweakBarSize.width - 20, 20);
-		TwDefine(stringBuilder.GetData());
-		*/
-
-
+		TwDefine(" TweakBar size='300 300' ");
+		TwDefine(" TweakBar valueswidth=150 ");
 		TwDefine(" TweakBar refresh=0.2 ");
 		TwDefine(" TweakBar contained=true "); // TweakBar must be inside the window.
 		//TwDefine(" TweakBar alpha=200 ");
@@ -80,8 +73,8 @@ void AntTweakBarInterface::AddButton(const std::string& name, std::function<void
 		static_cast<EntryButton*>(entry)->triggerCallback();
 	};
 
-	TwAddButton(m_tweakBar, name.c_str(), fkt, m_entries.back(), twDefines.c_str());
-	CheckTwError();
+	if(!TwAddButton(m_tweakBar, name.c_str(), fkt, m_entries.back(), twDefines.c_str()))
+		CheckTwError();
 }
 
 void AntTweakBarInterface::AddReadOnly(const std::string& name, std::function<std::string()>& getValue, const std::string& twDefines)
@@ -103,8 +96,14 @@ void AntTweakBarInterface::AddReadOnly(const std::string& name, std::function<st
 
 void AntTweakBarInterface::AddSeperator(const std::string& name, const std::string& twDefines)
 {
-	TwAddSeparator(m_tweakBar, name.c_str(), twDefines.c_str());
-	CheckTwError();
+	if(!TwAddSeparator(m_tweakBar, name.c_str(), twDefines.c_str()))
+		CheckTwError();
+}
+
+void AntTweakBarInterface::Remove(const std::string& name)
+{
+	if (!TwRemoveVar(m_tweakBar, name.c_str()))
+		CheckTwError();
 }
 
 void AntTweakBarInterface::Draw()

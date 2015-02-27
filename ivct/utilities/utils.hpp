@@ -19,3 +19,6 @@ T Clamp(T v, T min, T max)
 	else
 		return v;
 }
+
+template<class T, unsigned int N>
+unsigned int ArraySize(T(&)[N]) { return N; }
