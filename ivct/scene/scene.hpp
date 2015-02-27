@@ -29,6 +29,7 @@ public:
 
 	void AddLight(const Light& light) { m_lights.push_back(light); }
 	const std::vector<Light>& GetLights() const { return m_lights; }
+	std::vector<Light>& GetLights() { return m_lights; }
 
 	const ei::Box& GetBoundingBox() const { return m_boundingBox; }
 

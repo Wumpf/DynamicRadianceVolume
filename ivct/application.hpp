@@ -8,6 +8,7 @@ class OutputWindow;
 class Scene;
 class InteractiveCamera;
 class Renderer;
+class AntTweakBarInterface;
 
 class Application
 {
@@ -19,8 +20,9 @@ public:
 	void Run();
 
 private:
+	void SetupTweakBarBinding();
 
-	void Update(ezTime timeSinceLastUpdate);
+	void Update();
 
 	void Draw();
 
@@ -30,4 +32,7 @@ private:
 	std::shared_ptr<Scene> m_scene;
 	std::unique_ptr<Renderer> m_renderer;
 	std::unique_ptr<InteractiveCamera> m_camera;
+	std::unique_ptr<AntTweakBarInterface> m_tweakBar;
+
+	ezTime m_timeSinceLastUpdate;
 };

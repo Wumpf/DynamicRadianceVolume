@@ -171,6 +171,9 @@
     <ClCompile Include="..\dependencies\glhelper\glhelper\statemanagement.cpp">
       <Filter>dependencies\glhelper</Filter>
     </ClCompile>
+    <ClCompile Include="anttweakbarinterface.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="outputwindow.hpp">
@@ -307,6 +310,9 @@
     </ClInclude>
     <ClInclude Include="..\dependencies\glhelper\glhelper\statemanagement.hpp">
       <Filter>dependencies\glhelper</Filter>
+    </ClInclude>
+    <ClInclude Include="anttweakbarinterface.hpp">
+      <Filter>source</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

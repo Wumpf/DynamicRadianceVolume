@@ -72,8 +72,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(ProjectDir);..\dependencies\glhelper\glfw;../dependencies/epsilon\include;..\dependencies\glhelper;..\dependencies\glew\include;../dependencies\glfw\include;../dependencies\assimp\include;../dependencies/stb;$(IncludePath)</IncludePath>
-    <LibraryPath>..\dependencies\glew\lib-msvc120;..\dependencies\glfw\src\Debug;../dependencies\assimp\lib\Debug;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProjectDir);..\dependencies\AntTweakBar\include;..\dependencies\glhelper\glfw;../dependencies/epsilon\include;..\dependencies\glhelper;..\dependencies\glew\include;../dependencies\glfw\include;../dependencies\assimp\include;../dependencies/stb;$(IncludePath)</IncludePath>
+    <LibraryPath>..\dependencies\AntTweakBar\lib;..\dependencies\glew\lib-msvc120;..\dependencies\glfw\src\Debug;../dependencies\assimp\lib\Debug;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -81,8 +81,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(ProjectDir);..\dependencies\glhelper\glfw;../dependencies/epsilon\include;..\dependencies\glhelper;..\dependencies\glew\include;../dependencies\glfw\include;../dependencies\assimp\include;../dependencies/stb;$(IncludePath)</IncludePath>
-    <LibraryPath>..\dependencies\glew\lib-msvc120;..\dependencies\glfw\src\Release;../dependencies\assimp\lib\Release;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProjectDir);..\dependencies\AntTweakBar\include;..\dependencies\glhelper\glfw;../dependencies/epsilon\include;..\dependencies\glhelper;..\dependencies\glew\include;../dependencies\glfw\include;../dependencies\assimp\include;../dependencies/stb;$(IncludePath)</IncludePath>
+    <LibraryPath>..\dependencies\AntTweakBar\lib;..\dependencies\glew\lib-msvc120;..\dependencies\glfw\src\Release;../dependencies\assimp\lib\Release;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -113,7 +113,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>assimpd.lib;glfw3.lib;opengl32.lib;glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>AntTweakBar64.lib;assimpd.lib;glfw3.lib;opengl32.lib;glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -153,7 +153,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>assimp.lib;glfw3.lib;opengl32.lib;glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>AntTweakBar64.lib;assimp.lib;glfw3.lib;opengl32.lib;glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -179,6 +179,7 @@
     <ClCompile Include="..\dependencies\glhelper\glhelper\uniformbufferview.cpp" />
     <ClCompile Include="..\dependencies\glhelper\glhelper\utils\pathutils.cpp" />
     <ClCompile Include="..\dependencies\glhelper\glhelper\vertexarrayobject.cpp" />
+    <ClCompile Include="anttweakbarinterface.cpp" />
     <ClCompile Include="application.cpp" />
     <ClCompile Include="camera\camera.cpp" />
     <ClCompile Include="camera\interactivecamera.cpp" />
@@ -219,6 +220,7 @@
     <ClInclude Include="..\dependencies\glhelper\glhelper\utils\flagoperators.hpp" />
     <ClInclude Include="..\dependencies\glhelper\glhelper\utils\pathutils.hpp" />
     <ClInclude Include="..\dependencies\glhelper\glhelper\vertexarrayobject.hpp" />
+    <ClInclude Include="anttweakbarinterface.hpp" />
     <ClInclude Include="application.hpp" />
     <ClInclude Include="camera\camera.hpp" />
     <ClInclude Include="camera\interactivecamera.hpp" />

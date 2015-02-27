@@ -11,6 +11,7 @@
 #include "camera/interactivecamera.hpp"
 
 #include "shaderfilewatcher.hpp"
+#include "anttweakbarinterface.hpp"
 
 #ifdef _WIN32
 #undef APIENTRY
@@ -55,6 +56,8 @@ Application::Application(int argc, char** argv)
 
 	// Watch shader dir.
 	ShaderFileWatcher::Instance().SetShaderWatchDirectory("shader");
+
+	SetupTweakBarBinding();
 }
 
 Application::~Application()
@@ -68,37 +71,46 @@ Application::~Application()
 	m_scene.reset();
 }
 
+void Application::SetupTweakBarBinding()
+{
+	m_tweakBar = std::make_unique<AntTweakBarInterface>(m_window->GetGLFWWindow());
+	m_tweakBar->AddReadOnly("Frametime (ms)", std::function<std::string(void)>([&](){ return std::to_string(m_timeSinceLastUpdate.GetMilliseconds()); }));
+	m_tweakBar->AddReadWrite("Light0 Dir", std::function<ei::Vec3(void)>([&](){ return m_scene->GetLights()[0].direction; }),
+		std::function<void(const ei::Vec3&)>([&](const ei::Vec3& dir){ m_scene->GetLights()[0].direction = dir; }));
+}
+
 void Application::Run()
 {
 	// Main loop
 	ezStopwatch mainLoopStopWatch;
 	while (m_window->IsWindowAlive())
 	{
-		ezTime timeSinceLastUpdate = mainLoopStopWatch.GetRunningTotal();
+		m_timeSinceLastUpdate = mainLoopStopWatch.GetRunningTotal();
 		mainLoopStopWatch.StopAndReset();
 		mainLoopStopWatch.Resume();
 
-		Update(timeSinceLastUpdate);
+		Update();
 		Draw();
 	}
 }
 
-void Application::Update(ezTime timeSinceLastUpdate)
+void Application::Update()
 {
 	m_window->PollWindowEvents();
 
 	ShaderFileWatcher::Instance().Update();
 
-	m_camera->Update(timeSinceLastUpdate);
+	m_camera->Update(m_timeSinceLastUpdate);
 	Input();
 
 	m_window->SetTitle("time per frame " +
-		std::to_string(timeSinceLastUpdate.GetMilliseconds()) + "ms (FPS: " + std::to_string(1.0f / timeSinceLastUpdate.GetSeconds()) + ")");
+		std::to_string(m_timeSinceLastUpdate.GetMilliseconds()) + "ms (FPS: " + std::to_string(1.0f / m_timeSinceLastUpdate.GetSeconds()) + ")");
 }
 
 void Application::Draw()
 {
 	m_renderer->Draw(*m_camera);
+	m_tweakBar->Draw();
 	m_window->Present();
 }
 
