@@ -28,6 +28,8 @@ private:
 
 	void Input();
 
+	void ChangeLightCount(unsigned int lightCount);
+
 	std::unique_ptr<OutputWindow> m_window;
 	std::shared_ptr<Scene> m_scene;
 	std::unique_ptr<Renderer> m_renderer;

@@ -38,17 +38,6 @@ Application::Application(int argc, char** argv)
 
 	// TODO: Some kind of runtime/data system is needed here.
 	m_scene->AddModel("../models/test0/test0.obj");
-	Light spot;
-	spot.type = Light::Type::SPOT;
-	spot.intensity = ei::Vec3(100.0f, 90.0f, 90.0f); 
-	spot.position = ei::Vec3(0.0f, 2.5f, -2.5f);
-	spot.direction = ei::normalize(-spot.position);
-	spot.halfAngle = 30.0f * (ei::PI / 180.0f);
-	m_scene->AddLight(spot);
-	spot.position = ei::Vec3(1.0f, 2.5f, -2.5f);
-	spot.intensity = ei::Vec3(70.0f, 70.0f, 80.0f);
-	spot.direction = ei::normalize(ei::Vec3(1.0f, 2.5f, 0.0f) - spot.position);
-	m_scene->AddLight(spot);
 
 	// Renderer.
 	LOG_INFO("\nSetup renderer ...");
@@ -58,6 +47,24 @@ Application::Application(int argc, char** argv)
 	ShaderFileWatcher::Instance().SetShaderWatchDirectory("shader");
 
 	SetupTweakBarBinding();
+
+
+
+
+	ChangeLightCount(2);
+
+	m_scene->GetLights()[0].type = Light::Type::SPOT;
+	m_scene->GetLights()[0].intensity = ei::Vec3(100.0f, 90.0f, 90.0f);
+	m_scene->GetLights()[0].position = ei::Vec3(0.0f, 2.5f, -2.5f);
+	m_scene->GetLights()[0].direction = ei::normalize(-m_scene->GetLights()[0].position);
+	m_scene->GetLights()[0].halfAngle = 30.0f * (ei::PI / 180.0f);
+
+	m_scene->GetLights()[1].type = Light::Type::SPOT;
+	m_scene->GetLights()[1].position = ei::Vec3(1.0f, 2.5f, -2.5f);
+	m_scene->GetLights()[1].intensity = ei::Vec3(70.0f, 70.0f, 80.0f);
+	m_scene->GetLights()[1].direction = ei::normalize(ei::Vec3(1.0f, 2.5f, 0.0f) - m_scene->GetLights()[1].position);
+	m_scene->GetLights()[1].halfAngle = 30.0f * (ei::PI / 180.0f);
+
 }
 
 Application::~Application()
@@ -71,69 +78,83 @@ Application::~Application()
 	m_scene.reset();
 }
 
+void Application::ChangeLightCount(unsigned int lightCount)
+{
+	// Define light type
+	const static TwEnumVal lightTypes[] = // array used to describe the Scene::AnimMode enum values
+	{
+		{ static_cast<int>(Light::Type::SPOT), "Spot" }
+	};
+	static TwType lightEnumType = TW_TYPE_UNDEF;
+	if (lightEnumType == TW_TYPE_UNDEF)
+		lightEnumType = TwDefineEnum("LightType", lightTypes, ArraySize(lightTypes));
+
+	std::size_t oldLightCount = m_scene->GetLights().size();
+	m_scene->GetLights().resize(lightCount);
+
+
+	for (size_t i = lightCount; i < oldLightCount; ++i)
+	{
+		std::string namePrefix = "Light" + std::to_string(i) + "_";
+		m_tweakBar->Remove(namePrefix + "Type");
+		m_tweakBar->Remove(namePrefix + "Intensity");
+		m_tweakBar->Remove(namePrefix + "Position");
+		m_tweakBar->Remove(namePrefix + "Direction");
+		m_tweakBar->Remove(namePrefix + "HalfAngle");		
+	}
+	for (size_t i = oldLightCount; i < lightCount; ++i)
+	{
+		std::string namePrefix = "Light" + std::to_string(i) + "_";
+		std::string lightGroup = " group=Light" + std::to_string(i) + " ";
+		m_tweakBar->AddReadWrite<int>(namePrefix + "Type", [=](){ return static_cast<int>(m_scene->GetLights()[i].type); },
+			[=](const int& i){ m_scene->GetLights()[i].type = static_cast<Light::Type>(i); }, lightGroup + "label=Type", static_cast<AntTweakBarInterface::TypeHint>(lightEnumType));
+
+		m_tweakBar->AddReadWrite<ei::Vec3>(namePrefix + "Intensity", [=](){ return m_scene->GetLights()[i].intensity; },
+			[=](const ei::Vec3& v){ m_scene->GetLights()[i].intensity = v; }, lightGroup + " label=Intensity", AntTweakBarInterface::TypeHint::HDRCOLOR);
+
+		m_tweakBar->AddReadWrite<ei::Vec3>(namePrefix + "Position", [=](){ return m_scene->GetLights()[i].position; },
+			[=](const ei::Vec3& v){ m_scene->GetLights()[i].position = v; }, lightGroup + " label=Position", AntTweakBarInterface::TypeHint::POSITION);
+
+		m_tweakBar->AddReadWrite<ei::Vec3>(namePrefix + "Direction", [=](){ return m_scene->GetLights()[i].direction; },
+			[=](const ei::Vec3& v){ m_scene->GetLights()[i].direction = v; }, lightGroup + " label=Direction");
+
+		m_tweakBar->AddReadWrite<float>(namePrefix + "HalfAngle", [=](){ return m_scene->GetLights()[i].halfAngle; },
+			[=](const float& f){ m_scene->GetLights()[i].halfAngle = f; }, lightGroup + " label=HalfAngle min=0.01 max=1.57 step=0.01 label=HalfAngle");
+	}
+
+	m_scene->GetLights().resize(lightCount);
+}
+
 void Application::SetupTweakBarBinding()
 {
 	m_tweakBar = std::make_unique<AntTweakBarInterface>(m_window->GetGLFWWindow());
 
-
-	// Define light type
-	TwEnumVal lightTypes[] = // array used to describe the Scene::AnimMode enum values
-	{
-		{ static_cast<int>(Light::Type::SPOT), "Spot" }
-	};
-	TwType lightEnumType = TwDefineEnum("LightType", lightTypes, ArraySize(lightTypes));  // create a new TwType associated to the enum defined by the modeEV array
-
 	// Type for HDR color
-	TwStructMember hdrColorRGBMembers[] =
+	/*std::vector<TwStructMember> hdrColorRGBMembers(
 	{
 		{ "R", TW_TYPE_FLOAT, 0, " step=0.1" },
 		{ "G", TW_TYPE_FLOAT, sizeof(float), " step=0.1" },
 		{ "B", TW_TYPE_FLOAT, sizeof(float) * 2, " step=0.1" },
-	};
-	TwType hdrColorRGBStructType = TwDefineStruct("HDR Color", hdrColorRGBMembers, ArraySize(hdrColorRGBMembers), sizeof(ei::Vec3), nullptr, nullptr);
+	});
+	TwType hdrColorRGBStructType = m_tweakBar->DefineStruct("HDR Color", hdrColorRGBMembers, sizeof(ei::Vec3));
 
 	// Type for position
-	TwStructMember positionMembers[] =
+	std::vector<TwStructMember>  positionMembers(
 	{
 		{ "X", TW_TYPE_FLOAT, 0, " step=0.1" },
 		{ "Y", TW_TYPE_FLOAT, sizeof(float), " step=0.1" },
 		{ "Z", TW_TYPE_FLOAT, sizeof(float) * 2, " step=0.1" },
-	};
-	TwType positionStructType = TwDefineStruct("Position", positionMembers, ArraySize(positionMembers), sizeof(ei::Vec3), nullptr, nullptr);
-
-	// Define light struct
-	TwStructMember lightMembers[] =
-	{
-		{ "Type", lightEnumType, offsetof(Light, type), " " },
-		{ "Intensity", hdrColorRGBStructType, offsetof(Light, intensity), " " },
-		{ "Position", positionStructType, offsetof(Light, position), " " },
-		{ "Direction", TW_TYPE_DIR3F, offsetof(Light, direction), " " },
-		{ "HalfAngle", TW_TYPE_FLOAT, offsetof(Light, halfAngle), " min=0 max=1.57 step=0.01" },
-	};
-	TwType lightStructType = TwDefineStruct("Light", lightMembers, ArraySize(lightMembers), sizeof(Light), nullptr, nullptr);
-
-
-
-	m_tweakBar->AddReadOnly("Frametime (ms)", std::function<std::string(void)>([&](){ return std::to_string(m_timeSinceLastUpdate.GetMilliseconds()); }));
+	});
+	TwType positionStructType = m_tweakBar->DefineStruct("Position", positionMembers, sizeof(ei::Vec3));
+	*/
+	
+	m_tweakBar->AddReadOnly("Frametime (ms)", [&](){ return std::to_string(m_timeSinceLastUpdate.GetMilliseconds()); });
+	m_tweakBar->AddButton("Save Settings", [&](){ m_tweakBar->SaveReadWriteValuesToJSON("settings.json"); });
+	m_tweakBar->AddButton("Load Settings", [&](){ m_tweakBar->LoadReadWriteValuesToJSON("settings.json"); });
 
 	// Light settings
-	m_tweakBar->AddReadWrite("Light Count", std::function<std::uint32_t(void)>([&](){ return static_cast<std::uint32_t>(m_scene->GetLights().size()); }),
-		std::function<void(const std::uint32_t&)>([&, lightStructType](const std::uint32_t& lightCount)
-		{
-			// The light structs do not work properly with the callback version.
-			// Therefore we must use the variable-reference version. 
-			// This is super dangerous, as we give away pointer so elements of std::vector. On each resize of std::vector, the list must be rebuilt!
-			// Changes to the light count from outside are however not handled at all!
-			for (size_t i = 0; i < m_scene->GetLights().size(); ++i)
-				m_tweakBar->Remove("Light" + std::to_string(i));
-
-			m_scene->GetLights().resize(lightCount);
-
-			for (size_t i = 0; i < m_scene->GetLights().size(); ++i)
-				m_tweakBar->AddReadWrite("Light" + std::to_string(i), m_scene->GetLights()[i], " group=Lights", lightStructType);
-		}), " min=1 max=16 step=1");
-	for (size_t i = 0; i < m_scene->GetLights().size(); ++i)
-		m_tweakBar->AddReadWrite("Light" + std::to_string(i), m_scene->GetLights()[i], " group=Lights", lightStructType);
+	std::function<void(const int&)> changeLightCount = std::bind(&Application::ChangeLightCount, this, std::placeholders::_1);
+	m_tweakBar->AddReadWrite<int>("Light Count", [&](){ return static_cast<int>(m_scene->GetLights().size()); }, changeLightCount, " min=1 max=16 step=1");
 }
 
 void Application::Run()

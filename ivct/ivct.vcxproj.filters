@@ -43,6 +43,12 @@
     <Filter Include="dependencies\epsilon">
       <UniqueIdentifier>{c47b33d1-9344-4518-b1ca-31c4dae66e84}</UniqueIdentifier>
     </Filter>
+    <Filter Include="dependencies\jsoncpp">
+      <UniqueIdentifier>{3e07f7e3-a918-4f47-a0da-7dc07f9355eb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dependencies\jsoncpp\json">
+      <UniqueIdentifier>{2de7e87d-3b6c-4144-a2c0-d7489e59d8a0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="outputwindow.cpp">
@@ -173,6 +179,9 @@
     </ClCompile>
     <ClCompile Include="anttweakbarinterface.cpp">
       <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\jsoncpp\jsoncpp.cpp">
+      <Filter>dependencies\jsoncpp</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -313,6 +322,12 @@
     </ClInclude>
     <ClInclude Include="anttweakbarinterface.hpp">
       <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\jsoncpp\json\json.h">
+      <Filter>dependencies\jsoncpp\json</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\jsoncpp\json\json-forwards.h">
+      <Filter>dependencies\jsoncpp\json</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
