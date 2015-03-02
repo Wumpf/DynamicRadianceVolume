@@ -40,8 +40,10 @@
 /x64
 /ivct/x64
 
-# Non-submodule dependencies
+# Non-submodule dependencies or local replica in /dependencies/ path
 /dependencies/glew
+/dependencies/AntTweakBar
+/dependencies/github_jsoncpp
 
 # Data
 /models/
