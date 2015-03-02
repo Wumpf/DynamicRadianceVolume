@@ -13,7 +13,35 @@
 void TwEventMouseButtonGLFW3(GLFWwindow* window, int button, int action, int mods){ TwEventMouseButtonGLFW(button, action); }
 void TwEventMousePosGLFW3(GLFWwindow* window, double xpos, double ypos){ TwMouseMotion(int(xpos), int(ypos)); }
 void TwEventMouseWheelGLFW3(GLFWwindow* window, double xoffset, double yoffset){ TwEventMouseWheelGLFW(static_cast<int>(yoffset)); }
-void TwEventKeyGLFW3(GLFWwindow* window, int key, int scancode, int action, int mods){ TwEventKeyGLFW(key, action); }
+void TwEventKeyGLFW3(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+	// Keymapping changed in GLFW3.
+	// Here we handle only a few special cases.
+	if (action == GLFW_PRESS)
+	{
+		switch (key)
+		{
+		case GLFW_KEY_BACKSPACE:
+			TwKeyPressed(TW_KEY_BACKSPACE, TW_KMOD_NONE);
+			break;
+		case GLFW_KEY_LEFT:
+			TwKeyPressed(TW_KEY_LEFT, TW_KMOD_NONE);
+			break;
+		case GLFW_KEY_RIGHT:
+			TwKeyPressed(TW_KEY_RIGHT, TW_KMOD_NONE);
+			break;
+		case GLFW_KEY_UP:
+			TwKeyPressed(TW_KEY_UP, TW_KMOD_NONE);
+			break;
+		case GLFW_KEY_DOWN:
+			TwKeyPressed(TW_KEY_DOWN, TW_KMOD_NONE);
+			break;
+		default:
+			TwEventKeyGLFW(key, action);
+			break;
+		}
+	}
+}
 void TwEventCharGLFW3(GLFWwindow* window, int codepoint){ TwEventCharGLFW(codepoint, GLFW_PRESS); }
 
 AntTweakBarInterface::AntTweakBarInterface(GLFWwindow* glfwWindow) :
