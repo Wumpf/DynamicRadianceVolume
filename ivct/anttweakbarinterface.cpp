@@ -271,13 +271,22 @@ void AntTweakBarInterface::SaveReadWriteValuesToJSON(const std::string& jsonFile
 	}
 
 	std::ofstream file(jsonFilename.c_str());
+	if(file.bad() || !file.is_open())
+	{
+		LOG_ERROR("Couldn't settings to file " << jsonFilename);
+		return;
+	}
 	file << root;
 }
 
-#include <iostream>
 void AntTweakBarInterface::LoadReadWriteValuesToJSON(const std::string& jsonFilename)
 {
 	std::ifstream file(jsonFilename.c_str());
+	if(file.bad() || !file.is_open())
+	{
+		LOG_ERROR("Couldn't open settings file " << jsonFilename);
+		return;
+	}
 	std::vector<Json::Value> elementStack;
 	elementStack.emplace_back();
 	file >> elementStack[0];
