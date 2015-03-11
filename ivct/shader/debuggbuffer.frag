@@ -8,9 +8,13 @@ out vec3 OutputColor;
 #include "utils.glsl"
 #include "globalubos.glsl"
 
-#define OUTPUT_POS
+#include "lightcache.glsl"
+layout(binding=3) uniform isampler2D LightCacheEntryTexture;
+
+//#define OUTPUT_POS
 //#define OUTPUT_NORMAL
 //#define OUTPUT_DIFFUSE
+#define OUTPUT_CACHE_NORMAL
 
 void main()
 {
@@ -26,5 +30,13 @@ void main()
 
 #ifdef OUTPUT_NORMAL
 	OutputColor = UnpackNormal16I(texture(GBuffer_Normal, Texcoord).rg) * 0.5 + 0.5;
+#endif
+
+#ifdef OUTPUT_CACHE_NORMAL
+	int cacheIndex = texture(LightCacheEntryTexture, Texcoord).r;
+	if(cacheIndex < 0)
+		OutputColor = vec3(0.0);
+	else
+		OutputColor = normalize(LightCacheEntries[cacheIndex].Normal) * 0.5 + 0.5; // unpackUnorm4x8(uint(cacheIndex)).rgb;
 #endif
 }

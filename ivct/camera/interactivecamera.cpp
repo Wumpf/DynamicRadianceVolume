@@ -5,7 +5,7 @@ InteractiveCamera::InteractiveCamera(GLFWwindow* window, const Camera& camera) :
 	Camera(camera.GetPosition(), camera.GetLookAt(), camera.GetAspectRatio(), camera.GetNearPlane(), camera.GetFarPlane(), camera.GetHFov(), camera.GetUp()),
 	m_window(m_window),
 	m_rotSpeed(0.01f),
-	m_moveSpeed(16.0f),
+	m_moveSpeed(4.0f),
 	m_dirty(true)
 {
 }

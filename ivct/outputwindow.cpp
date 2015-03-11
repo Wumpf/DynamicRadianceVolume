@@ -39,8 +39,8 @@ OutputWindow::OutputWindow() :
 	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
 #endif
 
-	int width = 1024;
-	int height = 768;
+	int width = 1900;
+	int height = 1000;
 
 	window = glfwCreateWindow(width, height, "<Add fancy title here>", nullptr, nullptr);
 	if (!window)

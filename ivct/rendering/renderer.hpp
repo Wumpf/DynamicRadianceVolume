@@ -13,6 +13,7 @@ namespace gl
 	class Texture2D;
 	class SamplerObject;
 	class UniformBufferView;
+	class ShaderStorageBufferView;
 }
 class Scene;
 class Voxelization;
@@ -29,6 +30,10 @@ public:
 
 	void Draw(const Camera& camera);
 
+	void SetTrackLightCacheHashCollionCount(bool trackLightCacheHashCollisionCount);
+	bool GetTrackLightCacheHashCollionCount() const { return m_trackLightCacheHashCollisionCount; }
+	unsigned int GetLightCacheHashCollisionCount() const { return m_lastLightCacheHashCollisionCount; }
+
 private:
 	std::shared_ptr<const Scene> m_scene;
 
@@ -43,6 +48,10 @@ private:
 	void DrawGBufferDebug();
 	/// Performs direct lighting for all lights.
 	void DrawLights();
+	/// Fills light caches with screen space information.
+	void FillLightCaches();
+
+	void OutputHDRTextureToBackbuffer();
 
 	/// Draws scene, mesh by mesh.
 	///
@@ -61,6 +70,21 @@ private:
 
 	std::unique_ptr<gl::UniformBufferView> m_uboConstant;
 	std::unique_ptr<gl::UniformBufferView> m_uboPerFrame;
+
+
+
+	std::unique_ptr<gl::ShaderObject> m_shaderFillLightCaches;
+
+	bool m_trackLightCacheHashCollisionCount;
+	unsigned int m_lastLightCacheHashCollisionCount;
+	std::unique_ptr<gl::ShaderStorageBufferView> m_lightCacheHashCollisionCounter; ///< Atomic hash collision counter for debugging purposes
+	
+	ei::Vec3 m_cacheWorldSize;
+	std::unique_ptr<gl::ShaderStorageBufferView> m_lightCaches;
+
+
+	std::unique_ptr<gl::Texture2D> m_texturePerPixelCacheEntries;
+	std::unique_ptr<gl::FramebufferObject> m_fboPerPixelCacheEntries;
 
 	std::unique_ptr<gl::Texture2D> m_GBuffer_diffuse;
 	std::unique_ptr<gl::Texture2D> m_GBuffer_normal;

@@ -38,6 +38,7 @@ Application::Application(int argc, char** argv)
 
 	// TODO: Some kind of runtime/data system is needed here.
 	m_scene->AddModel("../models/test0/test0.obj");
+	//m_scene->AddModel("../models/cryteksponza/sponza.obj");
 
 	// Renderer.
 	LOG_INFO("\nSetup renderer ...");
@@ -151,8 +152,20 @@ void Application::SetupTweakBarBinding()
 	m_tweakBar->AddReadOnly("Frametime (ms)", [&](){ return std::to_string(m_timeSinceLastUpdate.GetMilliseconds()); });
 	m_tweakBar->AddButton("Save Settings", [&](){ m_tweakBar->SaveReadWriteValuesToJSON("settings.json"); });
 	m_tweakBar->AddButton("Load Settings", [&](){ m_tweakBar->LoadReadWriteValuesToJSON("settings.json"); });
+	
+
+	// Camera
+	m_tweakBar->AddSeperator("Camera settings");
+	m_tweakBar->AddReadWrite<float>("Camera Speed", [&](){ return m_camera->GetMoveSpeed(); }, [&](float f){ return m_camera->SetMoveSpeed(f); }, " min =0.01 max=100 step=0.01");
+
+	/// Light cache settings
+	m_tweakBar->AddSeperator("Light Cache settings");
+	m_tweakBar->AddReadWrite<bool>("Count Hash Collisions", [&](){ return m_renderer->GetTrackLightCacheHashCollionCount(); }, 
+																		[&](bool b){ return m_renderer->SetTrackLightCacheHashCollionCount(b); });
+	m_tweakBar->AddReadOnly("#Hash Collision", [&](){ return std::to_string(m_renderer->GetLightCacheHashCollisionCount()); });
 
 	// Light settings
+	m_tweakBar->AddSeperator("Lights:");
 	std::function<void(const int&)> changeLightCount = std::bind(&Application::ChangeLightCount, this, std::placeholders::_1);
 	m_tweakBar->AddReadWrite<int>("Light Count", [&](){ return static_cast<int>(m_scene->GetLights().size()); }, changeLightCount, " min=1 max=16 step=1");
 }

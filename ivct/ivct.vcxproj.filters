@@ -384,5 +384,11 @@
     <None Include="..\dependencies\glhelper\glhelper\statemanagement.inl">
       <Filter>dependencies\glhelper</Filter>
     </None>
+    <None Include="shader\lightcache.glsl">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\filllightcaches.frag">
+      <Filter>shader</Filter>
+    </None>
   </ItemGroup>
 </Project>

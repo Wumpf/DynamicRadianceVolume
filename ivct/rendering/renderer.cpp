@@ -12,14 +12,18 @@
 #include <glhelper/texture3d.hpp>
 #include <glhelper/screenalignedtriangle.hpp>
 #include <glhelper/uniformbufferview.hpp>
+#include <glhelper/shaderstoragebufferview.hpp>
 #include <glhelper/framebufferobject.hpp>
 #include <glhelper/statemanagement.hpp>
+#include <glhelper/utils/flagoperators.hpp>
 
 
 Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& resolution) :
 	m_samplerLinear(gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Border::REPEAT))),
-	m_samplerNearest(gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::NEAREST, gl::SamplerObject::Filter::NEAREST, gl::SamplerObject::Filter::NEAREST, gl::SamplerObject::Border::REPEAT)))
+	m_samplerNearest(gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::NEAREST, gl::SamplerObject::Filter::NEAREST, gl::SamplerObject::Filter::NEAREST, gl::SamplerObject::Border::REPEAT))),
 
+	m_trackLightCacheHashCollisionCount(false),
+	m_lastLightCacheHashCollisionCount(0)
 {
 	m_screenTriangle = std::make_unique<gl::ScreenAlignedTriangle>();
 
@@ -42,9 +46,14 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	SetScene(scene);
 	OnScreenResize(resolution);
 
+	// misc buffer
+	m_lightCacheHashCollisionCounter = std::make_unique<gl::ShaderStorageBufferView>(std::make_shared<gl::Buffer>(sizeof(std::uint32_t), gl::Buffer::Usage::MAP_READ | gl::Buffer::Usage::MAP_WRITE), "LightCacheHashCollisionCounter");
+
+
 	// General GL settings
 	gl::Enable(gl::Cap::DEPTH_TEST);
 	gl::Disable(gl::Cap::DITHER);
+
 	//gl::Enable(gl::Cap::CULL_FACE);
 	//GL_CALL(glFrontFace, GL_CW);
 
@@ -58,8 +67,7 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	GL_CALL(glClearDepth, 0.0f);
 
 	// The OpenGL clip space convention uses depth -1 to 1 which is remapped again. In GL4.5 it is possible to disable this
-	glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
-
+	GL_CALL(glClipControl, GL_LOWER_LEFT, GL_ZERO_TO_ONE);
 }
 
 Renderer::~Renderer()
@@ -91,11 +99,15 @@ void Renderer::LoadShader()
 	m_shaderTonemap->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/tonemapping.frag");
 	m_shaderTonemap->CreateProgram();
 
-	
+	m_shaderFillLightCaches = std::make_unique<gl::ShaderObject>("fill light caches");
+	m_shaderFillLightCaches->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
+	std::string defines = m_trackLightCacheHashCollisionCount ? "#define COUNT_LIGHTCACHE_HASH_COLLISIONS" : "";
+	m_shaderFillLightCaches->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/filllightcaches.frag", defines);
+	m_shaderFillLightCaches->CreateProgram();
 
 
 	// Register all shader for auto reload on change.
-	m_allShaders = { m_shaderDebugGBuffer.get(), m_shaderFillGBuffer_noskinning.get(), m_shaderDeferredDirectLighting_Spot.get(), m_shaderTonemap.get() };
+	m_allShaders = { m_shaderDebugGBuffer.get(), m_shaderFillGBuffer_noskinning.get(), m_shaderDeferredDirectLighting_Spot.get(), m_shaderTonemap.get(), m_shaderFillLightCaches.get() };
 	for (auto it : m_allShaders)
 		ShaderFileWatcher::Instance().RegisterShaderForReloadOnChange(it);
 
@@ -114,6 +126,9 @@ void Renderer::UpdateConstantUBO()
 	(*m_uboConstant)["VoxelVolumeWorldMin"].Set(voxelVolumeWorldMin);
 	(*m_uboConstant)["VoxelVolumeWorldMax"].Set(voxelVolumeWorldMax);
 	(*m_uboConstant)["VoxelSizeInWorld"].Set((voxelVolumeWorldMax - voxelVolumeWorldMin) / voxelVolumeSizePix);
+
+	m_cacheWorldSize = ei::Vec3(0.1f); // ei::Vec3(5.0f); // TODO
+	(*m_uboConstant)["CacheWorldSize"].Set(m_cacheWorldSize);
 	m_uboConstant->GetBuffer()->Unmap();
 }
 
@@ -128,6 +143,18 @@ void Renderer::UpdatePerFrameUBO(const Camera& camera)
 	(*m_uboPerFrame)["ViewProjection"].Set(viewProjection);
 	(*m_uboPerFrame)["InverseViewProjection"].Set(ei::invert(viewProjection));
 	(*m_uboPerFrame)["CameraPosition"].Set(camera.GetPosition());
+
+	ei::Vec3 cacheGridMin(ei::floor(m_scene->GetBoundingBox().min) - ei::Vec3(0.5f));
+	ei::Vec3 cacheGridMax(ei::ceil(m_scene->GetBoundingBox().max) + ei::Vec3(0.5f));
+
+	(*m_uboPerFrame)["CacheGridMin"].Set(cacheGridMin); // TODO: Better box - union of camera and scene box
+	ei::Vec3 cacheGridSize = cacheGridMax - cacheGridMin;
+	ei::Vec3 cacheGridCellCount = cacheGridSize / m_cacheWorldSize;
+	Assert(cacheGridCellCount.x * cacheGridCellCount.y * cacheGridCellCount.z < std::numeric_limits<int>().max(), "Too many virtual light cache entries!");
+
+	(*m_uboPerFrame)["CacheGridStrideX"].Set(static_cast<std::int32_t>(cacheGridCellCount.x));
+	(*m_uboPerFrame)["CacheGridSize"].Set(cacheGridSize);
+	(*m_uboPerFrame)["CacheGridStrideXY"].Set(static_cast<std::int32_t>(cacheGridCellCount.x) * static_cast<std::int32_t>(cacheGridCellCount.y));
 	m_uboPerFrame->GetBuffer()->Unmap();
 }
 
@@ -148,6 +175,20 @@ void Renderer::OnScreenResize(const ei::UVec2& newResolution)
 	m_HDRBackbuffer.reset(new gl::FramebufferObject(gl::FramebufferObject::Attachment(m_HDRBackbufferTexture.get())));
 
 	GL_CALL(glViewport, 0, 0, newResolution.x, newResolution.y);
+
+
+
+	// Light cache setup.
+	static const std::int32_t lightCacheEntrySize = sizeof(float) * 4 * 1;
+	std::int32_t maxNumLightCaches = (newResolution.x/2) * (newResolution.y/2);
+	m_lightCaches = std::make_unique<gl::ShaderStorageBufferView>(std::make_shared<gl::Buffer>(lightCacheEntrySize * maxNumLightCaches, gl::Buffer::Usage::IMMUTABLE), "LightCaches");
+	
+	m_texturePerPixelCacheEntries = std::make_unique<gl::Texture2D>(newResolution.x, newResolution.y, gl::TextureFormat::R32I, 1, 0);
+	m_fboPerPixelCacheEntries = std::make_unique<gl::FramebufferObject>(gl::FramebufferObject::Attachment(m_texturePerPixelCacheEntries.get()));
+
+	m_uboConstant->GetBuffer()->Map();//(*m_uboConstant)["MaxNumLightCaches"].GetMetaInfo().blockOffset, 4);
+	(*m_uboConstant)["MaxNumLightCaches"].Set(maxNumLightCaches);
+	m_uboConstant->GetBuffer()->Unmap();
 }
 
 void Renderer::SetScene(const std::shared_ptr<const Scene>& scene)
@@ -168,13 +209,19 @@ void Renderer::Draw(const Camera& camera)
 	m_voxelization->DrawVoxelRepresentation();*/
 
 	DrawSceneToGBuffer();
-	
-	m_HDRBackbuffer->Bind(false);
-	GL_CALL(glClear, GL_COLOR_BUFFER_BIT);
-	
-	DrawLights();
+	FillLightCaches();
 
-	// Output HDR texture to backbuffer.
+	//m_HDRBackbuffer->Bind(false);
+	//GL_CALL(glClear, GL_COLOR_BUFFER_BIT);
+	
+	//DrawLights();
+	DrawGBufferDebug();
+
+	//OutputHDRTextureToBackbuffer();
+}
+
+void Renderer::OutputHDRTextureToBackbuffer()
+{
 	gl::FramebufferObject::BindBackBuffer();
 	gl::Enable(gl::Cap::FRAMEBUFFER_SRGB);
 	m_shaderTonemap->Activate();
@@ -183,7 +230,28 @@ void Renderer::Draw(const Camera& camera)
 	m_HDRBackbufferTexture->Bind(0);
 
 	m_screenTriangle->Draw();
-	gl::Disable(gl::Cap::FRAMEBUFFER_SRGB);	
+	gl::Disable(gl::Cap::FRAMEBUFFER_SRGB);
+}
+
+void Renderer::FillLightCaches()
+{
+	if (m_trackLightCacheHashCollisionCount)
+	{
+		std::uint32_t* hashCollisionCount = static_cast<std::uint32_t*>(m_lightCacheHashCollisionCounter->GetBuffer()->Map());
+		m_lastLightCacheHashCollisionCount = *hashCollisionCount;
+		*hashCollisionCount = 0;
+		m_lightCacheHashCollisionCounter->GetBuffer()->Unmap();
+
+		m_shaderFillLightCaches->BindSSBO(*m_lightCacheHashCollisionCounter);
+	}
+
+	m_lightCaches->GetBuffer()->ClearToZero();
+	m_shaderFillLightCaches->BindSSBO(*m_lightCaches);
+
+	m_fboPerPixelCacheEntries->Bind(false);
+
+	m_shaderFillLightCaches->Activate();
+	m_screenTriangle->Draw();
 }
 
 void Renderer::DrawSceneToGBuffer()
@@ -208,10 +276,15 @@ void Renderer::DrawGBufferDebug()
 	m_GBuffer_diffuse->Bind(0);
 	m_GBuffer_normal->Bind(1);
 	m_GBuffer_depth->Bind(2);
+	m_texturePerPixelCacheEntries->Bind(3);
+
+	// For accessing light cache buffer (m_lightCaches)
+	GL_CALL(glMemoryBarrier, GL_SHADER_STORAGE_BARRIER_BIT);
 
 	m_samplerNearest.BindSampler(0);
 	m_samplerNearest.BindSampler(1);
 	m_samplerNearest.BindSampler(2);
+	m_samplerNearest.BindSampler(3);
 
 	m_screenTriangle->Draw();
 }
@@ -261,4 +334,14 @@ void Renderer::DrawScene()
 			GL_CALL(glDrawElements, GL_TRIANGLES, mesh.numIndices, GL_UNSIGNED_INT, reinterpret_cast<const void*>(sizeof(std::uint32_t) * mesh.startIndex));
 		}
 	}
+}
+
+void Renderer::SetTrackLightCacheHashCollionCount(bool trackLightCacheHashCollisionCount)
+{
+	m_trackLightCacheHashCollisionCount = trackLightCacheHashCollisionCount;
+
+	// Patch shader
+	std::string defines = m_trackLightCacheHashCollisionCount ? "#define COUNT_LIGHTCACHE_HASH_COLLISIONS" : "";
+	m_shaderFillLightCaches->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/filllightcaches.frag", defines);
+	m_shaderFillLightCaches->CreateProgram();
 }
