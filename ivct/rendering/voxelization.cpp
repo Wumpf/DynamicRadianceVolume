@@ -69,6 +69,7 @@ void Voxelization::VoxelizeScene(const Scene& scene)
 	gl::Disable(gl::Cap::DEPTH_TEST);
 	GL_CALL(glDepthMask, GL_FALSE);
 	gl::Disable(gl::Cap::CULL_FACE);
+	GL_CALL(glClipControl, GL_LOWER_LEFT, GL_NEGATIVE_ONE_TO_ONE); // The single one case where z -1 to 1 is actual practical. Makes the shader easier
 
 	// Disable color write
 	GL_CALL(glColorMask, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
@@ -95,6 +96,7 @@ void Voxelization::VoxelizeScene(const Scene& scene)
 	gl::Enable(gl::Cap::DEPTH_TEST);
 	GL_CALL(glDepthMask, GL_TRUE);
 	gl::Enable(gl::Cap::CULL_FACE);
+	GL_CALL(glClipControl, GL_LOWER_LEFT, GL_NEGATIVE_ONE_TO_ONE); // Reset to default (convention)
 
 	// Reenable color write
 	GL_CALL(glColorMask, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);

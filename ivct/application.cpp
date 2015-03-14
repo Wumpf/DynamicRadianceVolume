@@ -37,8 +37,8 @@ Application::Application(int argc, char** argv)
 	m_scene.reset(new Scene());
 
 	// TODO: Some kind of runtime/data system is needed here.
-	m_scene->AddModel("../models/test0/test0.obj");
-	//m_scene->AddModel("../models/cryteksponza/sponza.obj");
+	//m_scene->AddModel("../models/test0/test0.obj");
+	m_scene->AddModel("../models/cryteksponza/sponza.obj");
 
 	// Renderer.
 	LOG_INFO("\nSetup renderer ...");

@@ -127,7 +127,7 @@ void Renderer::UpdateConstantUBO()
 	(*m_uboConstant)["VoxelVolumeWorldMax"].Set(voxelVolumeWorldMax);
 	(*m_uboConstant)["VoxelSizeInWorld"].Set((voxelVolumeWorldMax - voxelVolumeWorldMin) / voxelVolumeSizePix);
 
-	m_cacheWorldSize = ei::Vec3(0.1f); // ei::Vec3(5.0f); // TODO
+	m_cacheWorldSize = ei::Vec3(5.0f); // TODO
 	(*m_uboConstant)["CacheWorldSize"].Set(m_cacheWorldSize);
 	m_uboConstant->GetBuffer()->Unmap();
 }
@@ -204,18 +204,18 @@ void Renderer::Draw(const Camera& camera)
 {
 	UpdatePerFrameUBO(camera);
 
-	/*m_voxelization->VoxelizeScene(*m_scene);
-	GL_CALL(glViewport, 0, 0, 1024, 768); // TODO
-	m_voxelization->DrawVoxelRepresentation();*/
+	m_voxelization->VoxelizeScene(*m_scene);
+	GL_CALL(glViewport, 0, 0, m_HDRBackbufferTexture->GetWidth(), m_HDRBackbufferTexture->GetHeight());
+	m_voxelization->DrawVoxelRepresentation();
 
-	DrawSceneToGBuffer();
-	FillLightCaches();
+	//DrawSceneToGBuffer();
+	//FillLightCaches();
 
 	//m_HDRBackbuffer->Bind(false);
 	//GL_CALL(glClear, GL_COLOR_BUFFER_BIT);
 	
 	//DrawLights();
-	DrawGBufferDebug();
+	//DrawGBufferDebug();
 
 	//OutputHDRTextureToBackbuffer();
 }

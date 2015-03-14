@@ -35,7 +35,7 @@ void main()
 	float rayHit = 0.0;
 	if(IntersectBox(CameraPosition, rayDirection, VoxelVolumeWorldMin, VoxelVolumeWorldMax, rayHit))
 	{
-		float stepSize = VoxelSizeInWorld.x * 0.05;
+		float stepSize = VoxelSizeInWorld.x * 0.1;
 
 		vec3 voxelHitPos = (CameraPosition + (rayHit + stepSize) * rayDirection - VoxelVolumeWorldMin) / VoxelSizeInWorld;
 		float totalIntensity = 0.0f;
