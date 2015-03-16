@@ -14,12 +14,14 @@ layout(location = 0) out vec3 gs_out_VoxelPos;
 layout(location = 1) out vec3 gs_out_WorldPos;
 layout(location = 2) out vec3 gs_out_Normal;
 layout(location = 3) out vec2 gs_out_Texcoord;
+layout(location = 4) out flat int gs_out_SideIndex;
 
 #define VERTEX_PASS_THROUGH() \
 	gs_out_VoxelPos = vs_out_VoxelPos[i]; \
 	gs_out_WorldPos = vs_out_WorldPos[i]; \
 	gs_out_Normal = vs_out_Normal[i]; \
-	gs_out_Texcoord = vs_out_Texcoord[i];
+	gs_out_Texcoord = vs_out_Texcoord[i]; \
+	gs_out_SideIndex = sideIndex;
 
 void main()
 {	
@@ -28,10 +30,10 @@ void main()
 	vec3 absNorm = abs(normalize(cross(v0,v1)));
 
 
-	int i = absNorm[0] > absNorm[1] ? 0 : 1;
-	i = absNorm[i] > absNorm[2] ? i : 2;
+	int sideIndex = absNorm[0] > absNorm[1] ? 0 : 1;
+	sideIndex = absNorm[sideIndex] > absNorm[2] ? sideIndex : 2;
 
-	switch(i)
+	switch(sideIndex)
 	{
 		// Dominant X
 	case 0:
