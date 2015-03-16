@@ -39,9 +39,6 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	m_uboDeferredDirectLighting = std::make_unique<gl::UniformBufferView>(*m_shaderDeferredDirectLighting_Spot, "Light");
 	m_shaderDeferredDirectLighting_Spot->BindUBO(*m_uboDeferredDirectLighting);
 
-	// Create voxelization module.
-	m_voxelization = std::make_unique<Voxelization>(ei::UVec3(256, 256, 256));
-
 	// Basic settings.
 	SetScene(scene);
 	OnScreenResize(resolution);
@@ -99,36 +96,39 @@ void Renderer::LoadShader()
 	m_shaderTonemap->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/tonemapping.frag");
 	m_shaderTonemap->CreateProgram();
 
-	m_shaderFillLightCaches = std::make_unique<gl::ShaderObject>("fill light caches");
-	m_shaderFillLightCaches->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
-	std::string defines = m_trackLightCacheHashCollisionCount ? "#define COUNT_LIGHTCACHE_HASH_COLLISIONS" : "";
-	m_shaderFillLightCaches->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/filllightcaches.frag", defines);
-	m_shaderFillLightCaches->CreateProgram();
+	m_shaderApplyLightCaches = std::make_unique<gl::ShaderObject>("apply light caches");
+	m_shaderApplyLightCaches->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
+	m_shaderApplyLightCaches->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/applylightcaches.frag");
+	m_shaderApplyLightCaches->CreateProgram();
+
+	m_shaderVoxelize = std::make_unique<gl::ShaderObject>("voxelization + cache creation");
+	m_shaderVoxelize->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/voxelize.vert");
+	m_shaderVoxelize->AddShaderFromFile(gl::ShaderObject::ShaderType::GEOMETRY, "shader/voxelize.geom");
+	m_shaderVoxelize->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/voxelize.frag");
+	m_shaderVoxelize->CreateProgram();
 
 
 	// Register all shader for auto reload on change.
-	m_allShaders = { m_shaderDebugGBuffer.get(), m_shaderFillGBuffer_noskinning.get(), m_shaderDeferredDirectLighting_Spot.get(), m_shaderTonemap.get(), m_shaderFillLightCaches.get() };
+	m_allShaders = { m_shaderDebugGBuffer.get(), m_shaderFillGBuffer_noskinning.get(), m_shaderDeferredDirectLighting_Spot.get(), 
+					 m_shaderTonemap.get(), m_shaderApplyLightCaches.get(), m_shaderVoxelize.get() };
 	for (auto it : m_allShaders)
 		ShaderFileWatcher::Instance().RegisterShaderForReloadOnChange(it);
-
 }
 
 void Renderer::UpdateConstantUBO()
 {
-	ei::Vec3 voxelVolumeWorldMin(m_scene->GetBoundingBox().min);
-	ei::Vec3 voxelVolumeWorldMax(m_scene->GetBoundingBox().max);
-	ei::Vec3 voxelVolumeSizePix(static_cast<float>(m_voxelization->GetVoxelTexture().GetWidth()), 
-								static_cast<float>(m_voxelization->GetVoxelTexture().GetHeight()), 
-								static_cast<float>(m_voxelization->GetVoxelTexture().GetDepth()));
+	ei::Vec3 voxelVolumeWorldMin(m_scene->GetBoundingBox().min - ei::Vec3(1.0f));
+	ei::Vec3 voxelVolumeWorldMax(m_scene->GetBoundingBox().max + ei::Vec3(1.0f));
+	m_voxelVolumeSize = ei::IVec3(64, 64, 64);
+	ei::Vec3 voxelVolumeSizePix((voxelVolumeWorldMax - voxelVolumeWorldMin) / m_voxelVolumeSize);
 	
 
 	m_uboConstant->GetBuffer()->Map();
 	(*m_uboConstant)["VoxelVolumeWorldMin"].Set(voxelVolumeWorldMin);
+	(*m_uboConstant)["VoxelCountX"].Set(m_voxelVolumeSize.x);
 	(*m_uboConstant)["VoxelVolumeWorldMax"].Set(voxelVolumeWorldMax);
-	(*m_uboConstant)["VoxelSizeInWorld"].Set((voxelVolumeWorldMax - voxelVolumeWorldMin) / voxelVolumeSizePix);
-
-	m_cacheWorldSize = ei::Vec3(5.0f); // TODO
-	(*m_uboConstant)["CacheWorldSize"].Set(m_cacheWorldSize);
+	(*m_uboConstant)["VoxelCountXZ"].Set(m_voxelVolumeSize.x * m_voxelVolumeSize.z);
+	(*m_uboConstant)["VoxelSizeInWorld"].Set(voxelVolumeSizePix);
 	m_uboConstant->GetBuffer()->Unmap();
 }
 
@@ -143,18 +143,6 @@ void Renderer::UpdatePerFrameUBO(const Camera& camera)
 	(*m_uboPerFrame)["ViewProjection"].Set(viewProjection);
 	(*m_uboPerFrame)["InverseViewProjection"].Set(ei::invert(viewProjection));
 	(*m_uboPerFrame)["CameraPosition"].Set(camera.GetPosition());
-
-	ei::Vec3 cacheGridMin(ei::floor(m_scene->GetBoundingBox().min) - ei::Vec3(0.5f));
-	ei::Vec3 cacheGridMax(ei::ceil(m_scene->GetBoundingBox().max) + ei::Vec3(0.5f));
-
-	(*m_uboPerFrame)["CacheGridMin"].Set(cacheGridMin); // TODO: Better box - union of camera and scene box
-	ei::Vec3 cacheGridSize = cacheGridMax - cacheGridMin;
-	ei::Vec3 cacheGridCellCount = cacheGridSize / m_cacheWorldSize;
-	Assert(cacheGridCellCount.x * cacheGridCellCount.y * cacheGridCellCount.z < std::numeric_limits<int>().max(), "Too many virtual light cache entries!");
-
-	(*m_uboPerFrame)["CacheGridStrideX"].Set(static_cast<std::int32_t>(cacheGridCellCount.x));
-	(*m_uboPerFrame)["CacheGridSize"].Set(cacheGridSize);
-	(*m_uboPerFrame)["CacheGridStrideXY"].Set(static_cast<std::int32_t>(cacheGridCellCount.x) * static_cast<std::int32_t>(cacheGridCellCount.y));
 	m_uboPerFrame->GetBuffer()->Unmap();
 }
 
@@ -183,9 +171,6 @@ void Renderer::OnScreenResize(const ei::UVec2& newResolution)
 	std::int32_t maxNumLightCaches = (newResolution.x/2) * (newResolution.y/2);
 	m_lightCaches = std::make_unique<gl::ShaderStorageBufferView>(std::make_shared<gl::Buffer>(lightCacheEntrySize * maxNumLightCaches, gl::Buffer::Usage::IMMUTABLE), "LightCaches");
 	
-	m_texturePerPixelCacheEntries = std::make_unique<gl::Texture2D>(newResolution.x, newResolution.y, gl::TextureFormat::R32I, 1, 0);
-	m_fboPerPixelCacheEntries = std::make_unique<gl::FramebufferObject>(gl::FramebufferObject::Attachment(m_texturePerPixelCacheEntries.get()));
-
 	m_uboConstant->GetBuffer()->Map();//(*m_uboConstant)["MaxNumLightCaches"].GetMetaInfo().blockOffset, 4);
 	(*m_uboConstant)["MaxNumLightCaches"].Set(maxNumLightCaches);
 	m_uboConstant->GetBuffer()->Unmap();
@@ -204,20 +189,28 @@ void Renderer::Draw(const Camera& camera)
 {
 	UpdatePerFrameUBO(camera);
 
-	m_voxelization->VoxelizeScene(*m_scene);
-	GL_CALL(glViewport, 0, 0, m_HDRBackbufferTexture->GetWidth(), m_HDRBackbufferTexture->GetHeight());
-	m_voxelization->DrawVoxelRepresentation();
+	DrawSceneToGBuffer();
 
-	//DrawSceneToGBuffer();
-	//FillLightCaches();
 
-	//m_HDRBackbuffer->Bind(false);
-	//GL_CALL(glClear, GL_COLOR_BUFFER_BIT);
+	m_GBuffer_diffuse->Bind(0);
+	m_GBuffer_normal->Bind(1);
+	m_GBuffer_depth->Bind(2);
+	gl::Disable(gl::Cap::DEPTH_TEST);
+	GL_CALL(glDepthMask, GL_FALSE);
+
+	VoxelizeAndCreateCaches();
+
+	m_HDRBackbuffer->Bind(true);
+	GL_CALL(glClear, GL_COLOR_BUFFER_BIT);
 	
 	//DrawLights();
 	//DrawGBufferDebug();
 
-	//OutputHDRTextureToBackbuffer();
+	// TODO
+	m_shaderApplyLightCaches->Activate();
+	m_screenTriangle->Draw();
+
+	OutputHDRTextureToBackbuffer();
 }
 
 void Renderer::OutputHDRTextureToBackbuffer()
@@ -233,7 +226,7 @@ void Renderer::OutputHDRTextureToBackbuffer()
 	gl::Disable(gl::Cap::FRAMEBUFFER_SRGB);
 }
 
-void Renderer::FillLightCaches()
+void Renderer::VoxelizeAndCreateCaches()
 {
 	if (m_trackLightCacheHashCollisionCount)
 	{
@@ -242,28 +235,43 @@ void Renderer::FillLightCaches()
 		*hashCollisionCount = 0;
 		m_lightCacheHashCollisionCounter->GetBuffer()->Unmap();
 
-		m_shaderFillLightCaches->BindSSBO(*m_lightCacheHashCollisionCounter);
+		m_shaderVoxelize->BindSSBO(*m_lightCacheHashCollisionCounter);
 	}
 
 	m_lightCaches->GetBuffer()->ClearToZero();
-	m_shaderFillLightCaches->BindSSBO(*m_lightCaches);
+	m_shaderVoxelize->BindSSBO(*m_lightCaches);
 
-	m_fboPerPixelCacheEntries->Bind(false);
 
-	m_shaderFillLightCaches->Activate();
-	m_screenTriangle->Draw();
+	// Disable color write
+	GL_CALL(glColorMask, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+	// The single one case where z -1 to 1 is actual practical. Makes the shader easier
+	GL_CALL(glClipControl, GL_LOWER_LEFT, GL_NEGATIVE_ONE_TO_ONE);
+
+
+	// Viewport in size of voxel volume.
+	// Using max on all dimensions may lead to simultaneous overwrites, but allows the geometry shader to flip triangles around much easier.
+	auto maxDim = ei::max(m_voxelVolumeSize);
+	GL_CALL(glViewport, 0, 0, maxDim, maxDim);
+
+
+	m_shaderVoxelize->Activate();
+	DrawScene(false);
+
+	GL_CALL(glColorMask, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	GL_CALL(glClipControl, GL_LOWER_LEFT, GL_ZERO_TO_ONE);
 }
 
 void Renderer::DrawSceneToGBuffer()
 {
 	gl::Enable(gl::Cap::DEPTH_TEST);
+	GL_CALL(glDepthMask, GL_TRUE);
 
 	m_samplerLinear.BindSampler(0);
 
 	m_shaderFillGBuffer_noskinning->Activate();
 	m_GBuffer->Bind(false);
 	GL_CALL(glClear, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	DrawScene();
+	DrawScene(true);
 }
 
 void Renderer::DrawGBufferDebug()
@@ -276,10 +284,6 @@ void Renderer::DrawGBufferDebug()
 	m_GBuffer_diffuse->Bind(0);
 	m_GBuffer_normal->Bind(1);
 	m_GBuffer_depth->Bind(2);
-	m_texturePerPixelCacheEntries->Bind(3);
-
-	// For accessing light cache buffer (m_lightCaches)
-	GL_CALL(glMemoryBarrier, GL_SHADER_STORAGE_BARRIER_BIT);
 
 	m_samplerNearest.BindSampler(0);
 	m_samplerNearest.BindSampler(1);
@@ -318,7 +322,7 @@ void Renderer::DrawLights()
 	gl::Disable(gl::Cap::BLEND);
 }
 
-void Renderer::DrawScene()
+void Renderer::DrawScene(bool setTextures)
 {
 	Model::BindVAO();
 
@@ -327,10 +331,13 @@ void Renderer::DrawScene()
 		model->BindBuffers();
 		for (const Model::Mesh& mesh : model->GetMeshes())
 		{
-			if (mesh.diffuseTexture)
-				mesh.diffuseTexture->Bind(0);
-			else
-				gl::Texture2D::ResetBinding(0);
+			if (setTextures)
+			{
+				if (mesh.diffuseTexture)
+					mesh.diffuseTexture->Bind(0);
+				else
+					gl::Texture2D::ResetBinding(0);
+			}
 			GL_CALL(glDrawElements, GL_TRIANGLES, mesh.numIndices, GL_UNSIGNED_INT, reinterpret_cast<const void*>(sizeof(std::uint32_t) * mesh.startIndex));
 		}
 	}
@@ -342,6 +349,6 @@ void Renderer::SetTrackLightCacheHashCollionCount(bool trackLightCacheHashCollis
 
 	// Patch shader
 	std::string defines = m_trackLightCacheHashCollisionCount ? "#define COUNT_LIGHTCACHE_HASH_COLLISIONS" : "";
-	m_shaderFillLightCaches->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/filllightcaches.frag", defines);
-	m_shaderFillLightCaches->CreateProgram();
+	m_shaderVoxelize->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/voxelize.frag", defines);
+	m_shaderVoxelize->CreateProgram();
 }

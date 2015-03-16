@@ -28,10 +28,10 @@ void main()
 	vec3 absNorm = abs(normalize(cross(v0,v1)));
 
 
-	int i = absNorm[0] > absNorm[1] ? 0 : 1;
-	i = absNorm[i] > absNorm[2] ? i : 2;
+	int dominantAxis = absNorm[0] > absNorm[1] ? 0 : 1;
+	dominantAxis = absNorm[dominantAxis] > absNorm[2] ? dominantAxis : 2;
 
-	switch(i)
+	switch(dominantAxis)
 	{
 		// Dominant X
 	case 0:

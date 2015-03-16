@@ -21,5 +21,5 @@ void main(void)
 	vs_out_Normal = inNormal;
 	vs_out_Texcoord = inTexcoord;
 
-	gl_Position = vec4(vs_out_VoxelPos * 2.0 - vec3(1.0), 1.0);
+	gl_Position = vec4(vs_out_VoxelPos * 2.0 - vec3(1.0), 1.0); // add little bias to include borders
 }

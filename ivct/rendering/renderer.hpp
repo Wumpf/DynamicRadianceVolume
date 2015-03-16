@@ -49,18 +49,16 @@ private:
 	/// Performs direct lighting for all lights.
 	void DrawLights();
 	/// Fills light caches with screen space information.
-	void FillLightCaches();
+	void VoxelizeAndCreateCaches();
 
 	void OutputHDRTextureToBackbuffer();
 
 	/// Draws scene, mesh by mesh.
 	///
 	/// Does set VAO, VBO and index buffers but nothing else. No culling!
-	void DrawScene();
+	void DrawScene(bool setTextures);
 
 	std::unique_ptr<gl::ScreenAlignedTriangle> m_screenTriangle;
-	std::unique_ptr<Voxelization> m_voxelization;
-
 
 	std::unique_ptr<gl::ShaderObject> m_shaderDebugGBuffer;
 	std::unique_ptr<gl::ShaderObject> m_shaderFillGBuffer_noskinning;
@@ -72,8 +70,9 @@ private:
 	std::unique_ptr<gl::UniformBufferView> m_uboPerFrame;
 
 
-
-	std::unique_ptr<gl::ShaderObject> m_shaderFillLightCaches;
+	ei::IVec3 m_voxelVolumeSize;
+	std::unique_ptr<gl::ShaderObject> m_shaderVoxelize;
+	std::unique_ptr<gl::ShaderObject> m_shaderApplyLightCaches;
 
 	bool m_trackLightCacheHashCollisionCount;
 	unsigned int m_lastLightCacheHashCollisionCount;
@@ -82,9 +81,6 @@ private:
 	ei::Vec3 m_cacheWorldSize;
 	std::unique_ptr<gl::ShaderStorageBufferView> m_lightCaches;
 
-
-	std::unique_ptr<gl::Texture2D> m_texturePerPixelCacheEntries;
-	std::unique_ptr<gl::FramebufferObject> m_fboPerPixelCacheEntries;
 
 	std::unique_ptr<gl::Texture2D> m_GBuffer_diffuse;
 	std::unique_ptr<gl::Texture2D> m_GBuffer_normal;

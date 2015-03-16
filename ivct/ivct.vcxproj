@@ -265,7 +265,7 @@
     <None Include="shader\defaultmodel_noskinning.vert" />
     <None Include="shader\directdeferredlighting.frag" />
     <None Include="shader\fillgbuffer.frag" />
-    <None Include="shader\filllightcaches.frag" />
+    <None Include="shader\applylightcaches.frag" />
     <None Include="shader\globalubos.glsl" />
     <None Include="shader\lightcache.glsl" />
     <None Include="shader\screenTri.vert" />

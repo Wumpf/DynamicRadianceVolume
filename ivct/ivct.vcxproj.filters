@@ -387,7 +387,7 @@
     <None Include="shader\lightcache.glsl">
       <Filter>shader</Filter>
     </None>
-    <None Include="shader\filllightcaches.frag">
+    <None Include="shader\applylightcaches.frag">
       <Filter>shader</Filter>
     </None>
   </ItemGroup>
