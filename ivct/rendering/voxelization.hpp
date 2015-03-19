@@ -17,7 +17,7 @@ class Scene;
 class Voxelization
 {
 public:
-	Voxelization(const ei::UVec3& resolution);
+	Voxelization(unsigned int resolution);
 	~Voxelization();
 
 	void DrawVoxelRepresentation();

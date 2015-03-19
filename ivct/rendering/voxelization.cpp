@@ -14,7 +14,7 @@
 #include <glhelper/statemanagement.hpp>
 
 
-Voxelization::Voxelization(const ei::UVec3& resolution) :
+Voxelization::Voxelization(unsigned int resolution) :
 	m_samplerLinearMipNearest(gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR,
 																							gl::SamplerObject::Filter::NEAREST, gl::SamplerObject::Border::CLAMP)))
 {
@@ -31,7 +31,7 @@ Voxelization::Voxelization(const ei::UVec3& resolution) :
 	m_voxelDebugShader->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/voxeldebug.frag");
 	m_voxelDebugShader->CreateProgram();
 
-	m_voxelSceneTexture = std::make_unique<gl::Texture3D>(resolution.x, resolution.y, resolution.z, gl::TextureFormat::R8, 1);
+	m_voxelSceneTexture = std::make_unique<gl::Texture3D>(resolution, resolution, resolution, gl::TextureFormat::R8, 1);
 
 	// Register all shader for auto reload on change.
 	ShaderFileWatcher::Instance().RegisterShaderForReloadOnChange(m_voxelDebugShader.get());
@@ -75,9 +75,7 @@ void Voxelization::VoxelizeScene(const Scene& scene)
 	GL_CALL(glColorMask, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 
 	// Viewport in size of voxel volume.
-	// Using max on all dimensions may lead to simultaneous overwrites, but allows the geometry shader to flip triangles around much easier.
-	auto maxDim = std::max(std::max(m_voxelSceneTexture->GetWidth(), m_voxelSceneTexture->GetHeight()), m_voxelSceneTexture->GetDepth());
-	GL_CALL(glViewport, 0, 0, maxDim, maxDim);
+	GL_CALL(glViewport, 0, 0, m_voxelSceneTexture->GetWidth(), m_voxelSceneTexture->GetWidth());
 
 	// Clear volume.
 	m_voxelSceneTexture->ClearToZero();

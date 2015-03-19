@@ -40,7 +40,7 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	m_shaderDeferredDirectLighting_Spot->BindUBO(*m_uboDeferredDirectLighting);
 
 	// Create voxelization module.
-	m_voxelization = std::make_unique<Voxelization>(ei::UVec3(256, 256, 256));
+	m_voxelization = std::make_unique<Voxelization>(32);
 
 	// Basic settings.
 	SetScene(scene);
@@ -117,15 +117,11 @@ void Renderer::UpdateConstantUBO()
 {
 	ei::Vec3 voxelVolumeWorldMin(m_scene->GetBoundingBox().min);
 	ei::Vec3 voxelVolumeWorldMax(m_scene->GetBoundingBox().max);
-	ei::Vec3 voxelVolumeSizePix(static_cast<float>(m_voxelization->GetVoxelTexture().GetWidth()), 
-								static_cast<float>(m_voxelization->GetVoxelTexture().GetHeight()), 
-								static_cast<float>(m_voxelization->GetVoxelTexture().GetDepth()));
-	
 
 	m_uboConstant->GetBuffer()->Map();
 	(*m_uboConstant)["VoxelVolumeWorldMin"].Set(voxelVolumeWorldMin);
 	(*m_uboConstant)["VoxelVolumeWorldMax"].Set(voxelVolumeWorldMax);
-	(*m_uboConstant)["VoxelSizeInWorld"].Set((voxelVolumeWorldMax - voxelVolumeWorldMin) / voxelVolumeSizePix);
+	(*m_uboConstant)["VoxelSizeInWorld"].Set((voxelVolumeWorldMax - voxelVolumeWorldMin) / m_voxelization->GetVoxelTexture().GetWidth());
 
 	m_cacheWorldSize = ei::Vec3(5.0f); // TODO
 	(*m_uboConstant)["CacheWorldSize"].Set(m_cacheWorldSize);

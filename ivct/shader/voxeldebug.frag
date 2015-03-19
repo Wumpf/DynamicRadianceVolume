@@ -62,7 +62,7 @@ void main()
 			}
 
 			voxelHitPos += rayMarchStep * stepSize;
-			rayMarchStep *= 1.001;
+			rayMarchStep *= 1.01;
 		}
 
 		//FragColor = vec4(mix(FragColor.xyz, vec3(1.0), totalIntensity), 0);
