@@ -6,6 +6,7 @@ layout(binding = 0, shared) uniform Constant
 
 	vec3 VoxelVolumeWorldMin; // World min coordinate of voxel volume (currently assumed to be scene-static)
 	vec3 VoxelVolumeWorldMax; // || max
+	int VoxelResolution;
 	vec3 VoxelSizeInWorld;
 
 	int MaxNumLightCaches;

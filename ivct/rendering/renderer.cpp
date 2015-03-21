@@ -40,7 +40,7 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	m_shaderDeferredDirectLighting_Spot->BindUBO(*m_uboDeferredDirectLighting);
 
 	// Create voxelization module.
-	m_voxelization = std::make_unique<Voxelization>(32);
+	m_voxelization = std::make_unique<Voxelization>(256);
 
 	// Basic settings.
 	SetScene(scene);
@@ -121,6 +121,7 @@ void Renderer::UpdateConstantUBO()
 	m_uboConstant->GetBuffer()->Map();
 	(*m_uboConstant)["VoxelVolumeWorldMin"].Set(voxelVolumeWorldMin);
 	(*m_uboConstant)["VoxelVolumeWorldMax"].Set(voxelVolumeWorldMax);
+	(*m_uboConstant)["VoxelResolution"].Set(m_voxelization->GetVoxelTexture().GetWidth());
 	(*m_uboConstant)["VoxelSizeInWorld"].Set((voxelVolumeWorldMax - voxelVolumeWorldMin) / m_voxelization->GetVoxelTexture().GetWidth());
 
 	m_cacheWorldSize = ei::Vec3(5.0f); // TODO
