@@ -10,6 +10,7 @@ public:
 
 	const ei::Vec3& GetPosition() const  { return m_position; }
 	const ei::Vec3& GetLookAt() const  { return m_lookat; }
+	ei::Vec3 GetDirection() const  { return ei::normalize(m_lookat - m_position); }
 
 	virtual void SetAspectRatio(float aspect)				{ m_aspectRatio = aspect; }
 	virtual void SetHFov(float hfov)						{ m_hfov = hfov; }

@@ -18,14 +18,29 @@ ivec3 UnswizzlePos(ivec3 pos)
 	return gs_out_SideIndex == 0 ? pos.zyx : (gs_out_SideIndex == 1 ? pos.xzy : pos.xyz);
 }
 
+/*float DepthBufferZToLinearZ(float z)
+{
+	return Projection[2][3] / (z - Projection[2][2]);
+}*/
+
 void RecordCache(ivec3 voxelPos)
 {
 	// Check if voxel is in frustum.
-	vec4 projectedWorldPos = vec4(voxelPos * VoxelSizeInWorld + VoxelVolumeWorldMin, 1.0) * ViewProjection;
+	vec3 worldPos = voxelPos * VoxelSizeInWorld + VoxelVolumeWorldMin;
+	vec4 projectedWorldPos = vec4(worldPos, 1.0) * ViewProjection;
 	if(-projectedWorldPos.w <= projectedWorldPos.x && projectedWorldPos.x <= projectedWorldPos.w &&
 	   -projectedWorldPos.w <= projectedWorldPos.y && projectedWorldPos.y <= projectedWorldPos.w &&
 	   0.0 <= projectedWorldPos.z && projectedWorldPos.z <= projectedWorldPos.w)
 	{
+		/*const float CACHE_DEPTH_TEST_OFFSET = 0.0;
+		float voxelDepth = dot(worldPos - CameraPosition, CameraDirection) - VoxelSizeInWorld.x * CACHE_DEPTH_TEST_OFFSET;
+		//if(voxelDepth > 0.0)
+		{
+			float depthBufferDepth = DepthBufferZToLinearZ(texture(GBuffer_Depth, projectedWorldPos.xy / projectedWorldPos.w * 0.5 + 0.5).r);
+			if(voxelDepth > depthBufferDepth)
+				return;
+		}*/
+
 		int cachePositionInt;
 		int cacheIndex = GetCacheHash(voxelPos, cachePositionInt);
 

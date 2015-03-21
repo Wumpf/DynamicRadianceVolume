@@ -16,9 +16,11 @@ layout(binding = 0, shared) uniform Constant
 // UBO for values that change once every frame.
 layout(binding = 1, shared) uniform PerFrame
 {
+	mat4 Projection;
 	mat4 ViewProjection;
 	mat4 InverseViewProjection;
 	vec3 CameraPosition;
+	vec3 CameraDirection;
 
 	vec3 CacheGridMin;
 	int CacheGridStrideX; // CacheGridSize.x / CacheWorldSize.x

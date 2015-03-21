@@ -124,11 +124,12 @@ void Renderer::UpdatePerFrameUBO(const Camera& camera)
 	auto projection = camera.ComputeProjectionMatrix();
 	auto viewProjection = projection * view;
 
-
 	m_uboPerFrame->GetBuffer()->Map();
+	(*m_uboPerFrame)["Projection"].Set(projection);
 	(*m_uboPerFrame)["ViewProjection"].Set(viewProjection);
 	(*m_uboPerFrame)["InverseViewProjection"].Set(ei::invert(viewProjection));
 	(*m_uboPerFrame)["CameraPosition"].Set(camera.GetPosition());
+	(*m_uboPerFrame)["CameraDirection"].Set(camera.GetDirection());
 	m_uboPerFrame->GetBuffer()->Unmap();
 }
 
@@ -174,7 +175,6 @@ void Renderer::Draw(const Camera& camera)
 	UpdatePerFrameUBO(camera);
 
 	DrawSceneToGBuffer();
-
 
 	m_GBuffer_diffuse->Bind(0);
 	m_GBuffer_normal->Bind(1);
