@@ -160,8 +160,9 @@ void Application::SetupTweakBarBinding()
 
 	/// Light cache settings
 	m_tweakBar->AddSeperator("Light Cache settings");
-	m_tweakBar->AddReadWrite<bool>("Count Hash Collisions", [&](){ return m_renderer->GetTrackLightCacheHashCollionCount(); }, 
-																		[&](bool b){ return m_renderer->SetTrackLightCacheHashCollionCount(b); });
+	m_tweakBar->AddReadWrite<bool>("Light Cache Creation Tracking", [&](){ return m_renderer->GetTrackLightCacheCreationStats(); }, 
+																	[&](bool b){ return m_renderer->SetTrackLightCacheCreationStats(b); });
+	m_tweakBar->AddReadOnly("#Active Caches", [&](){ return std::to_string(m_renderer->GetLightCacheActiveCount()); });
 	m_tweakBar->AddReadOnly("#Hash Collision", [&](){ return std::to_string(m_renderer->GetLightCacheHashCollisionCount()); });
 
 	// Light settings

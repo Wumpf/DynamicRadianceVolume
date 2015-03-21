@@ -30,9 +30,10 @@ public:
 
 	void Draw(const Camera& camera);
 
-	void SetTrackLightCacheHashCollionCount(bool trackLightCacheHashCollisionCount);
-	bool GetTrackLightCacheHashCollionCount() const { return m_trackLightCacheHashCollisionCount; }
-	unsigned int GetLightCacheHashCollisionCount() const { return m_lastLightCacheHashCollisionCount; }
+	void SetTrackLightCacheCreationStats(bool trackLightCacheCreationStats);
+	bool GetTrackLightCacheCreationStats() const;
+	unsigned int GetLightCacheHashCollisionCount() const;
+	unsigned int GetLightCacheActiveCount() const;
 
 private:
 	std::shared_ptr<const Scene> m_scene;
@@ -48,8 +49,6 @@ private:
 	void DrawGBufferDebug();
 	/// Performs direct lighting for all lights.
 	void DrawLights();
-	/// Fills light caches with screen space information.
-	void VoxelizeAndCreateCaches();
 
 	void OutputHDRTextureToBackbuffer();
 
@@ -59,6 +58,8 @@ private:
 	void DrawScene(bool setTextures);
 
 	std::unique_ptr<gl::ScreenAlignedTriangle> m_screenTriangle;
+
+	std::unique_ptr<Voxelization> m_voxelization;
 
 	std::unique_ptr<gl::ShaderObject> m_shaderDebugGBuffer;
 	std::unique_ptr<gl::ShaderObject> m_shaderFillGBuffer_noskinning;
@@ -70,17 +71,7 @@ private:
 	std::unique_ptr<gl::UniformBufferView> m_uboPerFrame;
 
 
-	ei::IVec3 m_voxelVolumeSize;
-	std::unique_ptr<gl::ShaderObject> m_shaderVoxelize;
 	std::unique_ptr<gl::ShaderObject> m_shaderApplyLightCaches;
-
-	bool m_trackLightCacheHashCollisionCount;
-	unsigned int m_lastLightCacheHashCollisionCount;
-	std::unique_ptr<gl::ShaderStorageBufferView> m_lightCacheHashCollisionCounter; ///< Atomic hash collision counter for debugging purposes
-	
-	ei::Vec3 m_cacheWorldSize;
-	std::unique_ptr<gl::ShaderStorageBufferView> m_lightCaches;
-
 
 	std::unique_ptr<gl::Texture2D> m_GBuffer_diffuse;
 	std::unique_ptr<gl::Texture2D> m_GBuffer_normal;

@@ -42,14 +42,14 @@ void main()
 
 		if(actualCachePosition != 0)
 		{
-			totalNormal += normalize(LightCacheEntries[cacheIndex[i]].Normal);
+			totalNormal += LightCacheEntries[cacheIndex[i]].Normal;
 			++numNonZero;
 		}
 	}
 
 
-	OutputColor = numNonZero == 0 ? vec3(1,0,1) : vec3(numNonZero / 8.0);
+	//OutputColor = numNonZero == 0 ? vec3(1,0,1) : vec3(numNonZero / 8.0);
 	//OutputColor =  UnpackNormal16I(texture(GBuffer_Normal, Texcoord).rg) * 0.5 + vec3(0.5);
-	//OutputColor = normalize(totalNormal) * 0.5 + vec3(0.5);
+	OutputColor = normalize(totalNormal) * 0.5 + vec3(0.5);
 	//OutputColor = vec3((cachePositionInt+1) - LightCacheEntries[cacheIndex].Position);
 }

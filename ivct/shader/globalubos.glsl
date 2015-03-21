@@ -5,12 +5,12 @@ layout(binding = 0, shared) uniform Constant
 	float FarPlane;
 
 	vec3 VoxelVolumeWorldMin; // World min coordinate of voxel volume (currently assumed to be scene-static)
-	int VoxelCountX;
 	vec3 VoxelVolumeWorldMax; // || max
-	int VoxelCountXZ;
+	int VoxelResolution;
 	vec3 VoxelSizeInWorld;
 
 	int MaxNumLightCaches;
+	vec3 CacheWorldSize;
 };
 
 // UBO for values that change once every frame.
@@ -19,4 +19,9 @@ layout(binding = 1, shared) uniform PerFrame
 	mat4 ViewProjection;
 	mat4 InverseViewProjection;
 	vec3 CameraPosition;
+
+	vec3 CacheGridMin;
+	int CacheGridStrideX; // CacheGridSize.x / CacheWorldSize.x
+	vec3 CacheGridSize;
+	int CacheGridStrideXY; // (CacheGridSize.x / CacheWorldSize.x) * (CacheGridSize.y / CacheWorldSize.y)
 };
