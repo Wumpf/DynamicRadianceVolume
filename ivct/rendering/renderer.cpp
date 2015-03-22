@@ -93,14 +93,22 @@ void Renderer::LoadShader()
 	m_shaderTonemap->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/tonemapping.frag");
 	m_shaderTonemap->CreateProgram();
 
+	m_shaderRequestLightCaches = std::make_unique<gl::ShaderObject>("request light caches");
+	m_shaderRequestLightCaches->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
+	m_shaderRequestLightCaches->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/requestlightcaches.frag");
+	m_shaderRequestLightCaches->CreateProgram();
+
 	m_shaderApplyLightCaches = std::make_unique<gl::ShaderObject>("apply light caches");
 	m_shaderApplyLightCaches->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
 	m_shaderApplyLightCaches->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/applylightcaches.frag");
 	m_shaderApplyLightCaches->CreateProgram();
 
+
+	
+
 	// Register all shader for auto reload on change.
 	m_allShaders = { m_shaderDebugGBuffer.get(), m_shaderFillGBuffer_noskinning.get(), m_shaderDeferredDirectLighting_Spot.get(), 
-					 m_shaderTonemap.get(), m_shaderApplyLightCaches.get() };
+						m_shaderTonemap.get(), m_shaderRequestLightCaches.get(), m_shaderApplyLightCaches.get() };
 	for (auto it : m_allShaders)
 		ShaderFileWatcher::Instance().RegisterShaderForReloadOnChange(it);
 }
@@ -180,6 +188,7 @@ void Renderer::Draw(const Camera& camera)
 	m_GBuffer_normal->Bind(1);
 	m_GBuffer_depth->Bind(2);
 
+	WriteCacheRequests();
 	m_voxelization->VoxelizeAndCreateCaches(*m_scene);
 
 	m_HDRBackbuffer->Bind(true);
@@ -196,6 +205,21 @@ void Renderer::Draw(const Camera& camera)
 	OutputHDRTextureToBackbuffer();
 
 	//m_voxelization->DrawVoxelRepresentation();
+}
+
+void Renderer::WriteCacheRequests()
+{
+	gl::Disable(gl::Cap::DEPTH_TEST);
+	GL_CALL(glDepthMask, GL_FALSE);
+	gl::Disable(gl::Cap::CULL_FACE);
+	GL_CALL(glColorMask, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+
+	m_voxelization->GetVoxelTexture().ClearToZero();
+	m_voxelization->GetVoxelTexture().BindImage(0, gl::Texture::ImageAccess::WRITE);
+	m_shaderRequestLightCaches->Activate();
+	m_screenTriangle->Draw();
+
+	//GL_CALL(glColorMask, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 }
 
 void Renderer::OutputHDRTextureToBackbuffer()

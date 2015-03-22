@@ -50,6 +50,8 @@ private:
 	/// Performs direct lighting for all lights.
 	void DrawLights();
 
+	void WriteCacheRequests();
+
 	void OutputHDRTextureToBackbuffer();
 
 	/// Draws scene, mesh by mesh.
@@ -70,8 +72,9 @@ private:
 	std::unique_ptr<gl::UniformBufferView> m_uboConstant;
 	std::unique_ptr<gl::UniformBufferView> m_uboPerFrame;
 
-
+	std::unique_ptr<gl::ShaderObject> m_shaderRequestLightCaches;
 	std::unique_ptr<gl::ShaderObject> m_shaderApplyLightCaches;
+	
 
 	std::unique_ptr<gl::Texture2D> m_GBuffer_diffuse;
 	std::unique_ptr<gl::Texture2D> m_GBuffer_normal;

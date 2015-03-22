@@ -16,6 +16,7 @@ namespace gl
 class Scene;
 
 /// Voxelization + LightCache generation.
+/// Not exactly self-contained! Submodule for renderer!
 class Voxelization
 {
 public:
@@ -30,10 +31,12 @@ public:
 	/// Voxel debug output.
 	void DrawVoxelRepresentation();
 
-	/// Voxelizes given scene into current grid
+
+	/// Voxelizes given scene into current voxel grid.
 	/// 
-	/// Grid world size settings are currently handled via the global "Constant" ubo
-	/// Attention: This function changes the viewport!
+	/// Caches are created on previously marked voxels (no clear happens here!)
+	/// Grid world size settings are currently handled via the global "Constant" ubo.
+	/// Changed renderstates: Viewport, VAO, depth write/read off, culling off.
 	void VoxelizeAndCreateCaches(const Scene& scene);
 
 
@@ -45,6 +48,7 @@ public:
 	gl::ShaderStorageBufferView& GetLightCaches() { return *m_lightCaches; }
 
 	const gl::Texture3D& GetVoxelTexture() const { return *m_voxelSceneTexture; }
+	gl::Texture3D& GetVoxelTexture()			 { return *m_voxelSceneTexture; }
 
 private:
 	std::unique_ptr<gl::ScreenAlignedTriangle> m_screenTriangle;

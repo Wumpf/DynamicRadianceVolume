@@ -38,7 +38,7 @@ Voxelization::Voxelization(unsigned int resolution) :
 	m_shaderVoxelDebug->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/voxeldebug.frag");
 	m_shaderVoxelDebug->CreateProgram();
 
-	m_voxelSceneTexture = std::make_unique<gl::Texture3D>(resolution, resolution, resolution, gl::TextureFormat::R8, 1);
+	m_voxelSceneTexture = std::make_unique<gl::Texture3D>(resolution, resolution, resolution, gl::TextureFormat::R8UI, 1);
 
 	// misc buffer
 	m_lightCacheHashCollisionCounter = std::make_unique<gl::ShaderStorageBufferView>(std::make_shared<gl::Buffer>(sizeof(std::int32_t) * 2, 
@@ -114,11 +114,9 @@ void Voxelization::VoxelizeAndCreateCaches(const Scene& scene)
 		m_shaderVoxelize->BindSSBO(*m_lightCaches);
 	}
 
-	// Clear volume.
-	m_voxelSceneTexture->ClearToZero();
-
 	// Draw
-	m_voxelSceneTexture->BindImage(0, gl::Texture::ImageAccess::WRITE);
+	GL_CALL(glMemoryBarrier, GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Ensure Cache demands are written.
+	m_voxelSceneTexture->BindImage(0, gl::Texture::ImageAccess::READ_WRITE);
 	m_shaderVoxelize->Activate();
 	Model::BindVAO();
 	for (const std::shared_ptr<Model>& model : scene.GetModels())

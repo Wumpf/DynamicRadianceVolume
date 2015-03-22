@@ -5,7 +5,7 @@
 // input
 layout(location = 0) in vec2 Texcoord;
 
-layout(binding = 0) uniform sampler3D VoxelScene;
+layout(binding = 0) uniform isampler3D VoxelScene;
 
 // output
 layout(location = 0, index = 0) out vec4 FragColor;

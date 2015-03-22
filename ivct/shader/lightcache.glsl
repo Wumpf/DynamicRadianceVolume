@@ -18,6 +18,10 @@ layout(std430, binding = 0) restrict buffer LightCaches
 #endif
 
 
+// Infos encoded in 8bit voxel grid
+#define CACHE_NEEDED_BIT uint(1)
+#define SOLID_BIT uint(2)
+
 
 int CacheHashFunction(int cachePositionInt)
 {
