@@ -192,18 +192,41 @@ T AntTweakBarInterface::GetRWEntryValue(const AntTweakBarInterface::EntryReadWri
 	}
 }
 
-template<typename T>
-void AntTweakBarInterface::SetRWEntryValue(AntTweakBarInterface::EntryReadWrite* rwEntry, const T& value)
+
+
+template<typename InputType>
+void AntTweakBarInterface::SetRWEntryValue(AntTweakBarInterface::EntryReadWrite* rwEntry, const InputType& value)
 {
-	auto cbEntry = dynamic_cast<AntTweakBarInterface::EntryReadWriteCB<T>*>(rwEntry);
+	if(!SetRWEntryValueCast<InputType, InputType>(rwEntry, value))
+		Assert(false, "Invalid type cast to both EntryReadWriteCB and EntryReadWriteVar. Type assumption wrong?");
+}
+
+template<typename InputType, typename CastingAlternative>
+void AntTweakBarInterface::SetRWEntryValue(AntTweakBarInterface::EntryReadWrite* rwEntry, const InputType& value)
+{
+	if (!SetRWEntryValueCast<InputType, InputType>(rwEntry, value))
+	{
+		if (!SetRWEntryValueCast<InputType, CastingAlternative>(rwEntry, value))
+			Assert(false, "Invalid type cast to both EntryReadWriteCB and EntryReadWriteVar. Type assumption wrong?");
+	}
+}
+
+
+template<typename InputType, typename CastingType>
+bool AntTweakBarInterface::SetRWEntryValueCast(AntTweakBarInterface::EntryReadWrite* rwEntry, const InputType& value)
+{
+	auto cbEntry = dynamic_cast<AntTweakBarInterface::EntryReadWriteCB<CastingType>*>(rwEntry);
 	if (cbEntry)
-		return cbEntry->setValue(value);
+		cbEntry->setValue(static_cast<CastingType>(value));
 	else
 	{
-		auto varEntry = dynamic_cast<AntTweakBarInterface::EntryReadWriteVar<T>*>(rwEntry);
-		Assert(varEntry != nullptr, "Invalid type cast to both EntryReadWriteCB and EntryReadWriteVar. Type assumption wrong?");
-		varEntry->variable = value;
+		auto varEntry = dynamic_cast<AntTweakBarInterface::EntryReadWriteVar<CastingType>*>(rwEntry);
+		if (!varEntry)
+			return false;
+		varEntry->variable = static_cast<CastingType>(value);
 	}
+
+	return true;
 }
 
 void AntTweakBarInterface::SaveReadWriteValuesToJSON(const std::string& jsonFilename)
@@ -234,11 +257,8 @@ void AntTweakBarInterface::SaveReadWriteValuesToJSON(const std::string& jsonFile
 			case TW_TYPE_INT32:
 				*value = GetRWEntryValue<std::int32_t>(rwEntry);
 				break;
-			case TW_TYPE_UINT32:
-				*value = GetRWEntryValue<std::uint32_t>(rwEntry);
-				break;
 
-			case TW_TYPE_BOOL32:
+			case TW_TYPE_BOOLCPP:
 				*value = GetRWEntryValue<bool>(rwEntry);
 				break;
 
@@ -254,6 +274,10 @@ void AntTweakBarInterface::SaveReadWriteValuesToJSON(const std::string& jsonFile
 
 			case TW_TYPE_FLOAT:
 				*value = GetRWEntryValue<float>(rwEntry);
+				break;
+
+			case TW_TYPE_STDSTRING:
+				*value = GetRWEntryValue<std::string>(rwEntry);
 				break;
 
 			default:
@@ -274,7 +298,6 @@ void AntTweakBarInterface::SaveReadWriteValuesToJSON(const std::string& jsonFile
 	file << root;
 }
 
-#include <iostream>
 void AntTweakBarInterface::LoadReadWriteValuesToJSON(const std::string& jsonFilename)
 {
 	std::ifstream file(jsonFilename.c_str());
@@ -307,11 +330,11 @@ void AntTweakBarInterface::LoadReadWriteValuesToJSON(const std::string& jsonFile
 				if (childIt->isBool())
 					SetRWEntryValue<bool>(static_cast<EntryReadWrite*>(*entryIt), childIt->asBool());
 				else if (childIt->isInt())
-					SetRWEntryValue<int>(static_cast<EntryReadWrite*>(*entryIt), childIt->asInt());
-				else if (childIt->isUInt())
-					SetRWEntryValue<unsigned int>(static_cast<EntryReadWrite*>(*entryIt), childIt->asUInt());
+					SetRWEntryValue<std::int32_t, float>(static_cast<EntryReadWrite*>(*entryIt), childIt->asInt());
 				else if (childIt->isDouble())
-					SetRWEntryValue<float>(static_cast<EntryReadWrite*>(*entryIt), childIt->asFloat());
+					SetRWEntryValue<float, std::int32_t>(static_cast<EntryReadWrite*>(*entryIt), childIt->asFloat());
+				else if (childIt->isString())
+					SetRWEntryValue<std::string>(static_cast<EntryReadWrite*>(*entryIt), childIt->asString());
 				else if (childIt->isArray() && childIt->size() == 3 && (*childIt)[0].isDouble() && (*childIt)[1].isDouble() && (*childIt)[2].isDouble())
 					SetRWEntryValue<ei::Vec3>(static_cast<EntryReadWrite*>(*entryIt), ei::Vec3((*childIt)[0].asFloat(), (*childIt)[1].asFloat(), (*childIt)[2].asFloat()));
 				else
