@@ -2,6 +2,7 @@
 #include "voxelization.hpp"
 
 #include "../scene/model.hpp"
+#include "../scene/sceneentity.hpp"
 #include "../scene/scene.hpp"
 #include "../camera/camera.hpp"
 
@@ -31,6 +32,9 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	m_allShaders[0]->BindUBO(*m_uboConstant);
 	m_uboPerFrame = std::make_unique<gl::UniformBufferView>(*m_allShaders[0], "PerFrame");
 	m_allShaders[0]->BindUBO(*m_uboPerFrame);
+	m_uboPerObject = std::make_unique<gl::UniformBufferView>(*m_allShaders[0], "PerObject");
+	m_allShaders[0]->BindUBO(*m_uboPerObject);
+
 
 	// Init specific ubos.
 	m_uboDeferredDirectLighting = std::make_unique<gl::UniformBufferView>(*m_shaderDeferredDirectLighting_Spot, "Light");
@@ -115,14 +119,8 @@ void Renderer::LoadShader()
 
 void Renderer::UpdateConstantUBO()
 {
-	ei::Vec3 voxelVolumeWorldMin(m_scene->GetBoundingBox().min - 0.1f);
-	ei::Vec3 voxelVolumeWorldMax(m_scene->GetBoundingBox().max + 0.1f);
-
 	m_uboConstant->GetBuffer()->Map();
-	(*m_uboConstant)["VoxelVolumeWorldMin"].Set(voxelVolumeWorldMin);
-	(*m_uboConstant)["VoxelVolumeWorldMax"].Set(voxelVolumeWorldMax);
 	(*m_uboConstant)["VoxelResolution"].Set(m_voxelization->GetVoxelTexture().GetWidth());
-	(*m_uboConstant)["VoxelSizeInWorld"].Set((voxelVolumeWorldMax - voxelVolumeWorldMin) / m_voxelization->GetVoxelTexture().GetWidth());
 	m_uboConstant->GetBuffer()->Unmap();
 }
 
@@ -132,13 +130,29 @@ void Renderer::UpdatePerFrameUBO(const Camera& camera)
 	auto projection = camera.ComputeProjectionMatrix();
 	auto viewProjection = projection * view;
 
+
+	ei::Vec3 voxelVolumeWorldMin(m_scene->GetBoundingBox().min - 0.1f);
+	ei::Vec3 voxelVolumeWorldMax(m_scene->GetBoundingBox().max + 0.1f);
+
 	m_uboPerFrame->GetBuffer()->Map();
 	(*m_uboPerFrame)["Projection"].Set(projection);
 	(*m_uboPerFrame)["ViewProjection"].Set(viewProjection);
 	(*m_uboPerFrame)["InverseViewProjection"].Set(ei::invert(viewProjection));
 	(*m_uboPerFrame)["CameraPosition"].Set(camera.GetPosition());
 	(*m_uboPerFrame)["CameraDirection"].Set(camera.GetDirection());
+
+	(*m_uboPerFrame)["VoxelVolumeWorldMin"].Set(voxelVolumeWorldMin);
+	(*m_uboPerFrame)["VoxelVolumeWorldMax"].Set(voxelVolumeWorldMax);
+	(*m_uboPerFrame)["VoxelSizeInWorld"].Set((voxelVolumeWorldMax - voxelVolumeWorldMin) / m_voxelization->GetVoxelTexture().GetWidth());
+
 	m_uboPerFrame->GetBuffer()->Unmap();
+}
+
+void Renderer::UpdatePerObjectUBO(const SceneEntity& entity)
+{
+	m_uboPerObject->GetBuffer()->Map();
+	(*m_uboPerObject)["World"].Set(entity.ComputeWorldMatrix());
+	m_uboPerObject->GetBuffer()->Unmap();
 }
 
 void Renderer::OnScreenResize(const ei::UVec2& newResolution)
@@ -187,9 +201,9 @@ void Renderer::Draw(const Camera& camera)
 	m_GBuffer_diffuse->Bind(0);
 	m_GBuffer_normal->Bind(1);
 	m_GBuffer_depth->Bind(2);
-
+	
 	WriteCacheRequests();
-	m_voxelization->VoxelizeAndCreateCaches(*m_scene);
+	m_voxelization->VoxelizeAndCreateCaches(*this);
 
 	m_HDRBackbuffer->Bind(true);
 	GL_CALL(glClear, GL_COLOR_BUFFER_BIT);
@@ -300,10 +314,14 @@ void Renderer::DrawScene(bool setTextures)
 {
 	Model::BindVAO();
 
-	for (const std::shared_ptr<Model>& model : m_scene->GetModels())
+	for (auto& entity : m_scene->GetEntities())
 	{
-		model->BindBuffers();
-		for (const Model::Mesh& mesh : model->GetMeshes())
+		if (!entity.GetModel())
+			continue;
+
+		UpdatePerObjectUBO(entity);
+		entity.GetModel()->BindBuffers();
+		for (const Model::Mesh& mesh : entity.GetModel()->GetMeshes())
 		{
 			if (setTextures)
 			{

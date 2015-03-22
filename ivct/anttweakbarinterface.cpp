@@ -272,6 +272,16 @@ void AntTweakBarInterface::SaveReadWriteValuesToJSON(const std::string& jsonFile
 				break;
 			}
 
+			case TW_TYPE_QUAT4F:
+			{
+				ei::Quaternion v = GetRWEntryValue<ei::Quaternion>(rwEntry);
+				(*value)[0] = v.i;
+				(*value)[1] = v.j;
+				(*value)[2] = v.k;
+				(*value)[3] = v.r;
+				break;
+			}
+
 			case TW_TYPE_FLOAT:
 				*value = GetRWEntryValue<float>(rwEntry);
 				break;
@@ -335,8 +345,10 @@ void AntTweakBarInterface::LoadReadWriteValuesToJSON(const std::string& jsonFile
 					SetRWEntryValue<float, std::int32_t>(static_cast<EntryReadWrite*>(*entryIt), childIt->asFloat());
 				else if (childIt->isString())
 					SetRWEntryValue<std::string>(static_cast<EntryReadWrite*>(*entryIt), childIt->asString());
-				else if (childIt->isArray() && childIt->size() == 3 && (*childIt)[0].isDouble() && (*childIt)[1].isDouble() && (*childIt)[2].isDouble())
+				else if (childIt->isArray() && childIt->size() == 3 && (*childIt)[0].isNumeric() && (*childIt)[1].isNumeric() && (*childIt)[2].isNumeric())
 					SetRWEntryValue<ei::Vec3>(static_cast<EntryReadWrite*>(*entryIt), ei::Vec3((*childIt)[0].asFloat(), (*childIt)[1].asFloat(), (*childIt)[2].asFloat()));
+				else if (childIt->isArray() && childIt->size() == 4 && (*childIt)[0].isNumeric() && (*childIt)[1].isNumeric() && (*childIt)[2].isNumeric() && (*childIt)[3].isNumeric())
+					SetRWEntryValue<ei::Quaternion>(static_cast<EntryReadWrite*>(*entryIt), ei::Quaternion((*childIt)[0].asFloat(), (*childIt)[1].asFloat(), (*childIt)[2].asFloat(), (*childIt)[3].asFloat()));
 				else
 					LOG_WARNING("Unkown json attribute type at \"" << childIt.key().asCString() << "\"");
 			}

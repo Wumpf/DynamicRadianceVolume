@@ -2,6 +2,7 @@
 
 #include "../scene/model.hpp"
 #include "../scene/scene.hpp"
+#include "renderer.hpp"
 
 #include "../shaderfilewatcher.hpp"
 
@@ -79,7 +80,7 @@ void Voxelization::DrawVoxelRepresentation()
 	GL_CALL(glDepthMask, GL_TRUE);
 }
 
-void Voxelization::VoxelizeAndCreateCaches(const Scene& scene)
+void Voxelization::VoxelizeAndCreateCaches(Renderer& renderer)
 {
 	// Disable depthbuffering & culling
 	gl::Disable(gl::Cap::DEPTH_TEST);
@@ -119,10 +120,14 @@ void Voxelization::VoxelizeAndCreateCaches(const Scene& scene)
 	m_voxelSceneTexture->BindImage(0, gl::Texture::ImageAccess::READ_WRITE);
 	m_shaderVoxelize->Activate();
 	Model::BindVAO();
-	for (const std::shared_ptr<Model>& model : scene.GetModels())
+	for (auto& entity : renderer.GetScene()->GetEntities())
 	{
-		model->BindBuffers();
-		GL_CALL(glDrawElements, GL_TRIANGLES, model->GetNumTriangles() * 3, GL_UNSIGNED_INT, nullptr);
+		if (!entity.GetModel())
+			continue;
+
+		renderer.UpdatePerObjectUBO(entity);
+		entity.GetModel()->BindBuffers();
+		GL_CALL(glDrawElements, GL_TRIANGLES, entity.GetModel()->GetNumTriangles() * 3, GL_UNSIGNED_INT, nullptr);
 	}
 
 	// Reset to default (convention)

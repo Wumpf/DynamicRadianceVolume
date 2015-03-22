@@ -183,6 +183,9 @@
     <ClCompile Include="..\dependencies\jsoncpp\jsoncpp.cpp">
       <Filter>dependencies\jsoncpp</Filter>
     </ClCompile>
+    <ClCompile Include="scene\sceneentity.cpp">
+      <Filter>source\scene</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="outputwindow.hpp">
@@ -328,6 +331,9 @@
     </ClInclude>
     <ClInclude Include="..\dependencies\jsoncpp\json\json-forwards.h">
       <Filter>dependencies\jsoncpp\json</Filter>
+    </ClInclude>
+    <ClInclude Include="scene\sceneentity.hpp">
+      <Filter>source\scene</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

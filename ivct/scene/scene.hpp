@@ -7,6 +7,7 @@
 #include <ei/3dtypes.hpp>
 
 #include "light.hpp"
+#include "sceneentity.hpp"
 
 namespace gl
 {
@@ -15,7 +16,6 @@ namespace gl
 	class ScreenAlignedTriangle;
 	class SamplerObject;
 }
-class Model;
 class Camera;
 
 class Scene
@@ -24,17 +24,18 @@ public:
 	Scene();
 	~Scene();
 
-	void AddModel(const std::string& filename);
-	const std::vector<std::shared_ptr<Model>>& GetModels() const { return m_models; }
+	const std::vector<SceneEntity>& GetEntities() const { return m_entities; }
+	std::vector<SceneEntity>& GetEntities() { return m_entities; }
 
-	void AddLight(const Light& light) { m_lights.push_back(light); }
+	void UpdateBoundingbox();
+
 	const std::vector<Light>& GetLights() const { return m_lights; }
 	std::vector<Light>& GetLights() { return m_lights; }
 
 	const ei::Box& GetBoundingBox() const { return m_boundingBox; }
 
 private:
-	std::vector<std::shared_ptr<Model>> m_models;
+	std::vector<SceneEntity> m_entities;
 	std::vector<Light> m_lights;
 	ei::Box m_boundingBox;
 };

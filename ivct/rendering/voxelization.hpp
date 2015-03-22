@@ -13,7 +13,7 @@ namespace gl
 	class ShaderStorageBufferView;
 	class SamplerObject;
 }
-class Scene;
+class Renderer;
 
 /// Voxelization + LightCache generation.
 /// Not exactly self-contained! Submodule for renderer!
@@ -37,7 +37,7 @@ public:
 	/// Caches are created on previously marked voxels (no clear happens here!)
 	/// Grid world size settings are currently handled via the global "Constant" ubo.
 	/// Changed renderstates: Viewport, VAO, depth write/read off, culling off.
-	void VoxelizeAndCreateCaches(const Scene& scene);
+	void VoxelizeAndCreateCaches(Renderer& renderer);
 
 
 	void SetTrackLightCacheCreationStats(bool trackLightCacheCreationStats);

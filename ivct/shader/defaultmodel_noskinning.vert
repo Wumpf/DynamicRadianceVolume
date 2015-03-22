@@ -13,9 +13,9 @@ out vec2 Texcoord;
 
 void main(void)
 {
-  gl_Position = vec4(inPosition, 1.0) * ViewProjection;
+	gl_Position = vec4(inPosition, 1.0) * World * ViewProjection;
 
-  // Simple pass through
-  Normal = inNormal;
-  Texcoord = inTexcoord;
+	// Simple pass through
+	Normal = (vec4(inNormal, 0.0) * World).xyz;
+	Texcoord = inTexcoord;
 }  

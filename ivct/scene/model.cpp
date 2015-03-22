@@ -15,7 +15,8 @@
 
 std::unique_ptr<gl::VertexArrayObject> Model::m_vertexArrayObject;
 
-Model::Model() :
+Model::Model(const std::string& originFilename) :
+	m_originFilename(originFilename),
 	m_numTriangles(0),
 	m_numVertices(0)
 {
@@ -59,7 +60,7 @@ std::shared_ptr<Model> Model::FromFile(const std::string& filename)
 		return nullptr;
 	}
 
-	std::shared_ptr<Model> output(new Model);
+	std::shared_ptr<Model> output(new Model(filename));
 
 	// Count tris/vertices
 	for(unsigned int i = 0; i < scene->mNumMeshes; ++i)

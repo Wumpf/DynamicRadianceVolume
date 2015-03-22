@@ -206,6 +206,7 @@ template<> inline ETwType AntTweakBarInterface::GetTwType<ei::Vec3>(AntTweakBarI
 template<> inline static ETwType AntTweakBarInterface::GetTwType<float>(AntTweakBarInterface::TypeHint) { return TW_TYPE_FLOAT; }
 template<> inline static ETwType AntTweakBarInterface::GetTwType<bool>(AntTweakBarInterface::TypeHint) { return TW_TYPE_BOOLCPP; }
 template<> inline static ETwType AntTweakBarInterface::GetTwType<std::string>(AntTweakBarInterface::TypeHint) { return TW_TYPE_STDSTRING; }
+template<> inline static ETwType AntTweakBarInterface::GetTwType<ei::Quaternion>(AntTweakBarInterface::TypeHint) { return TW_TYPE_QUAT4F; }
 template<> inline static ETwType AntTweakBarInterface::GetTwType<std::int32_t>(AntTweakBarInterface::TypeHint hint)
 {
 	if (hint == AntTweakBarInterface::TypeHint::AUTO)

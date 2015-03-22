@@ -16,6 +16,7 @@ namespace gl
 	class ShaderStorageBufferView;
 }
 class Scene;
+class SceneEntity;
 class Voxelization;
 
 class Renderer
@@ -27,6 +28,7 @@ public:
 	void OnScreenResize(const ei::UVec2& newResolution);
 
 	void SetScene(const std::shared_ptr<const Scene>& scene);
+	const std::shared_ptr<const Scene>& GetScene() const { return m_scene; }
 
 	void Draw(const Camera& camera);
 
@@ -34,6 +36,8 @@ public:
 	bool GetTrackLightCacheCreationStats() const;
 	unsigned int GetLightCacheHashCollisionCount() const;
 	unsigned int GetLightCacheActiveCount() const;
+
+	void UpdatePerObjectUBO(const SceneEntity& entity);
 
 private:
 	std::shared_ptr<const Scene> m_scene;
@@ -71,6 +75,7 @@ private:
 
 	std::unique_ptr<gl::UniformBufferView> m_uboConstant;
 	std::unique_ptr<gl::UniformBufferView> m_uboPerFrame;
+	std::unique_ptr<gl::UniformBufferView> m_uboPerObject;
 
 	std::unique_ptr<gl::ShaderObject> m_shaderRequestLightCaches;
 	std::unique_ptr<gl::ShaderObject> m_shaderApplyLightCaches;
