@@ -4,6 +4,10 @@
 #include <GLFW/glfw3.h>
 #include <ei/vector.hpp>
 
+#define GLFW_EXPOSE_NATIVE_WGL
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <glfw/glfw3native.h>
+
 struct GLFWwindow;
 namespace gl
 {
@@ -29,7 +33,9 @@ public:
 	bool WasButtonPressed(unsigned int glfwKey);
 
 	/// Returns GLFW window.
-	GLFWwindow* GetGLFWWindow() { return window; }
+	GLFWwindow* GetGLFWWindow() { return m_window; }
+
+	HWND GetWindowHandle();
 
 	void Present();
 
@@ -40,9 +46,9 @@ public:
 private:
 	void GetGLFWKeystates();
 	
-	GLFWwindow* window;
-	gl::ShaderObject displayHDR;
-	gl::ScreenAlignedTriangle* screenTri;
+	GLFWwindow* m_window;
+	gl::ShaderObject m_displayHDR;
+	gl::ScreenAlignedTriangle* m_screenTri;
 
 	int oldGLFWKeystates[GLFW_KEY_LAST];
 };
