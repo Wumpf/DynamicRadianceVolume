@@ -30,7 +30,7 @@ Model::~Model()
 
 std::shared_ptr<Model> Model::FromFile(const std::string& filename)
 {
-	std::string directory(PathUtils::GetDirectory(filename));
+	std::string directory(PathUtils::GetDirectory(PathUtils::CanonicalizePath(filename)));
 
 	// Ignore line/point primitives
 	Assimp::Importer importer;

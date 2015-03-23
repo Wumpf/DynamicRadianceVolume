@@ -17,10 +17,13 @@
 #include "shaderfilewatcher.hpp"
 #include "anttweakbarinterface.hpp"
 
+#include "glhelper/utils/pathutils.hpp"
+
 #ifdef _WIN32
 #undef APIENTRY
 #include <windows.h>
 #endif
+
 
 Application::Application(int argc, char** argv)
 {
@@ -55,16 +58,12 @@ Application::Application(int argc, char** argv)
 	m_scene->GetEntities()[0].LoadModel("../models/test0/test0.obj"); // "../models/cryteksponza/sponza.obj");
 	m_scene->UpdateBoundingbox();
 
-
 	ChangeLightCount(1);
 	m_scene->GetLights()[0].type = Light::Type::SPOT;
-	m_scene->GetLights()[0].intensity = ei::Vec3(100.0f, 90.0f, 90.0f);
-	m_scene->GetLights()[0].position = ei::Vec3(0.0f, 2.5f, -2.5f);
-	m_scene->GetLights()[0].direction = ei::normalize(-m_scene->GetLights()[0].position);
+	m_scene->GetLights()[0].intensity = ei::Vec3(100.0f, 100.0f, 100.0f);
+	m_scene->GetLights()[0].position = ei::Vec3(0.0f, 1.7f, -3.3f);
+	m_scene->GetLights()[0].direction = ei::Vec3(0.0f, 0.0f, 1.0f);
 	m_scene->GetLights()[0].halfAngle = 30.0f * (ei::PI / 180.0f);
-
-
-
 }
 
 Application::~Application()
@@ -78,6 +77,54 @@ Application::~Application()
 	m_scene.reset();
 }
 
+std::string Application::OpenFileDialog()
+{
+	OPENFILENAMEA ofn;
+	char szFileName[MAX_PATH] = "";
+
+	ZeroMemory(&ofn, sizeof(ofn));
+	ofn.lStructSize = sizeof(ofn);
+	ofn.hwndOwner = m_window->GetWindowHandle();
+	ofn.lpstrFilter = "All Files (*.*)\0*.*\0Json Files (*.json)\0*.json\0Obj Model (*.obj)\0*.obj\0";
+	ofn.lpstrFile = szFileName;
+	ofn.nMaxFile = MAX_PATH;
+	ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+	
+	if (GetOpenFileNameA(&ofn))
+	{
+		return szFileName;
+	}
+	else
+	{
+		return "";
+	}
+}
+
+std::string Application::SaveFileDialog(const std::string& defaultName, const std::string& fileEnding)
+{
+	OPENFILENAMEA ofn;
+	char szFileName[MAX_PATH];
+	strcpy(szFileName, defaultName.c_str());
+
+	ZeroMemory(&ofn, sizeof(ofn));
+	ofn.lStructSize = sizeof(ofn);
+	ofn.hwndOwner = m_window->GetWindowHandle();
+	ofn.lpstrFilter = "All Files (*.*)\0*.*\0Json Files (*.json)\0*.json\0Obj Model (*.obj)\0*.obj\0";
+	ofn.lpstrFile = szFileName;
+	ofn.nMaxFile = MAX_PATH;
+	ofn.Flags = OFN_EXPLORER | OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST;
+	ofn.lpstrDefExt = fileEnding.c_str();
+
+	if (GetSaveFileNameA(&ofn))
+	{
+		return szFileName;
+	}
+	else
+	{
+		return "";
+	}
+}
+
 void Application::ChangeEntityCount(unsigned int entityCount)
 {
 	size_t oldEntityCount = m_scene->GetEntities().size();
@@ -89,12 +136,20 @@ void Application::ChangeEntityCount(unsigned int entityCount)
 		m_tweakBar->Remove(namePrefix + "Filename");
 		m_tweakBar->Remove(namePrefix + "Position");
 		m_tweakBar->Remove(namePrefix + "Orientation");
+		m_tweakBar->Remove(namePrefix + "Scale");
 	}
 	for (size_t i = oldEntityCount; i < entityCount; ++i)
 	{
 		std::string namePrefix = "Entity" + std::to_string(i) + "_";
 		std::string entityGroup = "Entity" + std::to_string(i);
 		std::string groupSetting = " group=" + entityGroup + " ";
+
+		m_tweakBar->AddButton(namePrefix + "LoadFromFile", [&, i]() {
+			std::string filename = OpenFileDialog();
+			if (!filename.empty())
+				m_scene->GetEntities()[i].LoadModel(filename);
+			}, groupSetting + "label=LoadFromFile");
+
 		m_tweakBar->AddReadWrite<std::string>(namePrefix + "Filename", [=]()->std::string { return m_scene->GetEntities()[i].GetModel() != nullptr ? m_scene->GetEntities()[i].GetModel()->GetOriginFilename() : ""; },
 													[=](const std::string& str){}, groupSetting + "label=Type readonly=true");
 
@@ -103,6 +158,9 @@ void Application::ChangeEntityCount(unsigned int entityCount)
 
 		m_tweakBar->AddReadWrite<ei::Quaternion>(namePrefix + "Orientation", [=](){ return m_scene->GetEntities()[i].GetOrientation(); },
 			[=](const ei::Quaternion& q){ m_scene->GetEntities()[i].SetOrientation(q); }, groupSetting + " label=Orientation");
+
+		m_tweakBar->AddReadWrite<float>(namePrefix + "Scale", [=](){ return m_scene->GetEntities()[i].GetScale(); },
+			[=](float s){ m_scene->GetEntities()[i].SetScale(s); }, groupSetting + " label=Scale min=0.05 max=100.0 step=0.05");
 
 		m_tweakBar->SetGroupProperties(entityGroup, "Entities", entityGroup, false);
 	}
@@ -163,8 +221,8 @@ void Application::SetupTweakBarBinding()
 	m_tweakBar = std::make_unique<AntTweakBarInterface>(m_window->GetGLFWWindow());
 
 	m_tweakBar->AddReadOnly("Frametime (ms)", [&](){ return std::to_string(m_timeSinceLastUpdate.GetMilliseconds()); });
-	m_tweakBar->AddButton("Save Settings", [&](){ m_tweakBar->SaveReadWriteValuesToJSON("settings.json"); });
-	m_tweakBar->AddButton("Load Settings", [&](){ m_tweakBar->LoadReadWriteValuesToJSON("settings.json"); });
+	m_tweakBar->AddButton("Save Settings", [&](){ m_tweakBar->SaveReadWriteValuesToJSON(SaveFileDialog("settings.json", ".json")); });
+	m_tweakBar->AddButton("Load Settings", [&](){ m_tweakBar->LoadReadWriteValuesToJSON(OpenFileDialog()); });
 	
 
 	// Camera

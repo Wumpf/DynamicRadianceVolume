@@ -69,7 +69,7 @@ AntTweakBarInterface::AntTweakBarInterface(GLFWwindow* glfwWindow) :
 		// Create a tweak bar
 		m_tweakBar = TwNewBar("TweakBar");
 
-		TwDefine(" TweakBar size='300 300' ");
+		TwDefine(" TweakBar size='350 500' ");
 		TwDefine(" TweakBar valueswidth=150 ");
 		TwDefine(" TweakBar refresh=0.2 ");
 		TwDefine(" TweakBar contained=true "); // TweakBar must be inside the window.

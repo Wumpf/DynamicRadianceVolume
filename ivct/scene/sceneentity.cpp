@@ -23,5 +23,5 @@ bool SceneEntity::LoadModel(const std::string& modelFilename)
 
 ei::Mat4x4 SceneEntity::ComputeWorldMatrix() const
 {
-	return ei::translation(m_position) * ei::rotationH(m_orientation);
+	return ei::translation(m_position) * ei::rotationH(m_orientation) * ei::scalingH(m_scale);
 }
