@@ -311,21 +311,21 @@ void AntTweakBarInterface::SaveReadWriteValuesToJSON(const std::string& jsonFile
 void AntTweakBarInterface::LoadReadWriteValuesToJSON(const std::string& jsonFilename)
 {
 	std::ifstream file(jsonFilename.c_str());
-	std::vector<Json::Value> elementStack;
-	elementStack.emplace_back();
-	file >> elementStack[0];
+	std::vector<Json::Value> elementQueue;
+	elementQueue.emplace_back();
+	file >> elementQueue[0];
 
 
-	while (!elementStack.empty())
+	while (!elementQueue.empty())
 	{
-		Json::Value jsonValue = elementStack.back();
-		elementStack.pop_back();
+		Json::Value jsonValue = elementQueue.front();
+		elementQueue.erase(elementQueue.begin()); // Principally a bad idea, but we are not performance critical here.
 
 		for (auto childIt = jsonValue.begin(); childIt != jsonValue.end(); ++childIt)
 		{
 			if(childIt->isObject())
 			{
-				elementStack.push_back(*childIt);
+				elementQueue.push_back(*childIt);
 			}
 			else
 			{
