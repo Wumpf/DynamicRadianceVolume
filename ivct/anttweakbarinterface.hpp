@@ -72,6 +72,10 @@ private:
 	template<typename T>
 	ETwType GetTwType(TypeHint hint);
 
+	template<typename T>
+	TwGetVarCallback GetGetterFunc();
+
+
 	struct CTwBar* m_tweakBar;
 
 	/// Base entry type.
@@ -117,13 +121,34 @@ private:
 	template<typename T>
 	T GetRWEntryValue(const EntryReadWrite* rwEntry) const;
 	/// Sets value from a r/w entry where underlying type is known but not if EntryReadWriteVar or EntryReadWriteCB.
-	template<typename T>
-	void SetRWEntryValue(EntryReadWrite* rwEntry, const T& value);
+	template<typename InputType>
+	void SetRWEntryValue(EntryReadWrite* rwEntry, const InputType& value);
+	/// Same as with one template parameter but casts input to CastingAlternative if first call failed.
+	template<typename InputType, typename CastingAlternative>
+	void SetRWEntryValue(EntryReadWrite* rwEntry, const InputType& value);
+
+	template<typename InputType, typename CastingType>
+	bool SetRWEntryValueCast(EntryReadWrite* rwEntry, const InputType& value);
 
 	std::vector<EntryBase*> m_entries;
 	TwType m_hdrColorRGBStructType;
 	TwType m_positionStructType;
 };
+
+template<typename T>
+inline TwGetVarCallback AntTweakBarInterface::GetGetterFunc()
+{
+	return [](void *value, void *clientData) {
+		*static_cast<T*>(value) = static_cast<EntryReadWriteCB<T>*>(clientData)->getValue();
+	};
+}
+template<>
+inline TwGetVarCallback AntTweakBarInterface::GetGetterFunc<std::string>()
+{
+	return [](void *value, void *clientData) {
+		TwCopyStdStringToLibrary(*static_cast<std::string*>(value), static_cast<EntryReadWriteCB<std::string>*>(clientData)->getValue());
+	};
+}
 
 template<typename T>
 inline void AntTweakBarInterface::AddReadWrite(const std::string& name, const std::function<T()>& getValue, const std::function<void(const T&)>& setValue, const std::string& twDefines, AntTweakBarInterface::TypeHint typeHint)
@@ -135,9 +160,8 @@ inline void AntTweakBarInterface::AddReadWrite(const std::string& name, const st
 	entry->getValue = getValue;
 	entry->setValue = setValue;
 
-	TwGetVarCallback getFkt = [](void *value, void *clientData) {
-		*static_cast<T*>(value) = static_cast<EntryType*>(clientData)->getValue();
-	};
+	TwGetVarCallback getFkt = GetGetterFunc<T>();
+
 	TwSetVarCallback setFkt = [](const void *value, void *clientData) {
 		static_cast<EntryType*>(clientData)->setValue(*static_cast<const T*>(value));
 	};
@@ -167,7 +191,6 @@ inline void AntTweakBarInterface::AddReadWrite(const std::string& name, T& varia
 }
 
 
-
 template<> inline ETwType AntTweakBarInterface::GetTwType<ei::Vec3>(AntTweakBarInterface::TypeHint hint)
 {
 	switch (hint)
@@ -182,14 +205,9 @@ template<> inline ETwType AntTweakBarInterface::GetTwType<ei::Vec3>(AntTweakBarI
 }
 template<> inline static ETwType AntTweakBarInterface::GetTwType<float>(AntTweakBarInterface::TypeHint) { return TW_TYPE_FLOAT; }
 template<> inline static ETwType AntTweakBarInterface::GetTwType<bool>(AntTweakBarInterface::TypeHint) { return TW_TYPE_BOOLCPP; }
+template<> inline static ETwType AntTweakBarInterface::GetTwType<std::string>(AntTweakBarInterface::TypeHint) { return TW_TYPE_STDSTRING; }
+template<> inline static ETwType AntTweakBarInterface::GetTwType<ei::Quaternion>(AntTweakBarInterface::TypeHint) { return TW_TYPE_QUAT4F; }
 template<> inline static ETwType AntTweakBarInterface::GetTwType<std::int32_t>(AntTweakBarInterface::TypeHint hint)
-{
-	if (hint == AntTweakBarInterface::TypeHint::AUTO)
-		return TW_TYPE_INT32;
-	else
-		return static_cast<TwType>(hint);
-}
-template<> inline static ETwType AntTweakBarInterface::GetTwType<std::uint32_t>(AntTweakBarInterface::TypeHint hint)
 {
 	if (hint == AntTweakBarInterface::TypeHint::AUTO)
 		return TW_TYPE_INT32;

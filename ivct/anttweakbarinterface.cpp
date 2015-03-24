@@ -69,7 +69,7 @@ AntTweakBarInterface::AntTweakBarInterface(GLFWwindow* glfwWindow) :
 		// Create a tweak bar
 		m_tweakBar = TwNewBar("TweakBar");
 
-		TwDefine(" TweakBar size='300 300' ");
+		TwDefine(" TweakBar size='350 500' ");
 		TwDefine(" TweakBar valueswidth=150 ");
 		TwDefine(" TweakBar refresh=0.2 ");
 		TwDefine(" TweakBar contained=true "); // TweakBar must be inside the window.
@@ -192,18 +192,41 @@ T AntTweakBarInterface::GetRWEntryValue(const AntTweakBarInterface::EntryReadWri
 	}
 }
 
-template<typename T>
-void AntTweakBarInterface::SetRWEntryValue(AntTweakBarInterface::EntryReadWrite* rwEntry, const T& value)
+
+
+template<typename InputType>
+void AntTweakBarInterface::SetRWEntryValue(AntTweakBarInterface::EntryReadWrite* rwEntry, const InputType& value)
 {
-	auto cbEntry = dynamic_cast<AntTweakBarInterface::EntryReadWriteCB<T>*>(rwEntry);
+	if(!SetRWEntryValueCast<InputType, InputType>(rwEntry, value))
+		Assert(false, "Invalid type cast to both EntryReadWriteCB and EntryReadWriteVar. Type assumption wrong?");
+}
+
+template<typename InputType, typename CastingAlternative>
+void AntTweakBarInterface::SetRWEntryValue(AntTweakBarInterface::EntryReadWrite* rwEntry, const InputType& value)
+{
+	if (!SetRWEntryValueCast<InputType, InputType>(rwEntry, value))
+	{
+		if (!SetRWEntryValueCast<InputType, CastingAlternative>(rwEntry, value))
+			Assert(false, "Invalid type cast to both EntryReadWriteCB and EntryReadWriteVar. Type assumption wrong?");
+	}
+}
+
+
+template<typename InputType, typename CastingType>
+bool AntTweakBarInterface::SetRWEntryValueCast(AntTweakBarInterface::EntryReadWrite* rwEntry, const InputType& value)
+{
+	auto cbEntry = dynamic_cast<AntTweakBarInterface::EntryReadWriteCB<CastingType>*>(rwEntry);
 	if (cbEntry)
-		return cbEntry->setValue(value);
+		cbEntry->setValue(static_cast<CastingType>(value));
 	else
 	{
-		auto varEntry = dynamic_cast<AntTweakBarInterface::EntryReadWriteVar<T>*>(rwEntry);
-		Assert(varEntry != nullptr, "Invalid type cast to both EntryReadWriteCB and EntryReadWriteVar. Type assumption wrong?");
-		varEntry->variable = value;
+		auto varEntry = dynamic_cast<AntTweakBarInterface::EntryReadWriteVar<CastingType>*>(rwEntry);
+		if (!varEntry)
+			return false;
+		varEntry->variable = static_cast<CastingType>(value);
 	}
+
+	return true;
 }
 
 void AntTweakBarInterface::SaveReadWriteValuesToJSON(const std::string& jsonFilename)
@@ -234,11 +257,8 @@ void AntTweakBarInterface::SaveReadWriteValuesToJSON(const std::string& jsonFile
 			case TW_TYPE_INT32:
 				*value = GetRWEntryValue<std::int32_t>(rwEntry);
 				break;
-			case TW_TYPE_UINT32:
-				*value = GetRWEntryValue<std::uint32_t>(rwEntry);
-				break;
 
-			case TW_TYPE_BOOL32:
+			case TW_TYPE_BOOLCPP:
 				*value = GetRWEntryValue<bool>(rwEntry);
 				break;
 
@@ -252,8 +272,22 @@ void AntTweakBarInterface::SaveReadWriteValuesToJSON(const std::string& jsonFile
 				break;
 			}
 
+			case TW_TYPE_QUAT4F:
+			{
+				ei::Quaternion v = GetRWEntryValue<ei::Quaternion>(rwEntry);
+				(*value)[0] = v.i;
+				(*value)[1] = v.j;
+				(*value)[2] = v.k;
+				(*value)[3] = v.r;
+				break;
+			}
+
 			case TW_TYPE_FLOAT:
 				*value = GetRWEntryValue<float>(rwEntry);
+				break;
+
+			case TW_TYPE_STDSTRING:
+				*value = GetRWEntryValue<std::string>(rwEntry);
 				break;
 
 			default:
@@ -287,21 +321,21 @@ void AntTweakBarInterface::LoadReadWriteValuesToJSON(const std::string& jsonFile
 		LOG_ERROR("Couldn't open settings file " << jsonFilename);
 		return;
 	}
-	std::vector<Json::Value> elementStack;
-	elementStack.emplace_back();
-	file >> elementStack[0];
+	std::vector<Json::Value> elementQueue;
+	elementQueue.emplace_back();
+	file >> elementQueue[0];
 
 
-	while (!elementStack.empty())
+	while (!elementQueue.empty())
 	{
-		Json::Value jsonValue = elementStack.back();
-		elementStack.pop_back();
+		Json::Value jsonValue = elementQueue.front();
+		elementQueue.erase(elementQueue.begin()); // Principally a bad idea, but we are not performance critical here.
 
 		for (auto childIt = jsonValue.begin(); childIt != jsonValue.end(); ++childIt)
 		{
 			if(childIt->isObject())
 			{
-				elementStack.push_back(*childIt);
+				elementQueue.push_back(*childIt);
 			}
 			else
 			{
@@ -316,13 +350,15 @@ void AntTweakBarInterface::LoadReadWriteValuesToJSON(const std::string& jsonFile
 				if (childIt->isBool())
 					SetRWEntryValue<bool>(static_cast<EntryReadWrite*>(*entryIt), childIt->asBool());
 				else if (childIt->isInt())
-					SetRWEntryValue<int>(static_cast<EntryReadWrite*>(*entryIt), childIt->asInt());
-				else if (childIt->isUInt())
-					SetRWEntryValue<unsigned int>(static_cast<EntryReadWrite*>(*entryIt), childIt->asUInt());
+					SetRWEntryValue<std::int32_t, float>(static_cast<EntryReadWrite*>(*entryIt), childIt->asInt());
 				else if (childIt->isDouble())
-					SetRWEntryValue<float>(static_cast<EntryReadWrite*>(*entryIt), childIt->asFloat());
-				else if (childIt->isArray() && childIt->size() == 3 && (*childIt)[0].isDouble() && (*childIt)[1].isDouble() && (*childIt)[2].isDouble())
+					SetRWEntryValue<float, std::int32_t>(static_cast<EntryReadWrite*>(*entryIt), childIt->asFloat());
+				else if (childIt->isString())
+					SetRWEntryValue<std::string>(static_cast<EntryReadWrite*>(*entryIt), childIt->asString());
+				else if (childIt->isArray() && childIt->size() == 3 && (*childIt)[0].isNumeric() && (*childIt)[1].isNumeric() && (*childIt)[2].isNumeric())
 					SetRWEntryValue<ei::Vec3>(static_cast<EntryReadWrite*>(*entryIt), ei::Vec3((*childIt)[0].asFloat(), (*childIt)[1].asFloat(), (*childIt)[2].asFloat()));
+				else if (childIt->isArray() && childIt->size() == 4 && (*childIt)[0].isNumeric() && (*childIt)[1].isNumeric() && (*childIt)[2].isNumeric() && (*childIt)[3].isNumeric())
+					SetRWEntryValue<ei::Quaternion>(static_cast<EntryReadWrite*>(*entryIt), ei::Quaternion((*childIt)[0].asFloat(), (*childIt)[1].asFloat(), (*childIt)[2].asFloat(), (*childIt)[3].asFloat()));
 				else
 					LOG_WARNING("Unkown json attribute type at \"" << childIt.key().asCString() << "\"");
 			}

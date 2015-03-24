@@ -192,6 +192,7 @@
     <ClCompile Include="rendering\voxelization.cpp" />
     <ClCompile Include="scene\model.cpp" />
     <ClCompile Include="scene\scene.cpp" />
+    <ClCompile Include="scene\sceneentity.cpp" />
     <ClCompile Include="scene\texturemanager.cpp" />
     <ClCompile Include="shaderfilewatcher.cpp" />
     <ClCompile Include="Time\Implementation\Stopwatch.cpp" />
@@ -237,6 +238,7 @@
     <ClInclude Include="scene\light.hpp" />
     <ClInclude Include="scene\model.hpp" />
     <ClInclude Include="scene\scene.hpp" />
+    <ClInclude Include="scene\sceneentity.hpp" />
     <ClInclude Include="scene\texturemanager.hpp" />
     <ClInclude Include="shaderfilewatcher.hpp" />
     <ClInclude Include="Time\Implementation\Time_inl.h" />
@@ -265,7 +267,9 @@
     <None Include="shader\defaultmodel_noskinning.vert" />
     <None Include="shader\directdeferredlighting.frag" />
     <None Include="shader\fillgbuffer.frag" />
+    <None Include="shader\applylightcaches.frag" />
     <None Include="shader\globalubos.glsl" />
+    <None Include="shader\lightcache.glsl" />
     <None Include="shader\screenTri.vert" />
     <None Include="shader\utils.glsl" />
     <None Include="shader\voxeldebug.frag" />

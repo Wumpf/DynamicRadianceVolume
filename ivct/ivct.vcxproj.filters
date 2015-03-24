@@ -183,6 +183,9 @@
     <ClCompile Include="..\dependencies\jsoncpp\jsoncpp.cpp">
       <Filter>dependencies\jsoncpp</Filter>
     </ClCompile>
+    <ClCompile Include="scene\sceneentity.cpp">
+      <Filter>source\scene</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="outputwindow.hpp">
@@ -329,6 +332,9 @@
     <ClInclude Include="..\dependencies\jsoncpp\json\json-forwards.h">
       <Filter>dependencies\jsoncpp\json</Filter>
     </ClInclude>
+    <ClInclude Include="scene\sceneentity.hpp">
+      <Filter>source\scene</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="utilities\note.txt">
@@ -383,6 +389,12 @@
     </None>
     <None Include="..\dependencies\glhelper\glhelper\statemanagement.inl">
       <Filter>dependencies\glhelper</Filter>
+    </None>
+    <None Include="shader\lightcache.glsl">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\applylightcaches.frag">
+      <Filter>shader</Filter>
     </None>
   </ItemGroup>
 </Project>

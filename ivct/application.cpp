@@ -7,16 +7,23 @@
 #include "utilities/utils.hpp"
 
 #include "rendering/renderer.hpp"
+
 #include "scene/scene.hpp"
+#include "scene/model.hpp"
+#include "scene/sceneentity.hpp"
+
 #include "camera/interactivecamera.hpp"
 
 #include "shaderfilewatcher.hpp"
 #include "anttweakbarinterface.hpp"
 
+#include "glhelper/utils/pathutils.hpp"
+
 #ifdef _WIN32
 #undef APIENTRY
 #include <windows.h>
 #endif
+
 
 Application::Application(int argc, char** argv)
 {
@@ -36,9 +43,6 @@ Application::Application(int argc, char** argv)
 	LOG_INFO("\nLoad scene ...");
 	m_scene.reset(new Scene());
 
-	// TODO: Some kind of runtime/data system is needed here.
-	m_scene->AddModel("../models/test0/test0.obj");
-
 	// Renderer.
 	LOG_INFO("\nSetup renderer ...");
 	m_renderer.reset(new Renderer(m_scene, m_window->GetResolution()));
@@ -49,22 +53,17 @@ Application::Application(int argc, char** argv)
 	SetupTweakBarBinding();
 
 
+	// Default settings:
+	ChangeEntityCount(1);
+	m_scene->GetEntities()[0].LoadModel("../models/test0/test0.obj"); // "../models/cryteksponza/sponza.obj");
+	m_scene->UpdateBoundingbox();
 
-
-	ChangeLightCount(2);
-
+	ChangeLightCount(1);
 	m_scene->GetLights()[0].type = Light::Type::SPOT;
-	m_scene->GetLights()[0].intensity = ei::Vec3(100.0f, 90.0f, 90.0f);
-	m_scene->GetLights()[0].position = ei::Vec3(0.0f, 2.5f, -2.5f);
-	m_scene->GetLights()[0].direction = ei::normalize(-m_scene->GetLights()[0].position);
+	m_scene->GetLights()[0].intensity = ei::Vec3(100.0f, 100.0f, 100.0f);
+	m_scene->GetLights()[0].position = ei::Vec3(0.0f, 1.7f, -3.3f);
+	m_scene->GetLights()[0].direction = ei::Vec3(0.0f, 0.0f, 1.0f);
 	m_scene->GetLights()[0].halfAngle = 30.0f * (ei::PI / 180.0f);
-
-	m_scene->GetLights()[1].type = Light::Type::SPOT;
-	m_scene->GetLights()[1].position = ei::Vec3(1.0f, 2.5f, -2.5f);
-	m_scene->GetLights()[1].intensity = ei::Vec3(70.0f, 70.0f, 80.0f);
-	m_scene->GetLights()[1].direction = ei::normalize(ei::Vec3(1.0f, 2.5f, 0.0f) - m_scene->GetLights()[1].position);
-	m_scene->GetLights()[1].halfAngle = 30.0f * (ei::PI / 180.0f);
-
 }
 
 Application::~Application()
@@ -78,6 +77,97 @@ Application::~Application()
 	m_scene.reset();
 }
 
+std::string Application::OpenFileDialog()
+{
+	OPENFILENAMEA ofn;
+	char szFileName[MAX_PATH] = "";
+
+	ZeroMemory(&ofn, sizeof(ofn));
+	ofn.lStructSize = sizeof(ofn);
+	ofn.hwndOwner = m_window->GetWindowHandle();
+	ofn.lpstrFilter = "All Files (*.*)\0*.*\0Json Files (*.json)\0*.json\0Obj Model (*.obj)\0*.obj\0";
+	ofn.lpstrFile = szFileName;
+	ofn.nMaxFile = MAX_PATH;
+	ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+	
+	if (GetOpenFileNameA(&ofn))
+	{
+		return szFileName;
+	}
+	else
+	{
+		return "";
+	}
+}
+
+std::string Application::SaveFileDialog(const std::string& defaultName, const std::string& fileEnding)
+{
+	OPENFILENAMEA ofn;
+	char szFileName[MAX_PATH];
+	strcpy(szFileName, defaultName.c_str());
+
+	ZeroMemory(&ofn, sizeof(ofn));
+	ofn.lStructSize = sizeof(ofn);
+	ofn.hwndOwner = m_window->GetWindowHandle();
+	ofn.lpstrFilter = "All Files (*.*)\0*.*\0Json Files (*.json)\0*.json\0Obj Model (*.obj)\0*.obj\0";
+	ofn.lpstrFile = szFileName;
+	ofn.nMaxFile = MAX_PATH;
+	ofn.Flags = OFN_EXPLORER | OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST;
+	ofn.lpstrDefExt = fileEnding.c_str();
+
+	if (GetSaveFileNameA(&ofn))
+	{
+		return szFileName;
+	}
+	else
+	{
+		return "";
+	}
+}
+
+void Application::ChangeEntityCount(unsigned int entityCount)
+{
+	size_t oldEntityCount = m_scene->GetEntities().size();
+	m_scene->GetEntities().resize(entityCount);
+
+	for (size_t i = entityCount; i < oldEntityCount; ++i)
+	{
+		std::string namePrefix = "Entity" + std::to_string(i) + "_";
+		m_tweakBar->Remove(namePrefix + "Filename");
+		m_tweakBar->Remove(namePrefix + "Position");
+		m_tweakBar->Remove(namePrefix + "Orientation");
+		m_tweakBar->Remove(namePrefix + "Scale");
+	}
+	for (size_t i = oldEntityCount; i < entityCount; ++i)
+	{
+		std::string namePrefix = "Entity" + std::to_string(i) + "_";
+		std::string entityGroup = "Entity" + std::to_string(i);
+		std::string groupSetting = " group=" + entityGroup + " ";
+
+		m_tweakBar->AddButton(namePrefix + "LoadFromFile", [&, i]() {
+			std::string filename = OpenFileDialog();
+			if (!filename.empty())
+				m_scene->GetEntities()[i].LoadModel(filename);
+			}, groupSetting + "label=LoadFromFile");
+
+		m_tweakBar->AddReadWrite<std::string>(namePrefix + "Filename", [=]()->std::string { return m_scene->GetEntities()[i].GetModel() != nullptr ? m_scene->GetEntities()[i].GetModel()->GetOriginFilename() : ""; },
+													[=](const std::string& str){}, groupSetting + "label=Type readonly=true");
+
+		m_tweakBar->AddReadWrite<ei::Vec3>(namePrefix + "Position", [=](){ return m_scene->GetEntities()[i].GetPosition(); },
+			[=](const ei::Vec3& v){ m_scene->GetEntities()[i].SetPosition(v); }, groupSetting + " label=Position", AntTweakBarInterface::TypeHint::POSITION);
+
+		m_tweakBar->AddReadWrite<ei::Quaternion>(namePrefix + "Orientation", [=](){ return m_scene->GetEntities()[i].GetOrientation(); },
+			[=](const ei::Quaternion& q){ m_scene->GetEntities()[i].SetOrientation(q); }, groupSetting + " label=Orientation");
+
+		m_tweakBar->AddReadWrite<float>(namePrefix + "Scale", [=](){ return m_scene->GetEntities()[i].GetScale(); },
+			[=](float s){ m_scene->GetEntities()[i].SetScale(s); }, groupSetting + " label=Scale min=0.05 max=100.0 step=0.05");
+
+		m_tweakBar->SetGroupProperties(entityGroup, "Entities", entityGroup, false);
+	}
+
+	m_scene->UpdateBoundingbox();
+}
+
 void Application::ChangeLightCount(unsigned int lightCount)
 {
 	// Define light type
@@ -89,7 +179,7 @@ void Application::ChangeLightCount(unsigned int lightCount)
 	if (lightEnumType == TW_TYPE_UNDEF)
 		lightEnumType = TwDefineEnum("LightType", lightTypes, ArraySize(lightTypes));
 
-	std::size_t oldLightCount = m_scene->GetLights().size();
+	size_t oldLightCount = m_scene->GetLights().size();
 	m_scene->GetLights().resize(lightCount);
 
 
@@ -105,56 +195,57 @@ void Application::ChangeLightCount(unsigned int lightCount)
 	for (size_t i = oldLightCount; i < lightCount; ++i)
 	{
 		std::string namePrefix = "Light" + std::to_string(i) + "_";
-		std::string lightGroup = " group=Light" + std::to_string(i) + " ";
+		std::string lightGroup = "Light" + std::to_string(i);
+		std::string groupSetting = " group=" + lightGroup + " ";
 		m_tweakBar->AddReadWrite<int>(namePrefix + "Type", [=](){ return static_cast<int>(m_scene->GetLights()[i].type); },
-			[=](const int& i){ m_scene->GetLights()[i].type = static_cast<Light::Type>(i); }, lightGroup + "label=Type", static_cast<AntTweakBarInterface::TypeHint>(lightEnumType));
+			[=](const int& i){ m_scene->GetLights()[i].type = static_cast<Light::Type>(i); }, groupSetting + "label=Type", static_cast<AntTweakBarInterface::TypeHint>(lightEnumType));
 
 		m_tweakBar->AddReadWrite<ei::Vec3>(namePrefix + "Intensity", [=](){ return m_scene->GetLights()[i].intensity; },
-			[=](const ei::Vec3& v){ m_scene->GetLights()[i].intensity = v; }, lightGroup + " label=Intensity", AntTweakBarInterface::TypeHint::HDRCOLOR);
+			[=](const ei::Vec3& v){ m_scene->GetLights()[i].intensity = v; }, groupSetting + " label=Intensity", AntTweakBarInterface::TypeHint::HDRCOLOR);
 
 		m_tweakBar->AddReadWrite<ei::Vec3>(namePrefix + "Position", [=](){ return m_scene->GetLights()[i].position; },
-			[=](const ei::Vec3& v){ m_scene->GetLights()[i].position = v; }, lightGroup + " label=Position", AntTweakBarInterface::TypeHint::POSITION);
+			[=](const ei::Vec3& v){ m_scene->GetLights()[i].position = v; }, groupSetting + " label=Position", AntTweakBarInterface::TypeHint::POSITION);
 
 		m_tweakBar->AddReadWrite<ei::Vec3>(namePrefix + "Direction", [=](){ return m_scene->GetLights()[i].direction; },
-			[=](const ei::Vec3& v){ m_scene->GetLights()[i].direction = v; }, lightGroup + " label=Direction");
+			[=](const ei::Vec3& v){ m_scene->GetLights()[i].direction = v; }, groupSetting + " label=Direction");
 
 		m_tweakBar->AddReadWrite<float>(namePrefix + "HalfAngle", [=](){ return m_scene->GetLights()[i].halfAngle; },
-			[=](const float& f){ m_scene->GetLights()[i].halfAngle = f; }, lightGroup + " label=HalfAngle min=0.01 max=1.57 step=0.01 label=HalfAngle");
-	}
+			[=](const float& f){ m_scene->GetLights()[i].halfAngle = f; }, groupSetting + " label=HalfAngle min=0.01 max=1.57 step=0.01 label=HalfAngle");
 
-	m_scene->GetLights().resize(lightCount);
+		m_tweakBar->SetGroupProperties(lightGroup, "Lights", lightGroup, false);
+	}
 }
 
 void Application::SetupTweakBarBinding()
 {
 	m_tweakBar = std::make_unique<AntTweakBarInterface>(m_window->GetGLFWWindow());
 
-	// Type for HDR color
-	/*std::vector<TwStructMember> hdrColorRGBMembers(
-	{
-		{ "R", TW_TYPE_FLOAT, 0, " step=0.1" },
-		{ "G", TW_TYPE_FLOAT, sizeof(float), " step=0.1" },
-		{ "B", TW_TYPE_FLOAT, sizeof(float) * 2, " step=0.1" },
-	});
-	TwType hdrColorRGBStructType = m_tweakBar->DefineStruct("HDR Color", hdrColorRGBMembers, sizeof(ei::Vec3));
-
-	// Type for position
-	std::vector<TwStructMember>  positionMembers(
-	{
-		{ "X", TW_TYPE_FLOAT, 0, " step=0.1" },
-		{ "Y", TW_TYPE_FLOAT, sizeof(float), " step=0.1" },
-		{ "Z", TW_TYPE_FLOAT, sizeof(float) * 2, " step=0.1" },
-	});
-	TwType positionStructType = m_tweakBar->DefineStruct("Position", positionMembers, sizeof(ei::Vec3));
-	*/
-	
 	m_tweakBar->AddReadOnly("Frametime (ms)", [&](){ return std::to_string(m_timeSinceLastUpdate.GetMilliseconds()); });
-	m_tweakBar->AddButton("Save Settings", [&](){ m_tweakBar->SaveReadWriteValuesToJSON("settings.json"); });
-	m_tweakBar->AddButton("Load Settings", [&](){ m_tweakBar->LoadReadWriteValuesToJSON("settings.json"); });
+	m_tweakBar->AddButton("Save Settings", [&](){ m_tweakBar->SaveReadWriteValuesToJSON(SaveFileDialog("settings.json", ".json")); });
+	m_tweakBar->AddButton("Load Settings", [&](){ m_tweakBar->LoadReadWriteValuesToJSON(OpenFileDialog()); });
+	
+
+	// Camera
+	m_tweakBar->AddSeperator("Camera settings");
+	m_tweakBar->AddReadWrite<float>("Camera Speed", [&](){ return m_camera->GetMoveSpeed(); }, [&](float f){ return m_camera->SetMoveSpeed(f); }, " min =0.01 max=100 step=0.01");
+
+	/// Light cache settings
+	m_tweakBar->AddSeperator("Light Cache settings");
+	m_tweakBar->AddReadWrite<bool>("Light Cache Creation Tracking", [&](){ return m_renderer->GetTrackLightCacheCreationStats(); }, 
+																	[&](bool b){ return m_renderer->SetTrackLightCacheCreationStats(b); });
+	m_tweakBar->AddReadOnly("#Active Caches", [&](){ return std::to_string(m_renderer->GetLightCacheActiveCount()); });
+	m_tweakBar->AddReadOnly("#Hash Collision", [&](){ return std::to_string(m_renderer->GetLightCacheHashCollisionCount()); });
+
+
+	m_tweakBar->AddSeperator("Scene Settings");
+
+	// Entity settings
+	std::function<void(const int&)> changeEntityCount = std::bind(&Application::ChangeEntityCount, this, std::placeholders::_1);
+	m_tweakBar->AddReadWrite<int>("Entity Count", [&](){ return static_cast<int>(m_scene->GetEntities().size()); }, changeEntityCount, " min=1 max=16 step=1 group=Entities");
 
 	// Light settings
 	std::function<void(const int&)> changeLightCount = std::bind(&Application::ChangeLightCount, this, std::placeholders::_1);
-	m_tweakBar->AddReadWrite<int>("Light Count", [&](){ return static_cast<int>(m_scene->GetLights().size()); }, changeLightCount, " min=1 max=16 step=1");
+	m_tweakBar->AddReadWrite<int>("Light Count", [&](){ return static_cast<int>(m_scene->GetLights().size()); }, changeLightCount, " min=1 max=16 step=1 group=Lights");
 }
 
 void Application::Run()
@@ -180,6 +271,8 @@ void Application::Update()
 
 	m_camera->Update(m_timeSinceLastUpdate);
 	Input();
+
+	m_scene->UpdateBoundingbox();
 
 	m_window->SetTitle("time per frame " +
 		std::to_string(m_timeSinceLastUpdate.GetMilliseconds()) + "ms (FPS: " + std::to_string(1.0f / m_timeSinceLastUpdate.GetSeconds()) + ")");

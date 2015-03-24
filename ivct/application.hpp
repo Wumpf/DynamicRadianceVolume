@@ -28,6 +28,12 @@ private:
 
 	void Input();
 
+	std::string OpenFileDialog();
+	std::string SaveFileDialog(const std::string& defaultName, const std::string& fileEnding);
+
+	void AddEntity(const std::string& filename);
+
+	void ChangeEntityCount(unsigned int entityCount);
 	void ChangeLightCount(unsigned int lightCount);
 
 	std::unique_ptr<OutputWindow> m_window;

@@ -25,6 +25,8 @@ public:
 
 	~Model();
 
+	const std::string& GetOriginFilename() { return m_originFilename; }
+
 	struct Mesh
 	{
 		Mesh() : startIndex(0), numIndices(0) {}
@@ -55,9 +57,11 @@ public:
 	void BindBuffers();
 
 private:
-	Model();
+	Model(const std::string& originFilename);
 
 	static std::unique_ptr<gl::VertexArrayObject> m_vertexArrayObject;
+
+	const std::string m_originFilename;
 
 	std::vector<Mesh> m_meshes;
 

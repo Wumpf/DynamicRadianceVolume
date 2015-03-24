@@ -18,7 +18,7 @@ static void ErrorCallbackGLFW(int error, const char* description)
 }
 
 OutputWindow::OutputWindow() :
-	displayHDR("displayHDR")
+	m_displayHDR("displayHDR")
 {
 	if (!glfwInit())
 		throw std::exception("GLFW init failed");
@@ -39,17 +39,17 @@ OutputWindow::OutputWindow() :
 	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
 #endif
 
-	int width = 1024;
-	int height = 768;
+	int width = 1900;
+	int height = 1000;
 
-	window = glfwCreateWindow(width, height, "<Add fancy title here>", nullptr, nullptr);
-	if (!window)
+	m_window = glfwCreateWindow(width, height, "<Add fancy title here>", nullptr, nullptr);
+	if (!m_window)
 	{
 		glfwTerminate();
 		throw std::exception("Failed to create glfw window!");
 	}
 
-	glfwMakeContextCurrent(window);
+	glfwMakeContextCurrent(m_window);
 
 	// Init glew now since the GL context is ready.
 	glewExperimental = GL_TRUE;
@@ -74,16 +74,16 @@ OutputWindow::OutputWindow() :
 
 OutputWindow::~OutputWindow(void)
 {
-	SAFE_DELETE(screenTri);
+	SAFE_DELETE(m_screenTri);
 
-	glfwDestroyWindow(window);
-	window = nullptr;
+	glfwDestroyWindow(m_window);
+	m_window = nullptr;
 	glfwTerminate();
 }	
 
 void OutputWindow::ChangeWindowSize(const ei::UVec2& newResolution)
 {
-	glfwSetWindowSize(window, newResolution.x, newResolution.y);
+	glfwSetWindowSize(m_window, newResolution.x, newResolution.y);
 	GL_CALL(glViewport, 0, 0, newResolution.x, newResolution.y);
 }
 
@@ -96,13 +96,13 @@ void OutputWindow::PollWindowEvents()
 
 bool OutputWindow::IsWindowAlive()
 {
-	return !glfwWindowShouldClose(window);
+	return !glfwWindowShouldClose(m_window);
 }
 
 void OutputWindow::GetGLFWKeystates()
 {
 	for(unsigned int i=0; i< GLFW_KEY_LAST; ++i)
-		oldGLFWKeystates[i] = glfwGetKey(window, i);
+		oldGLFWKeystates[i] = glfwGetKey(m_window, i);
 }
 
 bool OutputWindow::WasButtonPressed(unsigned int glfwKey)
@@ -110,23 +110,28 @@ bool OutputWindow::WasButtonPressed(unsigned int glfwKey)
 	if(glfwKey >= GLFW_KEY_LAST)
 		return false;
 
-	return glfwGetKey(window, glfwKey) == GLFW_PRESS && oldGLFWKeystates[glfwKey] == GLFW_RELEASE;
+	return glfwGetKey(m_window, glfwKey) == GLFW_PRESS && oldGLFWKeystates[glfwKey] == GLFW_RELEASE;
 }
 
 void OutputWindow::SetTitle(const std::string& windowTitle)
 {
-	glfwSetWindowTitle(window, windowTitle.c_str());
+	glfwSetWindowTitle(m_window, windowTitle.c_str());
 }
 
 void OutputWindow::Present()
 {
-	glfwSwapBuffers(window);
+	glfwSwapBuffers(m_window);
 }
 
 
 ei::UVec2 OutputWindow::GetResolution()
 {
 	ei::IVec2 resolution;
-	glfwGetWindowSize(window, &resolution.x, &resolution.y);
+	glfwGetWindowSize(m_window, &resolution.x, &resolution.y);
 	return ei::UVec2(resolution);
+}
+
+HWND OutputWindow::GetWindowHandle()
+{
+	return glfwGetWin32Window(m_window);
 }

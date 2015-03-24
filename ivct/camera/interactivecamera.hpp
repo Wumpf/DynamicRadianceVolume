@@ -24,6 +24,9 @@ public:
 	/// Dirty state is reset after calling this function.
 	bool Update(ezTime timeSinceLastFrame);
 
+	void SetMoveSpeed(float speed) { m_moveSpeed = speed; }
+	float GetMoveSpeed() const { return m_moveSpeed; }
+
 private:
 	GLFWwindow* m_window;
 	float m_rotSpeed, m_moveSpeed;

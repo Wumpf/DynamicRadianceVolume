@@ -13,8 +13,10 @@ namespace gl
 	class Texture2D;
 	class SamplerObject;
 	class UniformBufferView;
+	class ShaderStorageBufferView;
 }
 class Scene;
+class SceneEntity;
 class Voxelization;
 
 class Renderer
@@ -26,8 +28,16 @@ public:
 	void OnScreenResize(const ei::UVec2& newResolution);
 
 	void SetScene(const std::shared_ptr<const Scene>& scene);
+	const std::shared_ptr<const Scene>& GetScene() const { return m_scene; }
 
 	void Draw(const Camera& camera);
+
+	void SetTrackLightCacheCreationStats(bool trackLightCacheCreationStats);
+	bool GetTrackLightCacheCreationStats() const;
+	unsigned int GetLightCacheHashCollisionCount() const;
+	unsigned int GetLightCacheActiveCount() const;
+
+	void UpdatePerObjectUBO(const SceneEntity& entity);
 
 private:
 	std::shared_ptr<const Scene> m_scene;
@@ -44,14 +54,18 @@ private:
 	/// Performs direct lighting for all lights.
 	void DrawLights();
 
+	void WriteCacheRequests();
+
+	void OutputHDRTextureToBackbuffer();
+
 	/// Draws scene, mesh by mesh.
 	///
 	/// Does set VAO, VBO and index buffers but nothing else. No culling!
-	void DrawScene();
+	void DrawScene(bool setTextures);
 
 	std::unique_ptr<gl::ScreenAlignedTriangle> m_screenTriangle;
-	std::unique_ptr<Voxelization> m_voxelization;
 
+	std::unique_ptr<Voxelization> m_voxelization;
 
 	std::unique_ptr<gl::ShaderObject> m_shaderDebugGBuffer;
 	std::unique_ptr<gl::ShaderObject> m_shaderFillGBuffer_noskinning;
@@ -61,6 +75,11 @@ private:
 
 	std::unique_ptr<gl::UniformBufferView> m_uboConstant;
 	std::unique_ptr<gl::UniformBufferView> m_uboPerFrame;
+	std::unique_ptr<gl::UniformBufferView> m_uboPerObject;
+
+	std::unique_ptr<gl::ShaderObject> m_shaderRequestLightCaches;
+	std::unique_ptr<gl::ShaderObject> m_shaderApplyLightCaches;
+	
 
 	std::unique_ptr<gl::Texture2D> m_GBuffer_diffuse;
 	std::unique_ptr<gl::Texture2D> m_GBuffer_normal;

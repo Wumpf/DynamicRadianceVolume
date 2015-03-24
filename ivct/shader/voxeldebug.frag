@@ -5,7 +5,7 @@
 // input
 layout(location = 0) in vec2 Texcoord;
 
-layout(binding = 0) uniform sampler3D VoxelScene;
+layout(binding = 0) uniform isampler3D VoxelScene;
 
 // output
 layout(location = 0, index = 0) out vec4 FragColor;
@@ -35,7 +35,7 @@ void main()
 	float rayHit = 0.0;
 	if(IntersectBox(CameraPosition, rayDirection, VoxelVolumeWorldMin, VoxelVolumeWorldMax, rayHit))
 	{
-		float stepSize = VoxelSizeInWorld.x * 0.05;
+		float stepSize = VoxelSizeInWorld.x * 0.1;
 
 		vec3 voxelHitPos = (CameraPosition + (rayHit + stepSize) * rayDirection - VoxelVolumeWorldMin) / VoxelSizeInWorld;
 		float totalIntensity = 0.0f;
@@ -53,16 +53,18 @@ void main()
 			if(totalIntensity >= 1.0)
 			{
 				// mark edges red.
-				vec3 edgeDist = clamp(abs(voxelCoord - voxelHitPos) * 2.0, vec3(0.0), vec3(1.0));
+				/*vec3 edgeDist = clamp(abs(voxelCoord - voxelHitPos) * 2.0, vec3(0.0), vec3(1.0));
 				edgeDist = pow(edgeDist, vec3(8.0));
 				float edgeFactor = max(max(edgeDist.x*edgeDist.y, edgeDist.x * edgeDist.z), edgeDist.y * edgeDist.z);
-				FragColor = vec4(mix(vec3(0.0), vec3(1.0, 0.2, 0.2), edgeFactor), 1.0);
+				FragColor = vec4(mix(vec3(0.0), vec3(1.0, 0.2, 0.2), edgeFactor), 1.0);*/
+
+				FragColor = vec4(mod(voxelCoord/32.0, vec3(1.0)), 1.0);
 
 				break;
 			}
 
 			voxelHitPos += rayMarchStep * stepSize;
-			rayMarchStep *= 1.001;
+			rayMarchStep *= 1.01;
 		}
 
 		//FragColor = vec4(mix(FragColor.xyz, vec3(1.0), totalIntensity), 0);
