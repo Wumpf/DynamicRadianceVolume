@@ -166,6 +166,7 @@
     <ClCompile Include="..\dependencies\glhelper\glhelper\buffer.cpp" />
     <ClCompile Include="..\dependencies\glhelper\glhelper\framebufferobject.cpp" />
     <ClCompile Include="..\dependencies\glhelper\glhelper\gl.cpp" />
+    <ClCompile Include="..\dependencies\glhelper\glhelper\persistentringbuffer.cpp" />
     <ClCompile Include="..\dependencies\glhelper\glhelper\samplerobject.cpp" />
     <ClCompile Include="..\dependencies\glhelper\glhelper\screenalignedtriangle.cpp" />
     <ClCompile Include="..\dependencies\glhelper\glhelper\shaderobject.cpp" />
@@ -207,6 +208,7 @@
     <ClInclude Include="..\dependencies\glhelper\glhelper\buffer.hpp" />
     <ClInclude Include="..\dependencies\glhelper\glhelper\framebufferobject.hpp" />
     <ClInclude Include="..\dependencies\glhelper\glhelper\gl.hpp" />
+    <ClInclude Include="..\dependencies\glhelper\glhelper\persistentringbuffer.hpp" />
     <ClInclude Include="..\dependencies\glhelper\glhelper\samplerobject.hpp" />
     <ClInclude Include="..\dependencies\glhelper\glhelper\screenalignedtriangle.hpp" />
     <ClInclude Include="..\dependencies\glhelper\glhelper\shaderdatametainfo.hpp" />
@@ -259,6 +261,7 @@
     <Text Include="utilities\note.txt" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\dependencies\glhelper\glhelper\buffer.inl" />
     <None Include="..\dependencies\glhelper\glhelper\glhelper.vcxproj.filters" />
     <None Include="..\dependencies\glhelper\glhelper\shaderdatametainfo.inl" />
     <None Include="..\dependencies\glhelper\glhelper\statemanagement.inl" />

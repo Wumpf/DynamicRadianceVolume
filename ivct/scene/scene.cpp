@@ -17,6 +17,15 @@ Scene::~Scene()
 	Model::DestroyVAO();
 }
 
+void Scene::Update(ezTime timeSinceLastUpdate)
+{
+	for (auto& it : m_entities)
+	{
+		it.Update(timeSinceLastUpdate);
+	}
+	UpdateBoundingbox();
+}
+
 void Scene::UpdateBoundingbox()
 {
 	m_boundingBox.min = ei::Vec3(std::numeric_limits<float>::max());
@@ -26,7 +35,8 @@ void Scene::UpdateBoundingbox()
 	{
 		if (it.GetModel())
 		{
-			m_boundingBox = ei::Box(m_boundingBox, it.GetModel()->GetBoundingBox());
+			m_boundingBox = ei::Box(m_boundingBox, ei::Box(it.GetModel()->GetBoundingBox().min * it.GetScale() + it.GetPosition(), 
+															it.GetModel()->GetBoundingBox().max * it.GetScale() + it.GetPosition()));
 		}
 	}
 }

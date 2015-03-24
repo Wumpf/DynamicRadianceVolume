@@ -13,6 +13,7 @@ namespace gl
 	class Texture2D;
 	class SamplerObject;
 	class UniformBufferView;
+	class PersistentRingBuffer;
 	class ShaderStorageBufferView;
 }
 class Scene;
@@ -37,7 +38,7 @@ public:
 	unsigned int GetLightCacheHashCollisionCount() const;
 	unsigned int GetLightCacheActiveCount() const;
 
-	void UpdatePerObjectUBO(const SceneEntity& entity);
+	void BindObjectUBO(unsigned int _objectIndex);
 
 private:
 	std::shared_ptr<const Scene> m_scene;
@@ -46,6 +47,8 @@ private:
 
 	void UpdateConstantUBO(); 
 	void UpdatePerFrameUBO(const Camera& camera);
+
+	void UpdatePerObjectUBORingBuffer();
 
 	/// Fills GBuffer.
 	void DrawSceneToGBuffer();
@@ -63,6 +66,8 @@ private:
 	/// Does set VAO, VBO and index buffers but nothing else. No culling!
 	void DrawScene(bool setTextures);
 
+	int m_UBOAlignment;
+
 	std::unique_ptr<gl::ScreenAlignedTriangle> m_screenTriangle;
 
 	std::unique_ptr<Voxelization> m_voxelization;
@@ -75,7 +80,9 @@ private:
 
 	std::unique_ptr<gl::UniformBufferView> m_uboConstant;
 	std::unique_ptr<gl::UniformBufferView> m_uboPerFrame;
-	std::unique_ptr<gl::UniformBufferView> m_uboPerObject;
+	std::unique_ptr<gl::PersistentRingBuffer> m_uboRing_PerObject;
+	unsigned int m_perObjectUBOBindingPoint;
+	unsigned int m_perObjectUBOSize;
 
 	std::unique_ptr<gl::ShaderObject> m_shaderRequestLightCaches;
 	std::unique_ptr<gl::ShaderObject> m_shaderApplyLightCaches;

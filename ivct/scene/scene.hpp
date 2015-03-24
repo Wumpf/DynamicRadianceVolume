@@ -9,6 +9,8 @@
 #include "light.hpp"
 #include "sceneentity.hpp"
 
+#include "Time/Time.h"
+
 namespace gl
 {
 	class ShaderObject;
@@ -24,10 +26,10 @@ public:
 	Scene();
 	~Scene();
 
+	void Update(ezTime timeSinceLastUpdate);
+
 	const std::vector<SceneEntity>& GetEntities() const { return m_entities; }
 	std::vector<SceneEntity>& GetEntities() { return m_entities; }
-
-	void UpdateBoundingbox();
 
 	const std::vector<Light>& GetLights() const { return m_lights; }
 	std::vector<Light>& GetLights() { return m_lights; }
@@ -35,6 +37,8 @@ public:
 	const ei::Box& GetBoundingBox() const { return m_boundingBox; }
 
 private:
+	void UpdateBoundingbox();
+
 	std::vector<SceneEntity> m_entities;
 	std::vector<Light> m_lights;
 	ei::Box m_boundingBox;

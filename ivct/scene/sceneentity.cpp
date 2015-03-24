@@ -21,6 +21,13 @@ bool SceneEntity::LoadModel(const std::string& modelFilename)
 	return m_model != nullptr;
 }
 
+void SceneEntity::Update(ezTime timeSinceLastUpdate)
+{
+	float timeSinceLastUpdateSecs = static_cast<float>(timeSinceLastUpdate.GetSeconds());
+	m_position += m_movementSpeed * timeSinceLastUpdateSecs;
+	m_orientation *= ei::Quaternion(m_rotationSpeed * timeSinceLastUpdateSecs);
+}
+
 ei::Mat4x4 SceneEntity::ComputeWorldMatrix() const
 {
 	return ei::translation(m_position) * ei::rotationH(m_orientation) * ei::scalingH(m_scale);
