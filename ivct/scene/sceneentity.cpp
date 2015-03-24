@@ -5,7 +5,7 @@ SceneEntity::SceneEntity() :
 	m_model(),
 	m_position(0.0f),
 	m_scale(1.0f),
-	m_orientation(0, 0, 0),
+	m_orientation(ei::qidentity()),
 
 	m_movementSpeed(0),
 	m_rotationSpeed(0)
