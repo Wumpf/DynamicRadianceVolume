@@ -21,6 +21,7 @@
 
 Voxelization::Voxelization(unsigned int resolution) :
 	m_trackLightCacheCreationStats(false),
+	m_maxNumLightCaches(0),
 	m_lastLightCacheHashCollisionCount(0),
 	m_lastLightCacheActiveCount(0),
 	m_samplerLinearMipNearest(gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR,
@@ -43,7 +44,7 @@ Voxelization::Voxelization(unsigned int resolution) :
 
 	// misc buffer
 	m_lightCacheHashCollisionCounter = std::make_unique<gl::ShaderStorageBufferView>(std::make_shared<gl::Buffer>(sizeof(std::int32_t) * 2, 
-																	gl::Buffer::Usage::MAP_READ | gl::Buffer::Usage::MAP_WRITE), "LightCacheStats");
+																	gl::Buffer::UsageFlag::MAP_READ | gl::Buffer::UsageFlag::MAP_WRITE), "LightCacheStats");
 
 
 	// Register all shader for auto reload on change.
@@ -59,8 +60,9 @@ Voxelization::~Voxelization()
 
 void Voxelization::SetLightCacheSize(unsigned int maxNumLightCaches)
 {
+	m_maxNumLightCaches = maxNumLightCaches;
 	static const std::int32_t lightCacheEntrySize = sizeof(float) * 4 * 1;
-	m_lightCaches = std::make_unique<gl::ShaderStorageBufferView>(std::make_shared<gl::Buffer>(lightCacheEntrySize * maxNumLightCaches, gl::Buffer::Usage::IMMUTABLE), "LightCaches");
+	m_lightCaches = std::make_unique<gl::ShaderStorageBufferView>(std::make_shared<gl::Buffer>(lightCacheEntrySize * maxNumLightCaches, gl::Buffer::UsageFlag::IMMUTABLE), "LightCaches");
 }
 
 void Voxelization::DrawVoxelRepresentation()
@@ -101,7 +103,7 @@ void Voxelization::VoxelizeAndCreateCaches(Renderer& renderer)
 		// Light cache hash collision counter
 		if (m_trackLightCacheCreationStats)
 		{
-			std::uint32_t* hashCollisionCount = static_cast<std::uint32_t*>(m_lightCacheHashCollisionCounter->GetBuffer()->Map());
+			std::uint32_t* hashCollisionCount = static_cast<std::uint32_t*>(m_lightCacheHashCollisionCounter->GetBuffer()->Map(gl::Buffer::MapType::READ_WRITE, gl::Buffer::MapWriteFlag::NONE));
 			m_lastLightCacheHashCollisionCount = hashCollisionCount[0];
 			m_lastLightCacheActiveCount = hashCollisionCount[1];
 			hashCollisionCount[0] = 0;
@@ -120,12 +122,14 @@ void Voxelization::VoxelizeAndCreateCaches(Renderer& renderer)
 	m_voxelSceneTexture->BindImage(0, gl::Texture::ImageAccess::READ_WRITE);
 	m_shaderVoxelize->Activate();
 	Model::BindVAO();
-	for (auto& entity : renderer.GetScene()->GetEntities())
+
+	for (unsigned int entityIndex = 0; entityIndex < renderer.GetScene()->GetEntities().size(); ++entityIndex)
 	{
+		const SceneEntity& entity = renderer.GetScene()->GetEntities()[entityIndex];
 		if (!entity.GetModel())
 			continue;
 
-		renderer.UpdatePerObjectUBO(entity);
+		renderer.BindObjectUBO(entityIndex);
 		entity.GetModel()->BindBuffers();
 		GL_CALL(glDrawElements, GL_TRIANGLES, entity.GetModel()->GetNumTriangles() * 3, GL_UNSIGNED_INT, nullptr);
 	}

@@ -107,7 +107,7 @@ std::shared_ptr<Model> Model::FromFile(const std::string& filename)
 			}
 		}
 	}
-	output->m_vertexBuffer.reset(new gl::Buffer(sizeof(Vertex) * output->m_numVertices, gl::Buffer::Usage::IMMUTABLE, vertices.get()));
+	output->m_vertexBuffer.reset(new gl::Buffer(sizeof(Vertex) * output->m_numVertices, gl::Buffer::UsageFlag::IMMUTABLE, vertices.get()));
 	vertices.release();
 
 	// Load indices - Currently only 32bit indices
@@ -142,7 +142,7 @@ std::shared_ptr<Model> Model::FromFile(const std::string& filename)
 			indexOffset += mesh.mNumVertices;
 		}
 	}
-	output->m_indexBuffer.reset(new gl::Buffer(sizeof(std::uint32_t) * output->m_numTriangles * 3, gl::Buffer::Usage::IMMUTABLE, indices.get()));
+	output->m_indexBuffer.reset(new gl::Buffer(sizeof(std::uint32_t) * output->m_numTriangles * 3, gl::Buffer::UsageFlag::IMMUTABLE, indices.get()));
 	indices.release();
 
 	// Load textures

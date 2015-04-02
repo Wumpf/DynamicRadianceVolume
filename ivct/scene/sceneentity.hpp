@@ -4,6 +4,8 @@
 #include <memory>
 #include <ei/vector.hpp>
 
+#include "Time/Time.h"
+
 class Model;
 
 class SceneEntity
@@ -12,7 +14,7 @@ public:
 	SceneEntity();
 	~SceneEntity();
 
-	void Update(float timeSinceLastUpdate);
+	void Update(ezTime timeSinceLastUpdate);
 	ei::Mat4x4 ComputeWorldMatrix() const;
 
 	/// Returns true if successful

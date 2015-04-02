@@ -275,10 +275,8 @@ void AntTweakBarInterface::SaveReadWriteValuesToJSON(const std::string& jsonFile
 			case TW_TYPE_QUAT4F:
 			{
 				ei::Quaternion v = GetRWEntryValue<ei::Quaternion>(rwEntry);
-				(*value)[0] = v.i;
-				(*value)[1] = v.j;
-				(*value)[2] = v.k;
-				(*value)[3] = v.r;
+				for (unsigned int i = 0; i < 4; ++i)
+					(*value)[i] = v.z[i];
 				break;
 			}
 

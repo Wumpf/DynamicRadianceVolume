@@ -63,7 +63,7 @@ OutputWindow::OutputWindow() :
 	glGetError();
 
 #ifdef _DEBUG
-	gl::ActivateGLDebugOutput(gl::DebugSeverity::LOW);
+	gl::ActivateGLDebugOutput(gl::DebugSeverity::MEDIUM);
 #endif
 	
 	// Disable V-Sync

@@ -14,15 +14,18 @@
 #include <glhelper/screenalignedtriangle.hpp>
 #include <glhelper/uniformbufferview.hpp>
 #include <glhelper/shaderstoragebufferview.hpp>
+#include <glhelper/persistentringbuffer.hpp>
 #include <glhelper/framebufferobject.hpp>
 #include <glhelper/statemanagement.hpp>
 #include <glhelper/utils/flagoperators.hpp>
-
 
 Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& resolution) :
 	m_samplerLinear(gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Border::REPEAT))),
 	m_samplerNearest(gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::NEAREST, gl::SamplerObject::Filter::NEAREST, gl::SamplerObject::Filter::NEAREST, gl::SamplerObject::Border::REPEAT)))
 {
+	glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &m_UBOAlignment);
+	LOG_INFO("Uniform buffer alignment is " << m_UBOAlignment);
+
 	m_screenTriangle = std::make_unique<gl::ScreenAlignedTriangle>();
 
 	LoadShader();
@@ -32,9 +35,13 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	m_allShaders[0]->BindUBO(*m_uboConstant);
 	m_uboPerFrame = std::make_unique<gl::UniformBufferView>(*m_allShaders[0], "PerFrame");
 	m_allShaders[0]->BindUBO(*m_uboPerFrame);
-	m_uboPerObject = std::make_unique<gl::UniformBufferView>(*m_allShaders[0], "PerObject");
-	m_allShaders[0]->BindUBO(*m_uboPerObject);
 
+	// Expecting about 16 objects. Doing triple buffering!
+	m_perObjectUBOSize = m_allShaders[0]->GetUniformBufferInfo()["PerObject"].bufferDataSizeByte;
+	m_perObjectUBOSize += (m_UBOAlignment - m_perObjectUBOSize % m_UBOAlignment) % m_UBOAlignment;
+	unsigned int perObjectUBORingBufferSize = 16 * 3 * m_perObjectUBOSize;
+	m_uboRing_PerObject = std::make_unique<gl::PersistentRingBuffer>(perObjectUBORingBufferSize);
+	m_perObjectUBOBindingPoint = m_allShaders[0]->GetUniformBufferInfo()["PerObject"].bufferBinding;
 
 	// Init specific ubos.
 	m_uboDeferredDirectLighting = std::make_unique<gl::UniformBufferView>(*m_shaderDeferredDirectLighting_Spot, "Light");
@@ -119,8 +126,9 @@ void Renderer::LoadShader()
 
 void Renderer::UpdateConstantUBO()
 {
-	m_uboConstant->GetBuffer()->Map();
+	m_uboConstant->GetBuffer()->Map(gl::Buffer::MapType::WRITE, gl::Buffer::MapWriteFlag::INVALIDATE_BUFFER);
 	(*m_uboConstant)["VoxelResolution"].Set(m_voxelization->GetVoxelTexture().GetWidth());
+	(*m_uboConstant)["MaxNumLightCaches"].Set(static_cast<int>(m_voxelization->GetLightCacheSize()));
 	m_uboConstant->GetBuffer()->Unmap();
 }
 
@@ -134,7 +142,7 @@ void Renderer::UpdatePerFrameUBO(const Camera& camera)
 	ei::Vec3 voxelVolumeWorldMin(m_scene->GetBoundingBox().min - 0.1f);
 	ei::Vec3 voxelVolumeWorldMax(m_scene->GetBoundingBox().max + 0.1f);
 
-	m_uboPerFrame->GetBuffer()->Map();
+	m_uboPerFrame->GetBuffer()->Map(gl::Buffer::MapType::WRITE, gl::Buffer::MapWriteFlag::INVALIDATE_BUFFER);
 	(*m_uboPerFrame)["Projection"].Set(projection);
 	(*m_uboPerFrame)["ViewProjection"].Set(viewProjection);
 	(*m_uboPerFrame)["InverseViewProjection"].Set(ei::invert(viewProjection));
@@ -146,13 +154,6 @@ void Renderer::UpdatePerFrameUBO(const Camera& camera)
 	(*m_uboPerFrame)["VoxelSizeInWorld"].Set((voxelVolumeWorldMax - voxelVolumeWorldMin) / m_voxelization->GetVoxelTexture().GetWidth());
 
 	m_uboPerFrame->GetBuffer()->Unmap();
-}
-
-void Renderer::UpdatePerObjectUBO(const SceneEntity& entity)
-{
-	m_uboPerObject->GetBuffer()->Map();
-	(*m_uboPerObject)["World"].Set(entity.ComputeWorldMatrix());
-	m_uboPerObject->GetBuffer()->Unmap();
 }
 
 void Renderer::OnScreenResize(const ei::UVec2& newResolution)
@@ -178,9 +179,7 @@ void Renderer::OnScreenResize(const ei::UVec2& newResolution)
 	// Light cache setup.
 	std::int32_t maxNumLightCaches = (newResolution.x / 2) * (newResolution.y / 2);
 	m_voxelization->SetLightCacheSize(maxNumLightCaches);
-	m_uboConstant->GetBuffer()->Map();//(*m_uboConstant)["MaxNumLightCaches"].GetMetaInfo().blockOffset, 4);
-	(*m_uboConstant)["MaxNumLightCaches"].Set(maxNumLightCaches);
-	m_uboConstant->GetBuffer()->Unmap();
+	UpdateConstantUBO();
 }
 
 void Renderer::SetScene(const std::shared_ptr<const Scene>& scene)
@@ -194,31 +193,59 @@ void Renderer::SetScene(const std::shared_ptr<const Scene>& scene)
 
 void Renderer::Draw(const Camera& camera)
 {
+	// Update data.
 	UpdatePerFrameUBO(camera);
+	UpdatePerObjectUBORingBuffer();
 
+	// 
 	DrawSceneToGBuffer();
-
 	m_GBuffer_diffuse->Bind(0);
 	m_GBuffer_normal->Bind(1);
 	m_GBuffer_depth->Bind(2);
 	
-	WriteCacheRequests();
-	m_voxelization->VoxelizeAndCreateCaches(*this);
+	//WriteCacheRequests();
+	//m_voxelization->VoxelizeAndCreateCaches(*this);
+
+	// No more object drawing from now on.
+	m_uboRing_PerObject->CompleteFrame();
+
 
 	m_HDRBackbuffer->Bind(true);
 	GL_CALL(glClear, GL_COLOR_BUFFER_BIT);
 	
-	//DrawLights();
+	DrawLights();
 	//DrawGBufferDebug();
 
 	// TODO
-	m_shaderApplyLightCaches->BindSSBO(m_voxelization->GetLightCaches());
+	/*m_shaderApplyLightCaches->BindSSBO(m_voxelization->GetLightCaches());
 	m_shaderApplyLightCaches->Activate();
 	m_screenTriangle->Draw();
-	
+	*/
 	OutputHDRTextureToBackbuffer();
 
-	//m_voxelization->DrawVoxelRepresentation();
+//	m_voxelization->DrawVoxelRepresentation();
+}
+
+void Renderer::UpdatePerObjectUBORingBuffer()
+{
+	for (unsigned int entityIndex = 0; entityIndex < m_scene->GetEntities().size(); ++entityIndex)
+	{
+		const SceneEntity& entity = m_scene->GetEntities()[entityIndex];
+		
+		void* blockMemory = nullptr;
+		size_t blockIndex = 0;	
+		m_uboRing_PerObject->AddBlock(blockMemory, blockIndex, sizeof(ei::Mat4x4), m_UBOAlignment);
+		Assert(blockIndex == entityIndex, "Entity index and memory block index are different.");
+
+		auto worldMatrix = entity.ComputeWorldMatrix();
+		memcpy(blockMemory, &worldMatrix, sizeof(ei::Mat4x4));
+	}
+	m_uboRing_PerObject->FlushAllBlocks();
+}
+
+void Renderer::BindObjectUBO(unsigned int _objectIndex)
+{
+	m_uboRing_PerObject->BindBlockAsUBO(m_perObjectUBOBindingPoint, _objectIndex);
 }
 
 void Renderer::WriteCacheRequests()
@@ -297,7 +324,7 @@ void Renderer::DrawLights()
 	{
 		Assert(light.type == Light::Type::SPOT, "Only spot lights are supported so far!");
 
-		m_uboDeferredDirectLighting->GetBuffer()->Map();
+		m_uboDeferredDirectLighting->GetBuffer()->Map(gl::Buffer::MapType::WRITE, gl::Buffer::MapWriteFlag::INVALIDATE_BUFFER);
 		(*m_uboDeferredDirectLighting)["LightIntensity"].Set(light.intensity);
 		(*m_uboDeferredDirectLighting)["LightPosition"].Set(light.position);
 		(*m_uboDeferredDirectLighting)["LightDirection"].Set(ei::normalize(light.direction));
@@ -314,12 +341,13 @@ void Renderer::DrawScene(bool setTextures)
 {
 	Model::BindVAO();
 
-	for (auto& entity : m_scene->GetEntities())
+	for (unsigned int entityIndex =0; entityIndex < m_scene->GetEntities().size(); ++entityIndex)
 	{
+		const SceneEntity& entity = m_scene->GetEntities()[entityIndex];
 		if (!entity.GetModel())
 			continue;
 
-		UpdatePerObjectUBO(entity);
+		BindObjectUBO(entityIndex);
 		entity.GetModel()->BindBuffers();
 		for (const Model::Mesh& mesh : entity.GetModel()->GetMeshes())
 		{

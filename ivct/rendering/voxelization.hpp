@@ -27,6 +27,7 @@ public:
 	///
 	/// Reallocates internal buffer accordingly.
 	void SetLightCacheSize(unsigned int maxNumLightCaches);
+	unsigned int GetLightCacheSize() const { return m_maxNumLightCaches; }
 
 	/// Voxel debug output.
 	void DrawVoxelRepresentation();
@@ -58,7 +59,7 @@ private:
 
 	std::unique_ptr<gl::Texture3D> m_voxelSceneTexture;
 
-
+	unsigned int m_maxNumLightCaches;
 	std::unique_ptr<gl::ShaderStorageBufferView> m_lightCaches;
 
 	bool m_trackLightCacheCreationStats;

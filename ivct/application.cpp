@@ -56,7 +56,6 @@ Application::Application(int argc, char** argv)
 	// Default settings:
 	ChangeEntityCount(1);
 	m_scene->GetEntities()[0].LoadModel("../models/test0/test0.obj"); // "../models/cryteksponza/sponza.obj");
-	m_scene->UpdateBoundingbox();
 
 	ChangeLightCount(1);
 	m_scene->GetLights()[0].type = Light::Type::SPOT;
@@ -133,10 +132,14 @@ void Application::ChangeEntityCount(unsigned int entityCount)
 	for (size_t i = entityCount; i < oldEntityCount; ++i)
 	{
 		std::string namePrefix = "Entity" + std::to_string(i) + "_";
+		m_tweakBar->Remove(namePrefix + "LoadFromFile");
 		m_tweakBar->Remove(namePrefix + "Filename");
 		m_tweakBar->Remove(namePrefix + "Position");
 		m_tweakBar->Remove(namePrefix + "Orientation");
 		m_tweakBar->Remove(namePrefix + "Scale");
+		m_tweakBar->Remove(namePrefix + "Movement");
+		m_tweakBar->Remove(namePrefix + "Rotation");
+		m_tweakBar->Remove(namePrefix + "Transform");
 	}
 	for (size_t i = oldEntityCount; i < entityCount; ++i)
 	{
@@ -151,7 +154,7 @@ void Application::ChangeEntityCount(unsigned int entityCount)
 			}, groupSetting + "label=LoadFromFile");
 
 		m_tweakBar->AddReadWrite<std::string>(namePrefix + "Filename", [=]()->std::string { return m_scene->GetEntities()[i].GetModel() != nullptr ? m_scene->GetEntities()[i].GetModel()->GetOriginFilename() : ""; },
-													[=](const std::string& str){}, groupSetting + "label=Type readonly=true");
+			[=](const std::string& str){ m_scene->GetEntities()[i].LoadModel(str); }, groupSetting + "label=Type readonly=true");
 
 		m_tweakBar->AddReadWrite<ei::Vec3>(namePrefix + "Position", [=](){ return m_scene->GetEntities()[i].GetPosition(); },
 			[=](const ei::Vec3& v){ m_scene->GetEntities()[i].SetPosition(v); }, groupSetting + " label=Position", AntTweakBarInterface::TypeHint::POSITION);
@@ -160,12 +163,18 @@ void Application::ChangeEntityCount(unsigned int entityCount)
 			[=](const ei::Quaternion& q){ m_scene->GetEntities()[i].SetOrientation(q); }, groupSetting + " label=Orientation");
 
 		m_tweakBar->AddReadWrite<float>(namePrefix + "Scale", [=](){ return m_scene->GetEntities()[i].GetScale(); },
-			[=](float s){ m_scene->GetEntities()[i].SetScale(s); }, groupSetting + " label=Scale min=0.05 max=100.0 step=0.05");
+			[=](float s){ m_scene->GetEntities()[i].SetScale(s); }, groupSetting + " label=Scale min=0.01 max=100.0 step=0.01");
+
+		m_tweakBar->AddSeperator(namePrefix + "Transform", groupSetting);
+	
+		m_tweakBar->AddReadWrite<ei::Vec3>(namePrefix + "Movement", [=](){ return m_scene->GetEntities()[i].GetMovementSpeed(); },
+			[=](const ei::Vec3& v){ m_scene->GetEntities()[i].SetMovementSpeed(v); }, groupSetting + " label=Movement", AntTweakBarInterface::TypeHint::POSITION);
+
+		m_tweakBar->AddReadWrite<ei::Vec3>(namePrefix + "Rotation", [=](){ return m_scene->GetEntities()[i].GetRotationSpeed(); },
+			[=](const ei::Vec3& v){ m_scene->GetEntities()[i].SetRotationSpeed(v); }, groupSetting + " label=Rotation", AntTweakBarInterface::TypeHint::POSITION);
 
 		m_tweakBar->SetGroupProperties(entityGroup, "Entities", entityGroup, false);
 	}
-
-	m_scene->UpdateBoundingbox();
 }
 
 void Application::ChangeLightCount(unsigned int lightCount)
@@ -272,7 +281,7 @@ void Application::Update()
 	m_camera->Update(m_timeSinceLastUpdate);
 	Input();
 
-	m_scene->UpdateBoundingbox();
+	m_scene->Update(m_timeSinceLastUpdate);
 
 	m_window->SetTitle("time per frame " +
 		std::to_string(m_timeSinceLastUpdate.GetMilliseconds()) + "ms (FPS: " + std::to_string(1.0f / m_timeSinceLastUpdate.GetSeconds()) + ")");
