@@ -1,6 +1,7 @@
 // UBO for values that change very rarely (max every few seconds or even minutes)
 layout(binding = 0, shared) uniform Constant
 {
+	ivec2 BackbufferResolution;
 	int VoxelResolution;
 	int MaxNumLightCaches;
 };

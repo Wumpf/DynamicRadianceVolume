@@ -1,0 +1,33 @@
+#version 450 core
+
+#include "globalubos.glsl"
+
+// Todo: Note a reason why "odd" and not "even"
+// Empirical: "even spacing" adds vertices at tess factor 1, odd not
+layout(triangles, fractional_odd_spacing, cw, point_mode) in;
+
+layout(location = 0) in vec3 inPosition[];
+layout(location = 1) in vec3 inNormal[];
+layout(location = 2) in vec2 inTexcoord[];
+
+
+layout(location = 0) out vec3 outNormal;
+layout(location = 1) out vec2 outTexcoord;
+
+void main()
+{	
+	outNormal = gl_TessCoord.x * inNormal[0] + 
+						gl_TessCoord.y * inNormal[1] + 
+						gl_TessCoord.z * inNormal[2];
+
+	outTexcoord = gl_TessCoord.x * inTexcoord[0] +
+						gl_TessCoord.y * inTexcoord[1] +
+						gl_TessCoord.z * inTexcoord[2];
+
+	vec3 outPosition = gl_TessCoord.x * inPosition[0] +
+						gl_TessCoord.y * inPosition[1] +
+						gl_TessCoord.z * inPosition[2];
+
+	
+	gl_Position = vec4(outPosition, 1.0) * ViewProjection;
+}

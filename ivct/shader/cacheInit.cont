@@ -1,0 +1,41 @@
+#version 450 core
+
+#include "globalubos.glsl"
+
+layout(location = 0) in vec3 inNormal[];
+layout(location = 1) in vec2 inTexcoord[];
+
+layout(location = 0) out vec3 outPosition[];
+layout(location = 1) out vec3 outNormal[];
+layout(location = 2) out vec2 outTexcoord[];
+
+// Output triangles
+layout(vertices = 3) out;
+
+void main()
+{
+	// Per Patch computation.
+	if (gl_InvocationID == 0)
+	{
+		vec4 clipPos0 = gl_in[0].gl_Position * ViewProjection;
+		vec4 clipPos1 = gl_in[1].gl_Position * ViewProjection;
+		vec4 clipPos2 = gl_in[2].gl_Position * ViewProjection;
+
+		vec2 screenSpace0 = clipPos0.xy / clipPos0.w;
+		vec2 screenSpace1 = clipPos1.xy / clipPos1.w;
+		vec2 screenSpace2 = clipPos2.xy / clipPos2.w;
+
+		const vec2 cachesPerClipSpaceCoord = BackbufferResolution * vec2(0.5) / vec2(100);
+
+		// TODO: Max tessellation.
+
+		gl_TessLevelOuter[0] = length((screenSpace1 - screenSpace2) * cachesPerClipSpaceCoord);
+		gl_TessLevelOuter[1] = length((screenSpace0 - screenSpace2) * cachesPerClipSpaceCoord);
+		gl_TessLevelOuter[2] = length((screenSpace1 - screenSpace0) * cachesPerClipSpaceCoord);
+		gl_TessLevelInner[0] = min(min(gl_TessLevelOuter[0], gl_TessLevelOuter[1]), gl_TessLevelOuter[2]);
+	}
+
+	outPosition[gl_InvocationID] = gl_in[gl_InvocationID].gl_Position.xyz;
+	outNormal[gl_InvocationID] = inNormal[gl_InvocationID];
+	outTexcoord[gl_InvocationID] = inTexcoord[gl_InvocationID];
+}

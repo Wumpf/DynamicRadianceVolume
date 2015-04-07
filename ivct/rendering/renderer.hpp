@@ -56,15 +56,16 @@ private:
 	void DrawGBufferDebug();
 	/// Performs direct lighting for all lights.
 	void DrawLights();
-
-	void WriteCacheRequests();
-
+	
 	void OutputHDRTextureToBackbuffer();
+
+	void PrepareLightCaches();
 
 	/// Draws scene, mesh by mesh.
 	///
 	/// Does set VAO, VBO and index buffers but nothing else. No culling!
 	void DrawScene(bool setTextures);
+
 
 	int m_UBOAlignment;
 
@@ -84,9 +85,7 @@ private:
 	unsigned int m_perObjectUBOBindingPoint;
 	unsigned int m_perObjectUBOSize;
 
-	std::unique_ptr<gl::ShaderObject> m_shaderRequestLightCaches;
-	std::unique_ptr<gl::ShaderObject> m_shaderApplyLightCaches;
-	
+	std::unique_ptr<gl::ShaderObject> m_shaderCacheInit;
 
 	std::unique_ptr<gl::Texture2D> m_GBuffer_diffuse;
 	std::unique_ptr<gl::Texture2D> m_GBuffer_normal;

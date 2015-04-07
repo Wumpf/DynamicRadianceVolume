@@ -11,7 +11,7 @@ layout(location = 1) in vec2 gs_out_Texcoord;
 layout(location = 2) in flat int gs_out_SideIndex;
 layout(location = 3) in flat vec4 gs_out_RasterAABB;
 
-layout(binding = 0, r8ui) restrict uniform uimage3D VoxelVolume;
+layout(binding = 0, r8ui) restrict writeonly uniform uimage3D VoxelVolume;
 
 ivec3 UnswizzlePos(ivec3 pos)
 {
@@ -52,7 +52,7 @@ void RecordCache(ivec3 voxelPos)
 void StoreVoxelAndCache(ivec3 voxelPosSwizzledI)
 {
 	ivec3 voxelPos = UnswizzlePos(voxelPosSwizzledI);
-	uint oldVoxelValue = imageLoad(VoxelVolume, voxelPos).r;
+	/*uint oldVoxelValue = imageLoad(VoxelVolume, voxelPos).r;
 
 	// Store cache only if a cache is ordered
 	if((oldVoxelValue & CACHE_NEEDED_BIT) != 0)
@@ -61,9 +61,9 @@ void StoreVoxelAndCache(ivec3 voxelPosSwizzledI)
 	}
 	// Store voxel only if there is not already one (needed to read it anyways)
 	if((oldVoxelValue & SOLID_BIT) == 0) // Branch helpful?
-	{
-		imageStore(VoxelVolume, voxelPos, uvec4(oldVoxelValue | SOLID_BIT));
-	}
+	{*/
+		imageStore(VoxelVolume, voxelPos, uvec4(SOLID_BIT));//uvec4(oldVoxelValue | SOLID_BIT));
+	//}
 }
 
 void main()

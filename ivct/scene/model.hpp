@@ -55,6 +55,7 @@ public:
 
 	/// Binds vertex and index buffer.
 	void BindBuffers();
+	void BindVertexBuffer();
 
 private:
 	Model(const std::string& originFilename);

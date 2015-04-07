@@ -73,6 +73,8 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 
 	// The OpenGL clip space convention uses depth -1 to 1 which is remapped again. In GL4.5 it is possible to disable this
 	GL_CALL(glClipControl, GL_LOWER_LEFT, GL_ZERO_TO_ONE);
+
+	GL_CALL(glPatchParameteri, GL_PATCH_VERTICES, 3);
 }
 
 Renderer::~Renderer()
@@ -104,22 +106,17 @@ void Renderer::LoadShader()
 	m_shaderTonemap->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/tonemapping.frag");
 	m_shaderTonemap->CreateProgram();
 
-	m_shaderRequestLightCaches = std::make_unique<gl::ShaderObject>("request light caches");
-	m_shaderRequestLightCaches->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
-	m_shaderRequestLightCaches->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/requestlightcaches.frag");
-	m_shaderRequestLightCaches->CreateProgram();
-
-	m_shaderApplyLightCaches = std::make_unique<gl::ShaderObject>("apply light caches");
-	m_shaderApplyLightCaches->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
-	m_shaderApplyLightCaches->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/applylightcaches.frag");
-	m_shaderApplyLightCaches->CreateProgram();
-
+	m_shaderCacheInit = std::make_unique<gl::ShaderObject>("cache init");
+	m_shaderCacheInit->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/cacheInit_noskinning.vert");
+	m_shaderCacheInit->AddShaderFromFile(gl::ShaderObject::ShaderType::EVALUATION, "shader/cacheInit.eval");
+	m_shaderCacheInit->AddShaderFromFile(gl::ShaderObject::ShaderType::CONTROL, "shader/cacheInit.cont");
+	m_shaderCacheInit->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/cacheInit.frag");
+	m_shaderCacheInit->CreateProgram();
 
 	
-
 	// Register all shader for auto reload on change.
 	m_allShaders = { m_shaderDebugGBuffer.get(), m_shaderFillGBuffer_noskinning.get(), m_shaderDeferredDirectLighting_Spot.get(), 
-						m_shaderTonemap.get(), m_shaderRequestLightCaches.get(), m_shaderApplyLightCaches.get() };
+					m_shaderTonemap.get(), m_shaderCacheInit.get() };
 	for (auto it : m_allShaders)
 		ShaderFileWatcher::Instance().RegisterShaderForReloadOnChange(it);
 }
@@ -127,6 +124,7 @@ void Renderer::LoadShader()
 void Renderer::UpdateConstantUBO()
 {
 	m_uboConstant->GetBuffer()->Map(gl::Buffer::MapType::WRITE, gl::Buffer::MapWriteFlag::INVALIDATE_BUFFER);
+	(*m_uboConstant)["BackbufferResolution"].Set(ei::IVec2(m_HDRBackbufferTexture->GetWidth(), m_HDRBackbufferTexture->GetHeight()));
 	(*m_uboConstant)["VoxelResolution"].Set(m_voxelization->GetVoxelTexture().GetWidth());
 	(*m_uboConstant)["MaxNumLightCaches"].Set(static_cast<int>(m_voxelization->GetLightCacheSize()));
 	m_uboConstant->GetBuffer()->Unmap();
@@ -188,7 +186,8 @@ void Renderer::SetScene(const std::shared_ptr<const Scene>& scene)
 
 	m_scene = scene;
 
-	UpdateConstantUBO();
+	if(m_HDRBackbufferTexture)
+		UpdateConstantUBO();
 }
 
 void Renderer::Draw(const Camera& camera)
@@ -213,9 +212,8 @@ void Renderer::Draw(const Camera& camera)
 	m_HDRBackbuffer->Bind(true);
 	GL_CALL(glClear, GL_COLOR_BUFFER_BIT);
 	
-	DrawLights();
-	//DrawGBufferDebug();
-
+	//DrawLights();
+	
 	// TODO
 	/*m_shaderApplyLightCaches->BindSSBO(m_voxelization->GetLightCaches());
 	m_shaderApplyLightCaches->Activate();
@@ -224,6 +222,7 @@ void Renderer::Draw(const Camera& camera)
 	OutputHDRTextureToBackbuffer();
 
 //	m_voxelization->DrawVoxelRepresentation();
+	DrawGBufferDebug();
 }
 
 void Renderer::UpdatePerObjectUBORingBuffer()
@@ -246,21 +245,6 @@ void Renderer::UpdatePerObjectUBORingBuffer()
 void Renderer::BindObjectUBO(unsigned int _objectIndex)
 {
 	m_uboRing_PerObject->BindBlockAsUBO(m_perObjectUBOBindingPoint, _objectIndex);
-}
-
-void Renderer::WriteCacheRequests()
-{
-	gl::Disable(gl::Cap::DEPTH_TEST);
-	GL_CALL(glDepthMask, GL_FALSE);
-	gl::Disable(gl::Cap::CULL_FACE);
-	GL_CALL(glColorMask, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-
-	m_voxelization->GetVoxelTexture().ClearToZero();
-	m_voxelization->GetVoxelTexture().BindImage(0, gl::Texture::ImageAccess::WRITE);
-	m_shaderRequestLightCaches->Activate();
-	m_screenTriangle->Draw();
-
-	//GL_CALL(glColorMask, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 }
 
 void Renderer::OutputHDRTextureToBackbuffer()
@@ -286,7 +270,9 @@ void Renderer::DrawSceneToGBuffer()
 	m_shaderFillGBuffer_noskinning->Activate();
 	m_GBuffer->Bind(false);
 	GL_CALL(glClear, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	DrawScene(true);
+	//DrawScene(true);
+
+	PrepareLightCaches();
 }
 
 void Renderer::DrawGBufferDebug()
@@ -335,6 +321,24 @@ void Renderer::DrawLights()
 	}
 
 	gl::Disable(gl::Cap::BLEND);
+}
+
+void Renderer::PrepareLightCaches()
+{
+	m_shaderCacheInit->Activate();
+	Model::BindVAO();
+
+	for(unsigned int entityIndex = 0; entityIndex < m_scene->GetEntities().size(); ++entityIndex)
+	{
+		const SceneEntity& entity = m_scene->GetEntities()[entityIndex];
+		if(!entity.GetModel())
+			continue;
+
+		BindObjectUBO(entityIndex);
+		entity.GetModel()->BindBuffers();
+		
+		GL_CALL(glDrawElements, GL_PATCHES, entity.GetModel()->GetNumTriangles() * 3, GL_UNSIGNED_INT, nullptr);
+	}
 }
 
 void Renderer::DrawScene(bool setTextures)
