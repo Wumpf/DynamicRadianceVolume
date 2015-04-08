@@ -2,6 +2,7 @@
 
 #include "globalubos.glsl"
 #include "random.glsl"
+#include "utils.glsl"
 
 layout(location = 0) in vec3 inNormal[];
 layout(location = 1) in vec2 inTexcoord[];
@@ -21,6 +22,14 @@ void main()
 		vec4 clipPos0 = gl_in[0].gl_Position * ViewProjection;
 		vec4 clipPos1 = gl_in[1].gl_Position * ViewProjection;
 		vec4 clipPos2 = gl_in[2].gl_Position * ViewProjection;
+
+		// Cull patches. For high tessellation factors this can massively improve performance!
+		if(!IsOnScreen(clipPos0) && !IsOnScreen(clipPos1) && !IsOnScreen(clipPos2))
+		{
+			gl_TessLevelInner[0] = gl_TessLevelOuter[0] = gl_TessLevelOuter[1]= gl_TessLevelOuter[2] = 0.0;
+			return;
+		}
+
 
 		vec2 screenSpace0 = clipPos0.xy / clipPos0.w;
 		vec2 screenSpace1 = clipPos1.xy / clipPos1.w;

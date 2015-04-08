@@ -71,3 +71,9 @@ ivec2 PackNormal16I(vec3 normal)
 	// Pack to 16bit signed int.
 	return ivec2(packedNormal.x * (32767.0 / PI), packedNormal.y * 32767.0);
 }
+
+bool IsOnScreen(vec4 clipspaceCoordinate)
+{
+	return all(lessThanEqual(clipspaceCoordinate.xyz, clipspaceCoordinate.www)) && 
+			all(lessThanEqual(vec3(-clipspaceCoordinate.ww, 0.0), clipspaceCoordinate.xyz));
+}

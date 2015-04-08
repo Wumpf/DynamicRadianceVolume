@@ -39,8 +39,10 @@ void main()
 						gl_TessCoord.z * inPosition[2];
 
 
-	const float CachePositionOffset = 2.0;
+	const float CachePositionOffset = 0.2;
 	outPosition += normalize(CameraPosition - outPosition) * CachePositionOffset;
 
 	gl_Position = vec4(outPosition, 1.0) * ViewProjection;
+
+	// TODO: Check if it is faster without pixel shader - just using direct write to target
 }
