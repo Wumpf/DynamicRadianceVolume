@@ -12,18 +12,12 @@
 #include <glhelper/shaderobject.hpp>
 #include <glhelper/texture3d.hpp>
 #include <glhelper/buffer.hpp>
-#include <glhelper/shaderstoragebufferview.hpp>
 #include <glhelper/screenalignedtriangle.hpp>
 #include <glhelper/statemanagement.hpp>
 #include <glhelper/utils/flagoperators.hpp>
 
 
-
 Voxelization::Voxelization(unsigned int resolution) :
-	m_trackLightCacheCreationStats(false),
-	m_maxNumLightCaches(0),
-	m_lastLightCacheHashCollisionCount(0),
-	m_lastLightCacheActiveCount(0),
 	m_samplerLinearMipNearest(gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR,
 																							gl::SamplerObject::Filter::NEAREST, gl::SamplerObject::Border::CLAMP)))
 {
@@ -42,10 +36,6 @@ Voxelization::Voxelization(unsigned int resolution) :
 
 	m_voxelSceneTexture = std::make_unique<gl::Texture3D>(resolution, resolution, resolution, gl::TextureFormat::R8UI, 1);
 
-	// misc buffer
-	m_lightCacheHashCollisionCounter = std::make_unique<gl::ShaderStorageBufferView>(std::make_shared<gl::Buffer>(sizeof(std::int32_t) * 2, 
-																	gl::Buffer::UsageFlag::MAP_READ | gl::Buffer::UsageFlag::MAP_WRITE), "LightCacheStats");
-
 
 	// Register all shader for auto reload on change.
 	ShaderFileWatcher::Instance().RegisterShaderForReloadOnChange(m_shaderVoxelDebug.get());
@@ -56,13 +46,6 @@ Voxelization::~Voxelization()
 {
 	ShaderFileWatcher::Instance().UnregisterShaderForReloadOnChange(m_shaderVoxelDebug.get());
 	ShaderFileWatcher::Instance().UnregisterShaderForReloadOnChange(m_shaderVoxelize.get());
-}
-
-void Voxelization::SetLightCacheSize(unsigned int maxNumLightCaches)
-{
-	m_maxNumLightCaches = maxNumLightCaches;
-	static const std::int32_t lightCacheEntrySize = sizeof(float) * 4 * 1;
-	m_lightCaches = std::make_unique<gl::ShaderStorageBufferView>(std::make_shared<gl::Buffer>(lightCacheEntrySize * maxNumLightCaches, gl::Buffer::UsageFlag::IMMUTABLE), "LightCaches");
 }
 
 void Voxelization::DrawVoxelRepresentation()
@@ -96,27 +79,6 @@ void Voxelization::VoxelizeAndCreateCaches(Renderer& renderer)
 	// Viewport in size of voxel volume.
 	GL_CALL(glViewport, 0, 0, m_voxelSceneTexture->GetWidth(), m_voxelSceneTexture->GetWidth());
 
-
-	// Light cache setup
-	if (m_lightCaches)
-	{
-		// Light cache hash collision counter
-		if (m_trackLightCacheCreationStats)
-		{
-			std::uint32_t* hashCollisionCount = static_cast<std::uint32_t*>(m_lightCacheHashCollisionCounter->GetBuffer()->Map(gl::Buffer::MapType::READ_WRITE, gl::Buffer::MapWriteFlag::NONE));
-			m_lastLightCacheHashCollisionCount = hashCollisionCount[0];
-			m_lastLightCacheActiveCount = hashCollisionCount[1];
-			hashCollisionCount[0] = 0;
-			hashCollisionCount[1] = 0;
-			m_lightCacheHashCollisionCounter->GetBuffer()->Unmap();
-
-			m_shaderVoxelize->BindSSBO(*m_lightCacheHashCollisionCounter);
-		}
-
-		m_lightCaches->GetBuffer()->ClearToZero();
-		m_shaderVoxelize->BindSSBO(*m_lightCaches);
-	}
-
 	// Draw
 	GL_CALL(glMemoryBarrier, GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Ensure Cache demands are written.
 	m_voxelSceneTexture->BindImage(0, gl::Texture::ImageAccess::READ_WRITE);
@@ -139,14 +101,4 @@ void Voxelization::VoxelizeAndCreateCaches(Renderer& renderer)
 
 	// Reenable color write
 	GL_CALL(glColorMask, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-}
-
-void Voxelization::SetTrackLightCacheCreationStats(bool trackLightCacheCreationStats)
-{
-	m_trackLightCacheCreationStats = trackLightCacheCreationStats;
-
-	// Patch shader
-	std::string defines = m_trackLightCacheCreationStats ? "#define LIGHTCACHE_CREATION_STATS" : "";
-	m_shaderVoxelize->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/voxelize.frag", defines);
-	m_shaderVoxelize->CreateProgram();
 }

@@ -54,7 +54,8 @@ Application::Application(int argc, char** argv)
 
 	// Default settings:
 	ChangeEntityCount(1);
-	m_scene->GetEntities()[0].LoadModel("../models/test0/test0.obj"); // "../models/cryteksponza/sponza.obj");
+	m_scene->GetEntities()[0].LoadModel("../models/cryteksponza/sponza.obj");
+	//m_scene->GetEntities()[0].LoadModel("../models/sanmiguel/san-miguel.obj");
 
 	ChangeLightCount(1);
 	m_scene->GetLights()[0].type = Light::Type::SPOT;

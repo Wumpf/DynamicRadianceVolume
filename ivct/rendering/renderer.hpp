@@ -54,6 +54,8 @@ private:
 	void DrawSceneToGBuffer();
 	/// Draws GBuffer directly to the (hardware) backbuffer.
 	void DrawGBufferDebug();
+	void DrawInitCacheDebug();
+
 	/// Performs direct lighting for all lights.
 	void DrawLights();
 	
@@ -86,6 +88,10 @@ private:
 	unsigned int m_perObjectUBOSize;
 
 	std::unique_ptr<gl::ShaderObject> m_shaderCacheInit;
+	std::unique_ptr<gl::Texture2D> m_textureCachePoints;
+	std::unique_ptr<gl::FramebufferObject> m_fboCachePoints;
+	std::unique_ptr<gl::ShaderObject> m_shaderShowCacheInitDisplay;
+
 
 	std::unique_ptr<gl::Texture2D> m_GBuffer_diffuse;
 	std::unique_ptr<gl::Texture2D> m_GBuffer_normal;

@@ -1,6 +1,7 @@
 #version 450 core
 
 #include "globalubos.glsl"
+#include "random.glsl"
 
 layout(location = 0) in vec3 inNormal[];
 layout(location = 1) in vec2 inTexcoord[];
@@ -25,14 +26,18 @@ void main()
 		vec2 screenSpace1 = clipPos1.xy / clipPos1.w;
 		vec2 screenSpace2 = clipPos2.xy / clipPos2.w;
 
-		const vec2 cachesPerClipSpaceCoord = BackbufferResolution * vec2(0.5) / vec2(100);
+		const vec2 CachesPerClipSpaceCoord = BackbufferResolution * vec2(0.5) / vec2(100);
+		const float MaxTesselationFactor = 32.0;
 
 		// TODO: Max tessellation.
 
-		gl_TessLevelOuter[0] = length((screenSpace1 - screenSpace2) * cachesPerClipSpaceCoord);
-		gl_TessLevelOuter[1] = length((screenSpace0 - screenSpace2) * cachesPerClipSpaceCoord);
-		gl_TessLevelOuter[2] = length((screenSpace1 - screenSpace0) * cachesPerClipSpaceCoord);
-		gl_TessLevelInner[0] = min(min(gl_TessLevelOuter[0], gl_TessLevelOuter[1]), gl_TessLevelOuter[2]);
+		gl_TessLevelOuter[0] = min(MaxTesselationFactor, length((screenSpace1 - screenSpace2) * CachesPerClipSpaceCoord));
+		gl_TessLevelOuter[1] = min(MaxTesselationFactor, length((screenSpace0 - screenSpace2) * CachesPerClipSpaceCoord));
+		gl_TessLevelOuter[2] = min(MaxTesselationFactor, length((screenSpace1 - screenSpace0) * CachesPerClipSpaceCoord));
+		gl_TessLevelInner[0] = min(MaxTesselationFactor, (gl_TessLevelOuter[0]+ gl_TessLevelOuter[1]+ gl_TessLevelOuter[2]) * 0.3333);
+		//gl_TessLevelInner[0] = min(min(gl_TessLevelOuter[0], gl_TessLevelOuter[1]), gl_TessLevelOuter[2]);
+
+		//gl_TessLevelInner[0] = gl_TessLevelOuter[0] = gl_TessLevelOuter[1]= gl_TessLevelOuter[2] = 1.0;
 	}
 
 	outPosition[gl_InvocationID] = gl_in[gl_InvocationID].gl_Position.xyz;

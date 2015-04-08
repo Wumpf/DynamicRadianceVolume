@@ -113,10 +113,14 @@ void Renderer::LoadShader()
 	m_shaderCacheInit->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/cacheInit.frag");
 	m_shaderCacheInit->CreateProgram();
 
-	
+	m_shaderShowCacheInitDisplay = std::make_unique<gl::ShaderObject>("cache init display");
+	m_shaderShowCacheInitDisplay->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
+	m_shaderShowCacheInitDisplay->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/cacheInitDisplay.frag");
+	m_shaderShowCacheInitDisplay->CreateProgram();
+
 	// Register all shader for auto reload on change.
 	m_allShaders = { m_shaderDebugGBuffer.get(), m_shaderFillGBuffer_noskinning.get(), m_shaderDeferredDirectLighting_Spot.get(), 
-					m_shaderTonemap.get(), m_shaderCacheInit.get() };
+					m_shaderTonemap.get(), m_shaderCacheInit.get(), m_shaderShowCacheInitDisplay.get() };
 	for (auto it : m_allShaders)
 		ShaderFileWatcher::Instance().RegisterShaderForReloadOnChange(it);
 }
@@ -126,7 +130,7 @@ void Renderer::UpdateConstantUBO()
 	m_uboConstant->GetBuffer()->Map(gl::Buffer::MapType::WRITE, gl::Buffer::MapWriteFlag::INVALIDATE_BUFFER);
 	(*m_uboConstant)["BackbufferResolution"].Set(ei::IVec2(m_HDRBackbufferTexture->GetWidth(), m_HDRBackbufferTexture->GetHeight()));
 	(*m_uboConstant)["VoxelResolution"].Set(m_voxelization->GetVoxelTexture().GetWidth());
-	(*m_uboConstant)["MaxNumLightCaches"].Set(static_cast<int>(m_voxelization->GetLightCacheSize()));
+	(*m_uboConstant)["MaxNumLightCaches"].Set(0); // TODO //static_cast<int>(m_voxelization->GetLightCacheSize()));
 	m_uboConstant->GetBuffer()->Unmap();
 }
 
@@ -175,8 +179,12 @@ void Renderer::OnScreenResize(const ei::UVec2& newResolution)
 
 
 	// Light cache setup.
-	std::int32_t maxNumLightCaches = (newResolution.x / 2) * (newResolution.y / 2);
-	m_voxelization->SetLightCacheSize(maxNumLightCaches);
+	// TODO: Try Half resolution - this has consequences on depth however...
+	m_textureCachePoints = std::make_unique<gl::Texture2D>(newResolution.x, newResolution.y, gl::TextureFormat::RGBA16F, 1, 0);
+	m_fboCachePoints.reset(new gl::FramebufferObject({ gl::FramebufferObject::Attachment(m_textureCachePoints.get()), gl::FramebufferObject::Attachment(m_GBuffer_normal.get()) },
+								gl::FramebufferObject::Attachment(m_GBuffer_depth.get())));
+
+
 	UpdateConstantUBO();
 }
 
@@ -196,18 +204,14 @@ void Renderer::Draw(const Camera& camera)
 	UpdatePerFrameUBO(camera);
 	UpdatePerObjectUBORingBuffer();
 
-	// 
+	// Fill GBuffer
 	DrawSceneToGBuffer();
-	m_GBuffer_diffuse->Bind(0);
-	m_GBuffer_normal->Bind(1);
-	m_GBuffer_depth->Bind(2);
-	
-	//WriteCacheRequests();
-	//m_voxelization->VoxelizeAndCreateCaches(*this);
+
+	// Light cache generation.
+	PrepareLightCaches();
 
 	// No more object drawing from now on.
 	m_uboRing_PerObject->CompleteFrame();
-
 
 	m_HDRBackbuffer->Bind(true);
 	GL_CALL(glClear, GL_COLOR_BUFFER_BIT);
@@ -222,7 +226,9 @@ void Renderer::Draw(const Camera& camera)
 	OutputHDRTextureToBackbuffer();
 
 //	m_voxelization->DrawVoxelRepresentation();
-	DrawGBufferDebug();
+//	DrawGBufferDebug();
+
+	DrawInitCacheDebug();
 }
 
 void Renderer::UpdatePerObjectUBORingBuffer()
@@ -270,9 +276,7 @@ void Renderer::DrawSceneToGBuffer()
 	m_shaderFillGBuffer_noskinning->Activate();
 	m_GBuffer->Bind(false);
 	GL_CALL(glClear, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	//DrawScene(true);
-
-	PrepareLightCaches();
+	DrawScene(true);
 }
 
 void Renderer::DrawGBufferDebug()
@@ -290,6 +294,19 @@ void Renderer::DrawGBufferDebug()
 	m_samplerNearest.BindSampler(1);
 	m_samplerNearest.BindSampler(2);
 	m_samplerNearest.BindSampler(3);
+
+	m_screenTriangle->Draw();
+}
+
+void Renderer::DrawInitCacheDebug()
+{
+	gl::Disable(gl::Cap::DEPTH_TEST);
+
+	m_shaderShowCacheInitDisplay->Activate();
+	gl::FramebufferObject::BindBackBuffer();
+
+	m_textureCachePoints->Bind(0);
+	m_samplerNearest.BindSampler(0);
 
 	m_screenTriangle->Draw();
 }
@@ -325,6 +342,12 @@ void Renderer::DrawLights()
 
 void Renderer::PrepareLightCaches()
 {
+	gl::Enable(gl::Cap::DEPTH_TEST);
+	GL_CALL(glDepthMask, GL_FALSE);
+
+	m_fboCachePoints->Bind(false);
+	GL_CALL(glClear, GL_COLOR_BUFFER_BIT);
+
 	m_shaderCacheInit->Activate();
 	Model::BindVAO();
 
@@ -369,20 +392,20 @@ void Renderer::DrawScene(bool setTextures)
 
 void Renderer::SetTrackLightCacheCreationStats(bool trackLightCacheHashCollisionCount)
 {
-	m_voxelization->SetTrackLightCacheCreationStats(trackLightCacheHashCollisionCount);
+	// TODO
 }
 
 bool Renderer::GetTrackLightCacheCreationStats() const
 {
-	return m_voxelization->GetTrackLightCacheCreationStats();
+	return true; // TODO
 }
 
 unsigned int Renderer::GetLightCacheHashCollisionCount() const
 {
-	return m_voxelization->GetLightCacheHashCollisionCount();
+	return 0; // TODO
 }
 
 unsigned int Renderer::GetLightCacheActiveCount() const
 {
-	return m_voxelization->GetLightCacheActiveCount();
+	return 0; // TODO
 }

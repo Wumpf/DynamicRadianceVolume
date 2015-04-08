@@ -4,17 +4,15 @@
 
 layout(early_fragment_tests) in; // Force early z.
 
-// Input = output from vertex shader.
-in vec3 Normal;
-in vec2 Texcoord;
+layout(location = 0) in vec3 inNormal;
+layout(location = 0) in vec2 inTexcoord;
 
-layout(location = 0) out vec3 OutDiffuse;
-layout(location = 1) out ivec2 OutPackedNormal;
+layout(location = 0) out vec4 OutData;
 
 uniform sampler2D DiffuseTexture;
 
 void main()
 {
-	OutDiffuse = texture(DiffuseTexture, Texcoord).rgb;
-	OutPackedNormal = PackNormal16I(normalize(Normal));
+	OutData.xy = PackNormal(normalize(inNormal));
+	OutData.zw = inTexcoord; // todo
 }
