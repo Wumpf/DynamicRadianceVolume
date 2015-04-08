@@ -118,9 +118,20 @@ void Renderer::LoadShader()
 	m_shaderShowCacheInitDisplay->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/cacheInitDisplay.frag");
 	m_shaderShowCacheInitDisplay->CreateProgram();
 
+	m_shaderCachePull = std::make_unique<gl::ShaderObject>("cache pull");
+	m_shaderCachePull->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cachePull.comp");
+	m_shaderCachePull->CreateProgram();
+
+
+	m_shaderApplyCaches = std::make_unique<gl::ShaderObject>("apply caches");
+	m_shaderApplyCaches->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
+	m_shaderApplyCaches->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/applylightcaches.frag");
+	m_shaderApplyCaches->CreateProgram();
+	
+
 	// Register all shader for auto reload on change.
 	m_allShaders = { m_shaderDebugGBuffer.get(), m_shaderFillGBuffer_noskinning.get(), m_shaderDeferredDirectLighting_Spot.get(), 
-					m_shaderTonemap.get(), m_shaderCacheInit.get(), m_shaderShowCacheInitDisplay.get() };
+		m_shaderTonemap.get(), m_shaderCacheInit.get(), m_shaderShowCacheInitDisplay.get(), m_shaderCachePull.get(), m_shaderApplyCaches.get() };
 	for (auto it : m_allShaders)
 		ShaderFileWatcher::Instance().RegisterShaderForReloadOnChange(it);
 }
@@ -179,11 +190,16 @@ void Renderer::OnScreenResize(const ei::UVec2& newResolution)
 
 
 	// Light cache setup.
-	// TODO: Try Half resolution - this has consequences on depth however...
+	// TODO: Try Half resolution - keep in mind that this has various consequences! (depth, pull pass ...)
 	m_textureCachePoints = std::make_unique<gl::Texture2D>(newResolution.x, newResolution.y, gl::TextureFormat::RGBA16F, 1, 0);
 	m_fboCachePoints.reset(new gl::FramebufferObject({ gl::FramebufferObject::Attachment(m_textureCachePoints.get()), gl::FramebufferObject::Attachment(m_GBuffer_normal.get()) },
 								gl::FramebufferObject::Attachment(m_GBuffer_depth.get())));
 
+
+	// CachePull compute groups are 16x16, each thread pulls 2x2 texels
+	unsigned int cacheAllocationWidth = (newResolution.x + 31) / 32;
+	unsigned int cacheAllocationHeight = (newResolution.y + 31) / 32;
+	m_cacheAllocationMap = std::make_unique<gl::Texture2D>(cacheAllocationWidth, cacheAllocationHeight, gl::TextureFormat::RGBA8UI, 1, 0);
 
 	UpdateConstantUBO();
 }
@@ -219,16 +235,27 @@ void Renderer::Draw(const Camera& camera)
 	//DrawLights();
 	
 	// TODO
-	/*m_shaderApplyLightCaches->BindSSBO(m_voxelization->GetLightCaches());
-	m_shaderApplyLightCaches->Activate();
+	glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
+
+	m_GBuffer_diffuse->Bind(0);
+	m_GBuffer_normal->Bind(1);
+	m_GBuffer_depth->Bind(2);
+	m_cacheAllocationMap->Bind(3);
+
+	m_samplerNearest.BindSampler(0);
+	m_samplerNearest.BindSampler(1);
+	m_samplerNearest.BindSampler(2);
+	m_samplerNearest.BindSampler(3);
+
+	m_shaderApplyCaches->Activate();
 	m_screenTriangle->Draw();
-	*/
+	
 	OutputHDRTextureToBackbuffer();
 
 //	m_voxelization->DrawVoxelRepresentation();
 //	DrawGBufferDebug();
 
-	DrawInitCacheDebug();
+	//DrawInitCacheDebug();
 }
 
 void Renderer::UpdatePerObjectUBORingBuffer()
@@ -362,6 +389,18 @@ void Renderer::PrepareLightCaches()
 		
 		GL_CALL(glDrawElements, GL_PATCHES, entity.GetModel()->GetNumTriangles() * 3, GL_UNSIGNED_INT, nullptr);
 	}
+
+
+	// Pull caches.
+	m_cacheAllocationMap->ClearToZero();
+	m_cacheAllocationMap->BindImage(0, gl::Texture::ImageAccess::WRITE);
+
+	m_textureCachePoints->Bind(0);
+	m_samplerNearest.BindSampler(0);
+
+	m_shaderCachePull->Activate();
+
+	GL_CALL(glDispatchCompute, m_cacheAllocationMap->GetWidth(), m_cacheAllocationMap->GetHeight(), 1);
 }
 
 void Renderer::DrawScene(bool setTextures)

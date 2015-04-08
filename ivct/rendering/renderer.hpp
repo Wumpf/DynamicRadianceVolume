@@ -87,10 +87,18 @@ private:
 	unsigned int m_perObjectUBOBindingPoint;
 	unsigned int m_perObjectUBOSize;
 
+
+
 	std::unique_ptr<gl::ShaderObject> m_shaderCacheInit;
 	std::unique_ptr<gl::Texture2D> m_textureCachePoints;
 	std::unique_ptr<gl::FramebufferObject> m_fboCachePoints;
 	std::unique_ptr<gl::ShaderObject> m_shaderShowCacheInitDisplay;
+
+	std::unique_ptr<gl::ShaderObject> m_shaderCachePull;
+	std::unique_ptr<gl::Texture2D> m_cacheAllocationMap;
+
+	std::unique_ptr<gl::ShaderObject> m_shaderApplyCaches;
+
 
 
 	std::unique_ptr<gl::Texture2D> m_GBuffer_diffuse;

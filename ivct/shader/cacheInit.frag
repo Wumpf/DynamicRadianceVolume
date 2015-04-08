@@ -14,5 +14,6 @@ uniform sampler2D DiffuseTexture;
 void main()
 {
 	OutData.xy = PackNormal(normalize(inNormal));
-	OutData.zw = inTexcoord; // todo
+	OutData.z = gl_FragCoord.z;
+	OutData.w = inTexcoord.x; // todo - fill in roughness
 }

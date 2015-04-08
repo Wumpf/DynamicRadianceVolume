@@ -1,0 +1,35 @@
+#version 450 core
+
+layout(binding = 0) uniform sampler2D CachePoints;
+layout(binding = 0, rgba8ui) restrict writeonly uniform uimage2D CacheAllocationMap;
+
+shared uint cacheCounter;
+
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+void main()
+{
+	if(gl_LocalInvocationID.xy == ivec2(0,0))
+		cacheCounter = 0;
+	barrier();
+
+	ivec2 pixelPosition = ivec2(gl_GlobalInvocationID.xy) * 2;
+
+	vec4 cacheData0 = texelFetch(CachePoints, pixelPosition, 0);
+	vec4 cacheData1 = texelFetch(CachePoints, pixelPosition + ivec2(0, 1), 0);
+	vec4 cacheData2 = texelFetch(CachePoints, pixelPosition + ivec2(1, 0), 0);
+	vec4 cacheData3 = texelFetch(CachePoints, pixelPosition + ivec2(1, 1), 0);
+
+	if(cacheData0.b > 0.0)
+		atomicAdd(cacheCounter, 1);
+	if(cacheData1.b > 0.0)
+		atomicAdd(cacheCounter, 1);
+	if(cacheData2.b > 0.0)
+		atomicAdd(cacheCounter, 1);
+	if(cacheData3.b > 0.0)
+		atomicAdd(cacheCounter, 1);
+
+	barrier();
+
+	if(gl_LocalInvocationID.xy == ivec2(0,0))
+		imageStore(CacheAllocationMap, ivec2(gl_WorkGroupID.xy), uvec4(cacheCounter));//uvec4(0, 10, 50, 0));
+}
