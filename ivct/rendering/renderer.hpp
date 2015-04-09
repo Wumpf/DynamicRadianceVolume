@@ -33,9 +33,8 @@ public:
 
 	void Draw(const Camera& camera);
 
-	void SetTrackLightCacheCreationStats(bool trackLightCacheCreationStats);
-	bool GetTrackLightCacheCreationStats() const;
-	unsigned int GetLightCacheHashCollisionCount() const;
+	void SetReadLightCacheCount(bool trackLightCacheCreationStats);
+	bool GetReadLightCacheCount() const;
 	unsigned int GetLightCacheActiveCount() const;
 
 	void BindObjectUBO(unsigned int _objectIndex);
@@ -62,6 +61,7 @@ private:
 	void OutputHDRTextureToBackbuffer();
 
 	void PrepareLightCaches();
+	void ApplyLightCaches();
 
 	/// Draws scene, mesh by mesh.
 	///
@@ -98,6 +98,12 @@ private:
 	std::unique_ptr<gl::Texture2D> m_cacheAllocationMap;
 
 	std::unique_ptr<gl::ShaderObject> m_shaderApplyCaches;
+
+	unsigned int m_maxNumLightCaches;
+	bool m_readLightCacheCount;
+	unsigned int m_lastNumLightCaches;
+	std::unique_ptr<gl::ShaderStorageBufferView> m_lightCacheBuffer;
+	std::unique_ptr<gl::ShaderStorageBufferView> m_lightCacheCounter;
 
 
 

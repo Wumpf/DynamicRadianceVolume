@@ -12,7 +12,13 @@ layout(binding=3) uniform usampler2D CacheAllocationMap;
 
 void main()
 {
-	OutputColor = vec3(texture(CacheAllocationMap, Texcoord).rgb)*0.01;
+	uvec4 nearestCacheAllocationEntry = textureLod(CacheAllocationMap, Texcoord, 0.0);
+	uint numCaches = nearestCacheAllocationEntry.w;
+	uint cacheMemoryOffset = nearestCacheAllocationEntry.x + 
+							 (nearestCacheAllocationEntry.y >> 8) + 
+							 (nearestCacheAllocationEntry.z >> 16);
+
+	OutputColor = vec3(int(numCaches) * 0.1);
 
 	// Get pixel world position.
 	/*float depthBufferDepth = texture(GBuffer_Depth, Texcoord).r;

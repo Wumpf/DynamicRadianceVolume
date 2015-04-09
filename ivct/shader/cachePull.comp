@@ -1,35 +1,92 @@
 #version 450 core
 
+#include "globalubos.glsl"
+#define LIGHTCACHEMODE LIGHTCACHEMODE_CREATE
+#include "lightcache.glsl"
+
 layout(binding = 0) uniform sampler2D CachePoints;
 layout(binding = 0, rgba8ui) restrict writeonly uniform uimage2D CacheAllocationMap;
 
-shared uint cacheCounter;
+shared int groupCacheCounter;
+shared int cacheMemoryOffset;
 
 layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 void main()
 {
-	if(gl_LocalInvocationID.xy == ivec2(0,0))
-		cacheCounter = 0;
-	barrier();
+	bool isThread0 = gl_LocalInvocationID.xy == ivec2(0,0);
+
+	if(isThread0)
+		groupCacheCounter = 0;
 
 	ivec2 pixelPosition = ivec2(gl_GlobalInvocationID.xy) * 2;
 
-	vec4 cacheData0 = texelFetch(CachePoints, pixelPosition, 0);
-	vec4 cacheData1 = texelFetch(CachePoints, pixelPosition + ivec2(0, 1), 0);
-	vec4 cacheData2 = texelFetch(CachePoints, pixelPosition + ivec2(1, 0), 0);
-	vec4 cacheData3 = texelFetch(CachePoints, pixelPosition + ivec2(1, 1), 0);
 
-	if(cacheData0.b > 0.0)
-		atomicAdd(cacheCounter, 1);
-	if(cacheData1.b > 0.0)
-		atomicAdd(cacheCounter, 1);
-	if(cacheData2.b > 0.0)
-		atomicAdd(cacheCounter, 1);
-	if(cacheData3.b > 0.0)
-		atomicAdd(cacheCounter, 1);
-
+	// Make sure the shared counter is initialized.
 	barrier();
 
-	if(gl_LocalInvocationID.xy == ivec2(0,0))
-		imageStore(CacheAllocationMap, ivec2(gl_WorkGroupID.xy), uvec4(cacheCounter));//uvec4(0, 10, 50, 0));
+	// Nearby caches are useless and extremely rare - Preserve only nearest.
+	// Todo: Use gather to predetermine which one and then a single texel fetch for the actual data.
+
+	// The first valid one is counted and kept as target.
+	// Instead of atomic counters a reduce may be used
+	int localCacheIndex = -1;
+	vec4 candidateCache = texelFetch(CachePoints, pixelPosition, 0);
+	if(candidateCache.b > 0.0)
+	{
+		localCacheIndex = atomicAdd(groupCacheCounter, 1);
+	}
+	else if((candidateCache = texelFetch(CachePoints, pixelPosition + ivec2(0, 1), 0)).b > 0.0)
+	{
+		localCacheIndex = atomicAdd(groupCacheCounter, 1);
+		pixelPosition = pixelPosition + ivec2(0, 1);
+	}
+	else if((candidateCache = texelFetch(CachePoints, pixelPosition + ivec2(1, 0), 0)).b > 0.0)
+	{
+		localCacheIndex = atomicAdd(groupCacheCounter, 1);
+		pixelPosition = pixelPosition + ivec2(1, 0);
+	}
+	else if((candidateCache = texelFetch(CachePoints, pixelPosition + ivec2(1, 1), 0)).b > 0.0)
+	{
+		localCacheIndex = atomicAdd(groupCacheCounter, 1);
+		pixelPosition = pixelPosition + ivec2(1, 1);
+	}
+
+
+	// Make sure all threads wrote to the shared counter.
+	barrier();
+
+	// Allocate cache memory area.
+	if(isThread0)
+	{
+		cacheMemoryOffset = atomicAdd(TotalLightCacheCount, groupCacheCounter);
+	}
+
+	// Make sure thread 0 is done and we know the cacheMemoryOffset now.
+	barrier();
+
+	// Store cache (if any)
+	if(localCacheIndex >= -1)
+	{
+		int cacheMemoryPosition = cacheMemoryOffset + localCacheIndex;
+		LightCacheEntries[cacheMemoryPosition].PackedNormal = candidateCache.xy; // Consider further packing, since original was stronger packed (16f)
+
+		// Reconstruct position. TODO: Consider packed writing
+		vec4 worldPosition4D = vec4((pixelPosition + vec2(0.5)) / BackbufferResolution * 2.0 - vec2(1.0), candidateCache.z, 1.0f) * InverseViewProjection;
+		LightCacheEntries[cacheMemoryPosition].Position = worldPosition4D.xyz / worldPosition4D.w;
+
+		LightCacheEntries[cacheMemoryPosition].Roughness = candidateCache.w;
+	}
+
+	// Do cache allocation map entry. (would also be possible within last isThread0 section, but other threads are not interested in this step!)
+	if(isThread0)
+	{
+		// 8bit are definitely sufficient to store the group's cache count (since there are only 16*16 threads!)
+		// Assumptions: 24 bit are sufficient to store the group's cache offset.
+		uvec4 cacheAllocationMapEntry;
+		cacheAllocationMapEntry.x = 0x000000FF & cacheMemoryOffset;
+		cacheAllocationMapEntry.y = 0x0000FF00 & cacheMemoryOffset;
+		cacheAllocationMapEntry.z = 0x00FF0000 & cacheMemoryOffset;
+		cacheAllocationMapEntry.w = groupCacheCounter;
+		imageStore(CacheAllocationMap, ivec2(gl_WorkGroupID.xy), cacheAllocationMapEntry);//uvec4(0, 10, 50, 0));
+	}
 }

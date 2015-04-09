@@ -39,7 +39,7 @@ void main()
 						gl_TessCoord.z * inPosition[2];
 
 
-	const float CachePositionOffset = 0.2;
+	const float CachePositionOffset = 0.1;
 	outPosition += normalize(CameraPosition - outPosition) * CachePositionOffset;
 
 	gl_Position = vec4(outPosition, 1.0) * ViewProjection;

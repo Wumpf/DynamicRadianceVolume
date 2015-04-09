@@ -35,7 +35,7 @@ void main()
 		vec2 screenSpace1 = clipPos1.xy / clipPos1.w;
 		vec2 screenSpace2 = clipPos2.xy / clipPos2.w;
 
-		const vec2 CachesPerClipSpaceCoord = BackbufferResolution * vec2(0.5) / vec2(50);
+		const vec2 CachesPerClipSpaceCoord = BackbufferResolution * vec2(0.5) / vec2(10);
 		const float MaxTesselationFactor = 32.0;
 
 		// TODO: Max tessellation.

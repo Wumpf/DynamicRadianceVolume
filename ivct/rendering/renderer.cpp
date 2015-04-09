@@ -21,7 +21,10 @@
 
 Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& resolution) :
 	m_samplerLinear(gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Border::REPEAT))),
-	m_samplerNearest(gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::NEAREST, gl::SamplerObject::Filter::NEAREST, gl::SamplerObject::Filter::NEAREST, gl::SamplerObject::Border::REPEAT)))
+	m_samplerNearest(gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::NEAREST, gl::SamplerObject::Filter::NEAREST, gl::SamplerObject::Filter::NEAREST, gl::SamplerObject::Border::REPEAT))),
+
+	m_readLightCacheCount(false),
+	m_lastNumLightCaches(0)
 {
 	glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &m_UBOAlignment);
 	LOG_INFO("Uniform buffer alignment is " << m_UBOAlignment);
@@ -50,10 +53,15 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	// Create voxelization module.
 	m_voxelization = std::make_unique<Voxelization>(64);
 
+	// Allocate light cache buffer
+	m_maxNumLightCaches = 131072;
+	const unsigned int lightCacheSizeInBytes = sizeof(float) * 4 * 6;
+	m_lightCacheBuffer = std::make_unique<gl::ShaderStorageBufferView>(std::make_shared<gl::Buffer>(m_maxNumLightCaches * lightCacheSizeInBytes, gl::Buffer::IMMUTABLE, nullptr), "LightCaches");
+	SetReadLightCacheCount(false); // (Re)creates the lightcache buffer
+
 	// Basic settings.
 	SetScene(scene);
 	OnScreenResize(resolution);
-
 
 	// General GL settings
 	gl::Enable(gl::Cap::DEPTH_TEST);
@@ -234,28 +242,14 @@ void Renderer::Draw(const Camera& camera)
 	
 	//DrawLights();
 	
-	// TODO
-	glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
-
-	m_GBuffer_diffuse->Bind(0);
-	m_GBuffer_normal->Bind(1);
-	m_GBuffer_depth->Bind(2);
-	m_cacheAllocationMap->Bind(3);
-
-	m_samplerNearest.BindSampler(0);
-	m_samplerNearest.BindSampler(1);
-	m_samplerNearest.BindSampler(2);
-	m_samplerNearest.BindSampler(3);
-
-	m_shaderApplyCaches->Activate();
-	m_screenTriangle->Draw();
+	ApplyLightCaches();
 	
 	OutputHDRTextureToBackbuffer();
 
 //	m_voxelization->DrawVoxelRepresentation();
 //	DrawGBufferDebug();
 
-	//DrawInitCacheDebug();
+	DrawInitCacheDebug();
 }
 
 void Renderer::UpdatePerObjectUBORingBuffer()
@@ -390,17 +384,49 @@ void Renderer::PrepareLightCaches()
 		GL_CALL(glDrawElements, GL_PATCHES, entity.GetModel()->GetNumTriangles() * 3, GL_UNSIGNED_INT, nullptr);
 	}
 
+	// Optionally read old light cache count
+	if (m_readLightCacheCount)
+	{
+		const void* counterData = m_lightCacheCounter->GetBuffer()->Map(gl::Buffer::MapType::READ, gl::Buffer::MapWriteFlag::NONE);
+		m_lastNumLightCaches = *reinterpret_cast<const int*>(counterData);
+		m_lightCacheCounter->GetBuffer()->Unmap();
+	}
 
 	// Pull caches.
+	m_lightCacheCounter->GetBuffer()->ClearToZero();
+
 	m_cacheAllocationMap->ClearToZero();
 	m_cacheAllocationMap->BindImage(0, gl::Texture::ImageAccess::WRITE);
 
 	m_textureCachePoints->Bind(0);
 	m_samplerNearest.BindSampler(0);
+	m_shaderCachePull->BindSSBO(*m_lightCacheBuffer);
+	m_shaderCachePull->BindSSBO(*m_lightCacheCounter);
 
 	m_shaderCachePull->Activate();
 
 	GL_CALL(glDispatchCompute, m_cacheAllocationMap->GetWidth(), m_cacheAllocationMap->GetHeight(), 1);
+}
+
+void Renderer::ApplyLightCaches()
+{
+	glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
+
+	m_GBuffer_diffuse->Bind(0);
+	m_GBuffer_normal->Bind(1);
+	m_GBuffer_depth->Bind(2);
+	m_cacheAllocationMap->Bind(3);
+
+	//m_shaderApplyCaches->BindSSBO(*m_lightCacheBuffer);
+	//m_shaderApplyCaches->BindSSBO(*m_lightCacheCounter);
+
+	m_samplerNearest.BindSampler(0);
+	m_samplerNearest.BindSampler(1);
+	m_samplerNearest.BindSampler(2);
+	m_samplerNearest.BindSampler(3);
+
+	m_shaderApplyCaches->Activate();
+	m_screenTriangle->Draw();
 }
 
 void Renderer::DrawScene(bool setTextures)
@@ -429,22 +455,22 @@ void Renderer::DrawScene(bool setTextures)
 	}
 }
 
-void Renderer::SetTrackLightCacheCreationStats(bool trackLightCacheHashCollisionCount)
+void Renderer::SetReadLightCacheCount(bool trackLightCacheHashCollisionCount)
 {
-	// TODO
+	m_readLightCacheCount = trackLightCacheHashCollisionCount;
+	gl::Buffer::UsageFlag usageFlag = gl::Buffer::IMMUTABLE;
+	if (trackLightCacheHashCollisionCount)
+		usageFlag = gl::Buffer::MAP_READ;
+	m_lightCacheCounter = std::make_unique<gl::ShaderStorageBufferView>(std::make_shared<gl::Buffer>(sizeof(unsigned int), usageFlag, nullptr), "LightCacheCounter");
+	m_lastNumLightCaches = 0;
 }
 
-bool Renderer::GetTrackLightCacheCreationStats() const
+bool Renderer::GetReadLightCacheCount() const
 {
-	return true; // TODO
-}
-
-unsigned int Renderer::GetLightCacheHashCollisionCount() const
-{
-	return 0; // TODO
+	return m_readLightCacheCount;
 }
 
 unsigned int Renderer::GetLightCacheActiveCount() const
 {
-	return 0; // TODO
+	return m_lastNumLightCaches;
 }
