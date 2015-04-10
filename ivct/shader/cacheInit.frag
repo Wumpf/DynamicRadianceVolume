@@ -5,7 +5,7 @@
 layout(early_fragment_tests) in; // Force early z.
 
 layout(location = 0) in vec3 inNormal;
-layout(location = 0) in vec2 inTexcoord;
+layout(location = 1) in vec2 inTexcoord;
 
 layout(location = 0) out vec4 OutData;
 

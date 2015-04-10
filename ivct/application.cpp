@@ -54,8 +54,9 @@ Application::Application(int argc, char** argv)
 
 	// Default settings:
 	ChangeEntityCount(1);
-	m_scene->GetEntities()[0].LoadModel("../models/cryteksponza/sponza.obj");
 	//m_scene->GetEntities()[0].LoadModel("../models/sanmiguel/san-miguel.obj");
+	m_scene->GetEntities()[0].LoadModel("../models/test0/test0.obj");
+	//m_scene->GetEntities()[0].LoadModel("../models/cryteksponza/sponza.obj");
 
 	ChangeLightCount(1);
 	m_scene->GetLights()[0].type = Light::Type::SPOT;
@@ -241,10 +242,9 @@ void Application::SetupTweakBarBinding()
 
 	/// Light cache settings
 	m_tweakBar->AddSeperator("Light Cache settings");
-	m_tweakBar->AddReadWrite<bool>("Light Cache Creation Tracking", [&](){ return m_renderer->GetTrackLightCacheCreationStats(); }, 
-																	[&](bool b){ return m_renderer->SetTrackLightCacheCreationStats(b); });
+	m_tweakBar->AddReadWrite<bool>("Track Light Cache Count", [&](){ return m_renderer->GetReadLightCacheCount(); }, 
+																[&](bool b){ return m_renderer->SetReadLightCacheCount(b); });
 	m_tweakBar->AddReadOnly("#Active Caches", [&](){ return std::to_string(m_renderer->GetLightCacheActiveCount()); });
-	m_tweakBar->AddReadOnly("#Hash Collision", [&](){ return std::to_string(m_renderer->GetLightCacheHashCollisionCount()); });
 
 
 	m_tweakBar->AddSeperator("Scene Settings");

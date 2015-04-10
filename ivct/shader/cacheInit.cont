@@ -4,10 +4,11 @@
 #include "random.glsl"
 #include "utils.glsl"
 
-layout(location = 0) in vec3 inNormal[];
-layout(location = 1) in vec2 inTexcoord[];
+layout(location = 0) in vec3 inWorldPosition[];
+layout(location = 1) in vec3 inNormal[];
+layout(location = 2) in vec2 inTexcoord[];
 
-layout(location = 0) out vec3 outPosition[];
+layout(location = 0) out vec3 outWorldPosition[];
 layout(location = 1) out vec3 outNormal[];
 layout(location = 2) out vec2 outTexcoord[];
 
@@ -19,23 +20,41 @@ void main()
 	// Per Patch computation.
 	if (gl_InvocationID == 0)
 	{
-		vec4 clipPos0 = gl_in[0].gl_Position * ViewProjection;
-		vec4 clipPos1 = gl_in[1].gl_Position * ViewProjection;
-		vec4 clipPos2 = gl_in[2].gl_Position * ViewProjection;
+		// Simple culling using frustum planes. "If all vertices of a triangle are behind a given plane, it is not visible"
+		// Note that it is conservative! See: http://www.iquilezles.org/www/articles/frustumcorrect/frustumcorrect.htm
+		// For alternative derivation of frustum planes see: https://fgiesen.wordpress.com/2012/08/31/frustum-planes-from-the-projection-matrix/
+		// Since we need clipspace positions anyways, we also can use this variant
 
-		// Cull patches. For high tessellation factors this can massively improve performance!
-		if(!IsOnScreen(clipPos0) && !IsOnScreen(clipPos1) && !IsOnScreen(clipPos2))
+		vec4 clipPos0 = vec4(inWorldPosition[0], 1.0) * ViewProjection;
+		vec4 clipPos1 = vec4(inWorldPosition[1], 1.0) * ViewProjection;
+		vec4 clipPos2 = vec4(inWorldPosition[2], 1.0) * ViewProjection;
+
+		if((clipPos0.x >  clipPos0.w && clipPos1.x >  clipPos1.w && clipPos2.x >  clipPos2.w) ||
+		   (clipPos0.x < -clipPos0.w && clipPos1.x < -clipPos1.w && clipPos2.x < -clipPos2.w) ||
+		   (clipPos0.y > clipPos0.w && clipPos1.y > clipPos1.w && clipPos2.y >  clipPos2.w) ||
+		   (clipPos0.y < -clipPos0.w && clipPos1.y < -clipPos1.w && clipPos2.y < -clipPos2.w) ||
+		   (clipPos0.z < 0 && clipPos1.z < 0 && clipPos2.z < 0)) // ignore far plane
 		{
 			gl_TessLevelInner[0] = gl_TessLevelOuter[0] = gl_TessLevelOuter[1]= gl_TessLevelOuter[2] = 0.0;
 			return;
 		}
+		/*vec3 x = vec3(clipPos0.x, clipPos1.x, clipPos2.x);
+		vec3 y = vec3(clipPos0.y, clipPos1.y, clipPos2.y);
+		vec3 z = vec3(clipPos0.z, clipPos1.z, clipPos2.z);
+		vec3 w = vec3(clipPos0.w, clipPos1.w, clipPos2.w);
+		if(all(greaterThan(x, w)) || all(lessThan(x, -w)) ||
+			all(greaterThan(y, w)) || all(lessThan(y, -w)) || all(lessThan(z, vec3(0)))) // ignore far plane
+		{
+			gl_TessLevelInner[0] = gl_TessLevelOuter[0] = gl_TessLevelOuter[1]= gl_TessLevelOuter[2] = 0.0;
+			return;
+		} */
 
 
-		vec2 screenSpace0 = clipPos0.xy / clipPos0.w;
-		vec2 screenSpace1 = clipPos1.xy / clipPos1.w;
-		vec2 screenSpace2 = clipPos2.xy / clipPos2.w;
+		vec2 screenSpace0 = clipPos0.xy / (clipPos0.w + 0.0001);
+		vec2 screenSpace1 = clipPos1.xy / (clipPos0.w + 0.0001);
+		vec2 screenSpace2 = clipPos2.xy / (clipPos0.w + 0.0001);
 
-		const vec2 CachesPerClipSpaceCoord = BackbufferResolution * vec2(0.5) / vec2(10);
+		const vec2 CachesPerClipSpaceCoord = BackbufferResolution * vec2(0.5) / vec2(32);
 		const float MaxTesselationFactor = 32.0;
 
 		// TODO: Max tessellation.
@@ -44,12 +63,11 @@ void main()
 		gl_TessLevelOuter[1] = min(MaxTesselationFactor, length((screenSpace0 - screenSpace2) * CachesPerClipSpaceCoord));
 		gl_TessLevelOuter[2] = min(MaxTesselationFactor, length((screenSpace1 - screenSpace0) * CachesPerClipSpaceCoord));
 		gl_TessLevelInner[0] = min(MaxTesselationFactor, (gl_TessLevelOuter[0]+ gl_TessLevelOuter[1]+ gl_TessLevelOuter[2]) * 0.3333);
-		//gl_TessLevelInner[0] = min(min(gl_TessLevelOuter[0], gl_TessLevelOuter[1]), gl_TessLevelOuter[2]);
+		gl_TessLevelInner[0] = max(max(gl_TessLevelOuter[0], gl_TessLevelOuter[1]), gl_TessLevelOuter[2]);
 
-		//gl_TessLevelInner[0] = gl_TessLevelOuter[0] = gl_TessLevelOuter[1]= gl_TessLevelOuter[2] = 1.0;
 	}
 
-	outPosition[gl_InvocationID] = gl_in[gl_InvocationID].gl_Position.xyz;
+	outWorldPosition[gl_InvocationID] = inWorldPosition[gl_InvocationID];
 	outNormal[gl_InvocationID] = inNormal[gl_InvocationID];
 	outTexcoord[gl_InvocationID] = inTexcoord[gl_InvocationID];
 }

@@ -363,7 +363,7 @@ void Renderer::DrawLights()
 
 void Renderer::PrepareLightCaches()
 {
-	gl::Enable(gl::Cap::DEPTH_TEST);
+	gl::Disable(gl::Cap::DEPTH_TEST);
 	GL_CALL(glDepthMask, GL_FALSE);
 
 	m_fboCachePoints->Bind(false);

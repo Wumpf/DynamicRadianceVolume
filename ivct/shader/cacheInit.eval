@@ -5,9 +5,9 @@
 
 // Todo: Note a reason why "odd" and not "even"
 // Empirical: "even spacing" adds vertices at tess factor 1, odd not
-layout(triangles, fractional_odd_spacing, cw, point_mode) in;
+layout(triangles, fractional_odd_spacing, ccw, point_mode) in;
 
-layout(location = 0) in vec3 inPosition[];
+layout(location = 0) in vec3 inWorldPosition[];
 layout(location = 1) in vec3 inNormal[];
 layout(location = 2) in vec2 inTexcoord[];
 
@@ -20,29 +20,24 @@ void main()
 	// Randomly remove this vertex for tessellation bellow 1.0. The lower the inner tessellation value, the more likely.
 	// We need a unique identifier for this vertex.
 	uint randomSeed = (uint(gl_PrimitiveID * 3 + gl_TessCoord.y * 1 + gl_TessCoord.z * 2));  // For an inner tess level bellow zero we can safely assume that there are only 3 vertices
-	if(gl_TessLevelInner[0] < 1.0 && Random(randomSeed) > gl_TessLevelInner[0])
+	if(gl_TessLevelInner[0] < 1.0 && Random(randomSeed) > gl_TessLevelInner[0]) //* gl_TessLevelInner[0])
 	{
 		gl_Position = vec4(999999.0, 999999.0, 999999.0, 1.0); // discard vertex
 		return;
 	}
 
 	outNormal = gl_TessCoord.x * inNormal[0] + 
-						gl_TessCoord.y * inNormal[1] + 
-						gl_TessCoord.z * inNormal[2];
+				gl_TessCoord.y * inNormal[1] + 
+				gl_TessCoord.z * inNormal[2];
 
 	outTexcoord = gl_TessCoord.x * inTexcoord[0] +
-						gl_TessCoord.y * inTexcoord[1] +
-						gl_TessCoord.z * inTexcoord[2];
+				gl_TessCoord.y * inTexcoord[1] +
+				gl_TessCoord.z * inTexcoord[2];
 
-	vec3 outPosition = gl_TessCoord.x * inPosition[0] +
-						gl_TessCoord.y * inPosition[1] +
-						gl_TessCoord.z * inPosition[2];
-
-
-	const float CachePositionOffset = 0.1;
-	outPosition += normalize(CameraPosition - outPosition) * CachePositionOffset;
-
-	gl_Position = vec4(outPosition, 1.0) * ViewProjection;
+	vec3 worldPosition = gl_TessCoord.x * inWorldPosition[0] +
+						gl_TessCoord.y * inWorldPosition[1] +
+						gl_TessCoord.z * inWorldPosition[2];
+	gl_Position = vec4(worldPosition, 1.0) * ViewProjection;
 
 	// TODO: Check if it is faster without pixel shader - just using direct write to target
 }
