@@ -12,7 +12,7 @@ struct LightCacheEntry
 	// We do not actually want to save irradiance.
 	// Will add sth. better later.
 	vec3 Irradiance;
-	float _padding2;
+	ivec2 PixelPos;
 };
 
 #define LIGHTCACHEMODE_CREATE 0

@@ -30,10 +30,11 @@ void main()
 
 
 
-
-	ivec2 textureSize = textureSize(CacheAllocationMap, 0);
+	// Compute texture coordinates.
+	// Keep in mind, that the CacheAllocationMap might be LARGER than backbuffer.
+	// Cells however are for a fact always 32 pixels large.
 	ivec2 cacheAllocationMapSampleCoord[4];
-	vec2 exactGridCoord = textureSize * Texcoord;
+	vec2 exactGridCoord = Texcoord * BackbufferResolution * vec2(1.0/32.0);
 	cacheAllocationMapSampleCoord[0] = ivec2(exactGridCoord);
 	cacheAllocationMapSampleCoord[1] = cacheAllocationMapSampleCoord[0] + ivec2(1, 0);
 	cacheAllocationMapSampleCoord[2] = cacheAllocationMapSampleCoord[0] + ivec2(0, 1);
@@ -59,17 +60,40 @@ void main()
 		{
 			uint cacheIndex = cacheMemoryOffset + i;
 
+			// Debug code to check if caches are in correct cells and the cell lookup works properly.
+			/*ivec2 lowerLeftCellInPix = cacheAllocationMapSampleCoord[cacheGridSample] * 32;
+			ivec2 upperLeftCellInPix = (cacheAllocationMapSampleCoord[cacheGridSample] + ivec2(1)) * 32;
+			if(LightCacheEntries[cacheIndex].PixelPos.x < lowerLeftCellInPix.x ||
+				LightCacheEntries[cacheIndex].PixelPos.y < lowerLeftCellInPix.y ||
+				LightCacheEntries[cacheIndex].PixelPos.x > upperLeftCellInPix.x ||
+				LightCacheEntries[cacheIndex].PixelPos.y > upperLeftCellInPix.y)
+			{
+				OutputColor = vec3(0, 99, 0);
+				return;
+			}*/
+
+
 			vec3 toCache = LightCacheEntries[cacheIndex].Position - worldPosition;
 			float weight = 1.0 / (dot(toCache, toCache) + 0.01);
-			weight *= saturate(dot(UnpackNormal(LightCacheEntries[cacheIndex].PackedNormal), worldNormal));
+			//weight *= saturate(dot(UnpackNormal(LightCacheEntries[cacheIndex].PackedNormal), worldNormal));
 
-			weightSum += weight;
-			OutputColor += LightCacheEntries[cacheIndex].Irradiance * weight;
+			//weightSum += weight;
+			//OutputColor += LightCacheEntries[cacheIndex].Irradiance * weight;
+
+			// "Display best cache" debug code
+			if(weight > weightSum)
+			{
+				weightSum = weight;
+				OutputColor = LightCacheEntries[cacheIndex].Irradiance;
+
+				if(ivec2(Texcoord * BackbufferResolution + vec2(0.5)) == LightCacheEntries[cacheIndex].PixelPos)
+					OutputColor = vec3(9999,0,999);
+			}
 		}
 	}
 
-	OutputColor /= weightSum;
-	OutputColor *= diffuse;
+	//OutputColor /= weightSum;
+	OutputColor *= diffuse * 0.5 + vec3(0.1);
 
 //	OutputColor = vec3(int(numCaches) * 0.01);
 	//OutputColor = vec3(int(nearestCacheAllocationEntry.y) * 0.1);

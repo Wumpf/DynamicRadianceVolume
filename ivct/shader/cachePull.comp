@@ -64,6 +64,7 @@ void main()
 	// Make sure thread 0 is done and we know the cacheMemoryOffset now.
 	barrier();
 
+	// Stop if we are over the maximum light cache count. Should never happen.
 	if(cacheMemoryOffset + groupCacheCounter >= MaxNumLightCaches)
 		return;
 
@@ -78,6 +79,9 @@ void main()
 		LightCacheEntries[cacheMemoryPosition].Position = worldPosition4D.xyz / worldPosition4D.w;
 
 		LightCacheEntries[cacheMemoryPosition].Roughness = candidateCache.w;
+
+
+		LightCacheEntries[cacheMemoryPosition].PixelPos = pixelPosition;
 	}
 
 	// Do cache allocation map entry. (would also be possible within last isThread0 section, but other threads are not interested in this step!)
