@@ -3,7 +3,7 @@ layout(binding = 0, shared) uniform Constant
 {
 	ivec2 BackbufferResolution;
 	int VoxelResolution;
-	int MaxNumLightCaches;
+	uint MaxNumLightCaches;
 };
 
 // UBO for values that change once every frame.
@@ -24,4 +24,13 @@ layout(binding = 1, shared) uniform PerFrame
 layout(binding = 2, shared) uniform PerObject
 {
 	mat4 World;
+};
+
+// UBO for a single spot light. Likely to be changed in something more general.
+layout(binding = 3, std140) uniform SpotLight
+{
+	vec3 LightIntensity;
+	vec3 LightPosition;
+	vec3 LightDirection;
+	float LightCosHalfAngle;
 };

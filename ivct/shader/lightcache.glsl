@@ -9,12 +9,10 @@ struct LightCacheEntry
 	vec3 Position; // Note that the source is not as accurate!
 	float _padding1;
 
-	// Data for Lensing-style light interpolation.
-	// Likely to change!
-	vec3 ProxyDiffusePosition; float _padding2;
-	vec3 ProxyDiffuseFlux; float _padding3;
-	vec3 ProxySpecularPosition; float _padding4;
-	vec3 ProxySpecularFlux; float _padding5;
+	// We do not actually want to save irradiance.
+	// Will add sth. better later.
+	vec3 Irradiance;
+	float _padding2;
 };
 
 #define LIGHTCACHEMODE_CREATE 0
@@ -25,10 +23,10 @@ struct LightCacheEntry
 	#define LIGHTCACHE_BUFFER_MODIFIER restrict writeonly
 	#define LIGHTCACHE_COUNTER_MODIFIER restrict coherent
 #elif LIGHTCACHEMODE == LIGHTCACHEMODE_LIGHT
-	#define LIGHTCACHE_MODIFIER restrict
+	#define LIGHTCACHE_BUFFER_MODIFIER restrict
 	#define LIGHTCACHE_COUNTER_MODIFIER restrict readonly
 #elif LIGHTCACHEMODE == LIGHTCACHEMODE_APPLY
-	#define LIGHTCACHE_MODIFIER restrict readonly
+	#define LIGHTCACHE_BUFFER_MODIFIER restrict readonly
 	#define LIGHTCACHE_COUNTER_MODIFIER restrict readonly
 #else
 	#error "Please specify LIGHTCACHEMODE!"
@@ -43,9 +41,14 @@ layout(std430, binding = 0) LIGHTCACHE_BUFFER_MODIFIER buffer LightCaches
 
 layout(std430, binding = 1) LIGHTCACHE_BUFFER_MODIFIER buffer LightCacheCounter
 {
-	int TotalLightCacheCount;
+	uint NumCacheLightingThreadGroupsX; // Should be (TotalLightCacheCount + LIGHTING_THREADS_PER_GROUP - 1) / LIGHTING_THREADS_PER_GROUP
+    uint NumCacheLightingThreadGroupsY; // Should be 1
+    uint NumCacheLightingThreadGroupsZ; // Should be 1
+
+    int TotalLightCacheCount;
 };
 
+#define LIGHTING_THREADS_PER_GROUP 512
 
 // Infos encoded in 8bit voxel grid
 #define SOLID_BIT uint(2)

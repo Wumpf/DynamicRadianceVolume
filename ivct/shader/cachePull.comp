@@ -64,8 +64,11 @@ void main()
 	// Make sure thread 0 is done and we know the cacheMemoryOffset now.
 	barrier();
 
+	if(cacheMemoryOffset + groupCacheCounter >= MaxNumLightCaches)
+		return;
+
 	// Store cache (if any)
-	if(localCacheIndex >= -1)
+	if(localCacheIndex > -1)
 	{
 		int cacheMemoryPosition = cacheMemoryOffset + localCacheIndex;
 		LightCacheEntries[cacheMemoryPosition].PackedNormal = candidateCache.xy; // Consider further packing, since original was stronger packed (16f)
@@ -83,10 +86,22 @@ void main()
 		// 8bit are definitely sufficient to store the group's cache count (since there are only 16*16 threads!)
 		// Assumptions: 24 bit are sufficient to store the group's cache offset.
 		uvec4 cacheAllocationMapEntry;
-		cacheAllocationMapEntry.x = 0x000000FF & cacheMemoryOffset;
-		cacheAllocationMapEntry.y = 0x0000FF00 & cacheMemoryOffset;
-		cacheAllocationMapEntry.z = 0x00FF0000 & cacheMemoryOffset;
+		cacheAllocationMapEntry.x =  0x000000FF & cacheMemoryOffset;
+		cacheAllocationMapEntry.y = (0x0000FF00 & cacheMemoryOffset) >> 8;
+		cacheAllocationMapEntry.z = (0x00FF0000 & cacheMemoryOffset) >> 16;
 		cacheAllocationMapEntry.w = groupCacheCounter;
 		imageStore(CacheAllocationMap, ivec2(gl_WorkGroupID.xy), cacheAllocationMapEntry);//uvec4(0, 10, 50, 0));
+
+		// Need to write number of thread groups for cache lighting.
+		// Alternative approach would be a separate pass that computes it from the final TotalLightCacheCount. ... but this would be another pass :/
+		atomicMax(NumCacheLightingThreadGroupsX, uint((cacheMemoryOffset + groupCacheCounter + LIGHTING_THREADS_PER_GROUP - 1) / LIGHTING_THREADS_PER_GROUP));
+
+
+		// TODO: Remove the need of this by not clearing that part of the buffer
+		if(gl_NumWorkGroups.xy - ivec2(1) == gl_WorkGroupID.xy)
+		{
+			NumCacheLightingThreadGroupsY = 1;
+			NumCacheLightingThreadGroupsZ = 1;
+		}
 	}
 }

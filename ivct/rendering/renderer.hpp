@@ -63,6 +63,9 @@ private:
 	void PrepareLightCaches();
 	void ApplyLightCaches();
 
+	/// Applies direct light to caches (mainly for debug purposes)
+	void DirectCacheLighting();
+
 	/// Draws scene, mesh by mesh.
 	///
 	/// Does set VAO, VBO and index buffers but nothing else. No culling!
@@ -104,6 +107,8 @@ private:
 	unsigned int m_lastNumLightCaches;
 	std::unique_ptr<gl::ShaderStorageBufferView> m_lightCacheBuffer;
 	std::unique_ptr<gl::ShaderStorageBufferView> m_lightCacheCounter;
+
+	std::unique_ptr<gl::ShaderObject> m_shaderLightCachesDirect;
 
 
 

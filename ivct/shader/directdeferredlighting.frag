@@ -7,15 +7,6 @@
 in vec2 Texcoord;
 out vec3 OutputColor;
 
-
-layout(binding = 3, std140) uniform Light
-{
-	vec3 LightIntensity;
-	vec3 LightPosition;
-	vec3 LightDirection;
-	float LightCosHalfAngle;
-};
-
 // Evaluates BRDF.
 // Attention: Parameter directions are not as (often) given in theoretical notation!
 vec3 BRDF(vec3 toLight, vec3 toCamera, vec3 diffuseColor)
