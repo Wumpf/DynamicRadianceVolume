@@ -204,7 +204,7 @@ void Renderer::OnScreenResize(const ei::UVec2& newResolution)
 	// Light cache setup.
 	// TODO: Try Half resolution - keep in mind that this has various consequences! (depth, pull pass ...)
 	m_textureCachePoints = std::make_unique<gl::Texture2D>(newResolution.x, newResolution.y, gl::TextureFormat::RGBA16F, 1, 0);
-	m_fboCachePoints.reset(new gl::FramebufferObject({ gl::FramebufferObject::Attachment(m_textureCachePoints.get()), gl::FramebufferObject::Attachment(m_GBuffer_normal.get()) },
+	m_fboCachePoints.reset(new gl::FramebufferObject({ gl::FramebufferObject::Attachment(m_textureCachePoints.get()), },
 								gl::FramebufferObject::Attachment(m_GBuffer_depth.get())));
 
 
@@ -369,8 +369,6 @@ void Renderer::DrawLights()
 
 void Renderer::DirectCacheLighting()
 {
-	glFinish(); // TODO REMOVE REMOVE!!!!
-
 	GL_CALL(glMemoryBarrier, GL_SHADER_STORAGE_BARRIER_BIT | GL_COMMAND_BARRIER_BIT);
 	GL_CALL(glBindBuffer, GL_DISPATCH_INDIRECT_BUFFER, m_lightCacheCounter->GetBuffer()->GetInternHandle());
 	m_shaderLightCachesDirect->BindSSBO(*m_lightCacheBuffer);
@@ -442,8 +440,6 @@ void Renderer::PrepareLightCaches()
 
 void Renderer::ApplyLightCaches()
 {
-	glFinish(); // TODO REMOVE REMOVE!!!!
-
 	GL_CALL(glMemoryBarrier, GL_TEXTURE_FETCH_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
 
 	m_GBuffer_diffuse->Bind(0);

@@ -39,7 +39,8 @@ void main()
 	cacheAllocationMapSampleCoord[2] = cacheAllocationMapSampleCoord[0] + ivec2(0, 1);
 	cacheAllocationMapSampleCoord[3] = cacheAllocationMapSampleCoord[0] + ivec2(1, 1);
 
-	vec3 colorPerCacheGroup[4];
+	float weightSum = 0.0;
+	OutputColor = vec3(0.0);
 
 	for(int cacheGridSample=0; cacheGridSample<4; ++cacheGridSample)
 	{
@@ -53,8 +54,6 @@ void main()
 		// Apply caches.
 		uint numProcessedCaches = min(128, numCaches);
 
-		float weightSum = 0.0;
-		colorPerCacheGroup[cacheGridSample] = vec3(0.0);
 		
 		for(uint i=0; i<numProcessedCaches; ++i)
 		{
@@ -62,21 +61,17 @@ void main()
 
 			vec3 toCache = LightCacheEntries[cacheIndex].Position - worldPosition;
 			float weight = 1.0 / (dot(toCache, toCache) + 0.01);
-			//weight = saturate(dot(UnpackNormal(LightCacheEntries[cacheIndex].PackedNormal), worldNormal));
+			weight *= saturate(dot(UnpackNormal(LightCacheEntries[cacheIndex].PackedNormal), worldNormal));
 
 			weightSum += weight;
-			colorPerCacheGroup[cacheGridSample] += LightCacheEntries[cacheIndex].Irradiance * weight;
+			OutputColor += LightCacheEntries[cacheIndex].Irradiance * weight;
 		}
-		colorPerCacheGroup[cacheGridSample] /= weightSum;
 	}
 
-	float interpX = exactGridCoord.x - cacheAllocationMapSampleCoord[0].x;
-	float interpY = exactGridCoord.y - cacheAllocationMapSampleCoord[0].y;
-	OutputColor = mix(mix(colorPerCacheGroup[0], colorPerCacheGroup[1], interpX),
-					  mix(colorPerCacheGroup[2], colorPerCacheGroup[3], interpX), interpY); 
+	OutputColor /= weightSum;
 	OutputColor *= diffuse;
 
-	//OutputColor = vec3(int(numCaches) * 0.01);
+//	OutputColor = vec3(int(numCaches) * 0.01);
 	//OutputColor = vec3(int(nearestCacheAllocationEntry.y) * 0.1);
 
 	//OutputColor = numNonZero == 0 ? vec3(1,0,1) : vec3(numNonZero / 8.0);
