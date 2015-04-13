@@ -201,6 +201,6 @@ void Model::BindVAO()
 
 void Model::BindBuffers()
 {
-	GL_CALL(glBindVertexBuffer, 0, m_vertexBuffer->GetBufferId(), 0, static_cast<GLsizei>(sizeof(Vertex))); // TODO: Move into buffer
-	GL_CALL(glBindBuffer, GL_ELEMENT_ARRAY_BUFFER, m_indexBuffer->GetBufferId()); // TODO: Move into buffer
+	m_vertexBuffer->BindVertexBuffer(0, 0, static_cast<GLsizei>(sizeof(Vertex)));
+	m_indexBuffer->BindIndexBuffer();
 }
