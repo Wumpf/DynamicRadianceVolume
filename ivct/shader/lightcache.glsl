@@ -23,12 +23,26 @@
 struct LightCacheEntry
 {
 	vec3 Position; // Consider storing packed identifier!
-	float _padding1;
+	float _padding0;
 
-	// We do not actually want to save irradiance.
-	// Will add sth. better later.
-	vec3 Irradiance;
-	ivec2 PixelPos;
+
+	// Irradiance via SH (band, coefficient)
+	// Consider packing!
+	vec3 SH1neg1;
+	float SH00_r;
+	vec3 SH10;
+	float SH00_g;
+	vec3 SH1pos1;
+	float SH00_b;
+
+/*	vec3 SH2neg2;
+	float SH20_r;
+	vec3 SH2neg1;
+	float SH20_g;
+	vec3 SH2pos1;
+	float SH20_b;
+	vec3 SH2pos2;
+	float _padding1;*/
 };
 
 layout(std430, binding = 0) LIGHTCACHE_BUFFER_MODIFIER buffer LightCacheBuffer
@@ -64,7 +78,7 @@ layout(std430, binding = 2) LIGHTCACHE_HASHMAP_MODIFIER buffer LightCacheHashMap
 #else
 	layout(binding = 3) uniform usampler3D VoxelAddressVolume;
 #endif
-const float AddressVolumeVoxelSize = 0.21f; // TODO
+const float AddressVolumeVoxelSize = 20.1f; // TODO
 
 
 #define LIGHTING_THREADS_PER_GROUP 512

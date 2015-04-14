@@ -224,7 +224,7 @@ void Renderer::Draw(const Camera& camera)
 	m_HDRBackbuffer->Bind(true);
 	GL_CALL(glClear, GL_COLOR_BUFFER_BIT);
 	
-	//DrawLights();
+	DrawLights();
 
 	DirectCacheLighting();
 	

@@ -14,7 +14,6 @@ void main()
 
 
 	vec3 worldPosition = LightCacheEntries[gl_GlobalInvocationID.x].Position;
-	vec3 worldNormal = vec3(0, 1, 0); // TODO //UnpackNormal(LightCacheEntries[gl_GlobalInvocationID.x].PackedNormal);
 
 	// Direction and distance to light.
 	vec3 toLight = LightPosition - worldPosition;
@@ -27,9 +26,39 @@ void main()
 	// Evaluate direct light.
 	float spotFalloff = saturate(dot(-toLight, LightDirection) - LightCosHalfAngle) / (1.0 - LightCosHalfAngle);
 	spotFalloff = sqrt(spotFalloff);
-	float cosTheta = saturate(dot(toLight, worldNormal));
-	vec3 irradiance = LightIntensity * (spotFalloff * cosTheta / lightDistanceSq);
+	
+	vec3 scaledIntensity = LightIntensity * (spotFalloff / lightDistanceSq);
 
-	// For testing purposes.
-	LightCacheEntries[gl_GlobalInvocationID.x].Irradiance = vec3(spotFalloff); // TODO
+
+	// -----------------------------------------------
+	// IRRADIANCE VIA SH (test)
+
+	// Analytical clamped cosine lobe transformation into SH basis
+	// Derivation: Assume light direction = z-axis, then rotate resulting zonal harmonics
+
+	const float factor0 = sqrt(PI) / 2.0;
+	const float factor1 = sqrt(PI / 3.0);
+
+	vec3 SH00 = factor0 * scaledIntensity;
+	vec3 SH1neg1 = (factor1 * toLight.y) * scaledIntensity;
+	vec3 SH10 = (factor1 * toLight.z) * scaledIntensity;
+	vec3 SH1pos1 = (factor1 * toLight.x) * scaledIntensity;
+
+	// TODO: Don't know the rotation of the second zonal harmonic
+	// cosine lobe second band zonal is sqrt(5*PI)/8 according to https://d3cw3dd2w32x2b.cloudfront.net/wp-content/uploads/2011/06/10-14.pdf
+	/*vec3 SH2neg2 = 
+	vec3 SH2neg1 = 
+	vec3 SH20 = 
+	vec3 SH2pos1 = 
+	vec3 SH2pos2 =*/
+	
+	
+
+	// Save to buffer.
+	LightCacheEntries[gl_GlobalInvocationID.x].SH1neg1 = SH1neg1;
+	LightCacheEntries[gl_GlobalInvocationID.x].SH00_r = SH00.r;
+	LightCacheEntries[gl_GlobalInvocationID.x].SH10 = SH10;
+	LightCacheEntries[gl_GlobalInvocationID.x].SH00_g = SH00.g;
+	LightCacheEntries[gl_GlobalInvocationID.x].SH1pos1 = SH1pos1;
+	LightCacheEntries[gl_GlobalInvocationID.x].SH00_b = SH00.b;
 }
