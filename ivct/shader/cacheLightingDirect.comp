@@ -1,0 +1,35 @@
+#version 450 core
+
+#include "globalubos.glsl"
+#include "utils.glsl"
+#define LIGHTCACHEMODE LIGHTCACHEMODE_LIGHT
+#include "lightcache.glsl"
+
+
+layout (local_size_x = LIGHTING_THREADS_PER_GROUP, local_size_y = 1, local_size_z = 1) in;
+void main()
+{
+	if(gl_GlobalInvocationID.x >= TotalLightCacheCount)
+		return;
+
+
+	vec3 worldPosition = LightCacheEntries[gl_GlobalInvocationID.x].Position;
+	vec3 worldNormal = vec3(0, 1, 0); // TODO //UnpackNormal(LightCacheEntries[gl_GlobalInvocationID.x].PackedNormal);
+
+	// Direction and distance to light.
+	vec3 toLight = LightPosition - worldPosition;
+	float lightDistanceSq = dot(toLight, toLight);
+	toLight *= inversesqrt(lightDistanceSq);
+
+	// Direction to camera.
+	vec3 toCamera = normalize(vec3(CameraPosition - worldPosition));
+
+	// Evaluate direct light.
+	float spotFalloff = saturate(dot(-toLight, LightDirection) - LightCosHalfAngle) / (1.0 - LightCosHalfAngle);
+	spotFalloff = sqrt(spotFalloff);
+	float cosTheta = saturate(dot(toLight, worldNormal));
+	vec3 irradiance = LightIntensity * (spotFalloff * cosTheta / lightDistanceSq);
+
+	// For testing purposes.
+	LightCacheEntries[gl_GlobalInvocationID.x].Irradiance = vec3(spotFalloff); // TODO
+}

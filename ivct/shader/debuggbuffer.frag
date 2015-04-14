@@ -19,7 +19,7 @@ void main()
 #endif
 
 #ifdef OUTPUT_POS
-	vec4 worldPosition4D = vec4(Texcoord * 2.0 - vec2(1.0), texture(GBuffer_Depth, Texcoord).r, 1.0f) * InverseViewProjection;
+	vec4 worldPosition4D = vec4(Texcoord * 2.0 - vec2(1.0), texture(GBuffer_Depth, Texcoord).r, 1.0) * InverseViewProjection;
 	vec3 worldPosition = worldPosition4D.xyz / worldPosition4D.w;
 	OutputColor = abs(worldPosition.xyz);
 #endif

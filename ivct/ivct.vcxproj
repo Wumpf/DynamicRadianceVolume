@@ -73,7 +73,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>$(ProjectDir);..\dependencies\jsoncpp\;..\dependencies\AntTweakBar\include;..\dependencies\glhelper\glfw;../dependencies/epsilon\include;..\dependencies\glhelper;..\dependencies\glew\include;../dependencies\glfw\include;../dependencies\assimp\include;../dependencies/stb;$(IncludePath)</IncludePath>
-    <LibraryPath>..\dependencies\AntTweakBar\lib;..\dependencies\glew\lib-msvc120;..\dependencies\glfw\src\Debug;../dependencies\assimp\lib\Debug;$(LibraryPath)</LibraryPath>
+    <LibraryPath>..\dependencies\AntTweakBar\lib;..\dependencies\glew\lib-msvc120;..\dependencies\glfw\src\Debug;../dependencies\assimp\lib\Release;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -113,7 +113,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>AntTweakBar64.lib;assimpd.lib;glfw3.lib;opengl32.lib;glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>AntTweakBar64.lib;assimp.lib;glfw3.lib;opengl32.lib;glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
