@@ -65,7 +65,7 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	*/
 
 	const unsigned int addressGridSize = 128;
-	m_lightCacheAddressGrid = std::make_unique<gl::Texture3D>(addressGridSize, addressGridSize, addressGridSize, gl::TextureFormat::R32UI, 1);
+	m_lightCacheAddressVolume = std::make_unique<gl::Texture3D>(addressGridSize, addressGridSize, addressGridSize, gl::TextureFormat::R32UI, 1);
 
 	// Basic settings.
 	SetScene(scene);
@@ -157,8 +157,8 @@ void Renderer::UpdatePerFrameUBO(const Camera& camera)
 	auto viewProjection = projection * view;
 
 
-	ei::Vec3 voxelVolumeWorldMin(m_scene->GetBoundingBox().min - 0.1f);
-	ei::Vec3 voxelVolumeWorldMax(m_scene->GetBoundingBox().max + 0.1f);
+	ei::Vec3 VolumeWorldMin(m_scene->GetBoundingBox().min - 0.1f);
+	ei::Vec3 VolumeWorldMax(m_scene->GetBoundingBox().max + 0.1f);
 
 	m_uboPerFrame->GetBuffer()->Map(gl::Buffer::MapType::WRITE, gl::Buffer::MapWriteFlag::INVALIDATE_BUFFER);
 	(*m_uboPerFrame)["Projection"].Set(projection);
@@ -167,9 +167,10 @@ void Renderer::UpdatePerFrameUBO(const Camera& camera)
 	(*m_uboPerFrame)["CameraPosition"].Set(camera.GetPosition());
 	(*m_uboPerFrame)["CameraDirection"].Set(camera.GetDirection());
 
-	(*m_uboPerFrame)["VoxelVolumeWorldMin"].Set(voxelVolumeWorldMin);
-	(*m_uboPerFrame)["VoxelVolumeWorldMax"].Set(voxelVolumeWorldMax);
-	(*m_uboPerFrame)["VoxelSizeInWorld"].Set((voxelVolumeWorldMax - voxelVolumeWorldMin) / m_voxelization->GetVoxelTexture().GetWidth());
+	(*m_uboPerFrame)["VolumeWorldMin"].Set(VolumeWorldMin);
+	(*m_uboPerFrame)["VolumeWorldMax"].Set(VolumeWorldMax);
+	(*m_uboPerFrame)["VoxelSizeInWorld"].Set((VolumeWorldMax - VolumeWorldMin) / m_voxelization->GetVoxelTexture().GetWidth());
+	(*m_uboPerFrame)["AddressVolumeVoxelSize"].Set((VolumeWorldMax - VolumeWorldMin) / m_lightCacheAddressVolume->GetWidth());
 
 	m_uboPerFrame->GetBuffer()->Unmap();
 }
@@ -373,13 +374,13 @@ void Renderer::GatherLightCaches()
 	m_lightCacheCounter->GetBuffer()->ClearToZero();
 	m_lightCacheBuffer->GetBuffer()->ClearToZero();
 	//m_lightCacheHashMap->GetBuffer()->ClearToZero();
-	m_lightCacheAddressGrid->ClearToZero();
+	m_lightCacheAddressVolume->ClearToZero();
 
 
 	m_shaderCacheGather->BindSSBO(*m_lightCacheCounter);
 	m_shaderCacheGather->BindSSBO(*m_lightCacheBuffer);
 	//m_shaderCacheGather->BindSSBO(*m_lightCacheHashMap);
-	m_lightCacheAddressGrid->BindImage(0, gl::Texture::ImageAccess::READ_WRITE);
+	m_lightCacheAddressVolume->BindImage(0, gl::Texture::ImageAccess::READ_WRITE);
 
 	m_shaderCacheGather->Activate();
 
@@ -402,7 +403,7 @@ void Renderer::ApplyLightCaches()
 	//m_shaderCacheApply->BindSSBO(*m_lightCacheHashMap);
 	m_shaderCacheApply->BindSSBO(*m_lightCacheBuffer);
 
-	m_lightCacheAddressGrid->Bind(3);
+	m_lightCacheAddressVolume->Bind(3);
 	m_samplerNearest.BindSampler(3);
 
 	m_shaderCacheApply->Activate();

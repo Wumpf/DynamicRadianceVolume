@@ -360,6 +360,36 @@
     <None Include="..\dependencies\glhelper\glhelper\uniformbuffer.inl">
       <Filter>dependencies\glhelper</Filter>
     </None>
+    <None Include="..\dependencies\glhelper\glhelper\statemanagement.inl">
+      <Filter>dependencies\glhelper</Filter>
+    </None>
+    <None Include="..\dependencies\glhelper\glhelper\buffer.inl">
+      <Filter>dependencies\glhelper</Filter>
+    </None>
+    <None Include="shader\gbuffer.glsl">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\globalubos.glsl">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\lightcache.glsl">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\random.glsl">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\requestlightcaches.frag">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\screenTri.vert">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\tonemapping.frag">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\utils.glsl">
+      <Filter>shader</Filter>
+    </None>
     <None Include="shader\voxeldebug.frag">
       <Filter>shader</Filter>
     </None>
@@ -372,38 +402,26 @@
     <None Include="shader\voxelize.vert">
       <Filter>shader</Filter>
     </None>
+    <None Include="shader\cacheApply.frag">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\cacheGather.comp">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\cacheLightingDirect.comp">
+      <Filter>shader</Filter>
+    </None>
     <None Include="shader\debuggbuffer.frag">
       <Filter>shader</Filter>
     </None>
     <None Include="shader\defaultmodel_noskinning.vert">
       <Filter>shader</Filter>
     </None>
-    <None Include="shader\fillgbuffer.frag">
-      <Filter>shader</Filter>
-    </None>
-    <None Include="shader\globalubos.glsl">
-      <Filter>shader</Filter>
-    </None>
-    <None Include="shader\screenTri.vert">
-      <Filter>shader</Filter>
-    </None>
-    <None Include="shader\utils.glsl">
-      <Filter>shader</Filter>
-    </None>
     <None Include="shader\directdeferredlighting.frag">
       <Filter>shader</Filter>
     </None>
-    <None Include="..\dependencies\glhelper\glhelper\statemanagement.inl">
-      <Filter>dependencies\glhelper</Filter>
-    </None>
-    <None Include="shader\lightcache.glsl">
+    <None Include="shader\fillgbuffer.frag">
       <Filter>shader</Filter>
-    </None>
-    <None Include="shader\applylightcaches.frag">
-      <Filter>shader</Filter>
-    </None>
-    <None Include="..\dependencies\glhelper\glhelper\buffer.inl">
-      <Filter>dependencies\glhelper</Filter>
     </None>
   </ItemGroup>
 </Project>

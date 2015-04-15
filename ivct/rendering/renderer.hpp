@@ -98,7 +98,7 @@ private:
 	//unsigned int m_lightCacheHashMapSize;
 	//std::unique_ptr<gl::ShaderStorageBufferView> m_lightCacheHashMap;
 
-	std::unique_ptr<gl::Texture3D> m_lightCacheAddressGrid;
+	std::unique_ptr<gl::Texture3D> m_lightCacheAddressVolume;
 
 	unsigned int m_maxNumLightCaches;
 	bool m_readLightCacheCount;

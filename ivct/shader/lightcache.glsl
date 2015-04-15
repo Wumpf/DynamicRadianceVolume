@@ -78,7 +78,6 @@ layout(std430, binding = 2) LIGHTCACHE_HASHMAP_MODIFIER buffer LightCacheHashMap
 #else
 	layout(binding = 3) uniform usampler3D VoxelAddressVolume;
 #endif
-const float AddressVolumeVoxelSize = 20.1f; // TODO
 
 
 #define LIGHTING_THREADS_PER_GROUP 512
