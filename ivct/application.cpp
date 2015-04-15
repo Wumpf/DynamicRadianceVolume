@@ -79,20 +79,27 @@ Application::~Application()
 
 std::string Application::OpenFileDialog()
 {
-	OPENFILENAMEA ofn;
-	char szFileName[MAX_PATH] = "";
+	// Openfiledialog changes relative paths. Save current directory to restore it later.
+	char oldCurrentPath[MAX_PATH];
+	GetCurrentDirectoryA(MAX_PATH, oldCurrentPath);
 
-	ZeroMemory(&ofn, sizeof(ofn));
+	char fileName[MAX_PATH] = "";
+
+	OPENFILENAMEA ofn = { 0 };
 	ofn.lStructSize = sizeof(ofn);
 	ofn.hwndOwner = m_window->GetWindowHandle();
 	ofn.lpstrFilter = "All Files (*.*)\0*.*\0Json Files (*.json)\0*.json\0Obj Model (*.obj)\0*.obj\0";
-	ofn.lpstrFile = szFileName;
+	ofn.nFilterIndex = 1;
+	ofn.lpstrFile = fileName;
 	ofn.nMaxFile = MAX_PATH;
-	ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+	ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
 	
 	if (GetOpenFileNameA(&ofn))
 	{
-		return szFileName;
+		// Restore current directory
+		SetCurrentDirectoryA(oldCurrentPath);
+
+		return fileName;
 	}
 	else
 	{
@@ -102,11 +109,14 @@ std::string Application::OpenFileDialog()
 
 std::string Application::SaveFileDialog(const std::string& defaultName, const std::string& fileEnding)
 {
-	OPENFILENAMEA ofn;
+	// Openfiledialog changes relative paths. Save current directory to restore it later.
+	char oldCurrentPath[MAX_PATH];
+	GetCurrentDirectoryA(MAX_PATH, oldCurrentPath);
+
 	char szFileName[MAX_PATH];
 	strcpy(szFileName, defaultName.c_str());
 
-	ZeroMemory(&ofn, sizeof(ofn));
+	OPENFILENAMEA ofn = { 0 };
 	ofn.lStructSize = sizeof(ofn);
 	ofn.hwndOwner = m_window->GetWindowHandle();
 	ofn.lpstrFilter = "All Files (*.*)\0*.*\0Json Files (*.json)\0*.json\0Obj Model (*.obj)\0*.obj\0";
@@ -117,6 +127,9 @@ std::string Application::SaveFileDialog(const std::string& defaultName, const st
 
 	if (GetSaveFileNameA(&ofn))
 	{
+		// Restore current directory
+		SetCurrentDirectoryA(oldCurrentPath);
+
 		return szFileName;
 	}
 	else
