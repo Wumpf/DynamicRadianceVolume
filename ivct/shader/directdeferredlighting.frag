@@ -3,6 +3,7 @@
 #include "gbuffer.glsl"
 #include "utils.glsl"
 #include "globalubos.glsl"
+#include "lightingfunctions.glsl"
 
 in vec2 Texcoord;
 out vec3 OutputColor;
@@ -38,9 +39,7 @@ void main()
 	vec3 diffuseColor = texture(GBuffer_Diffuse, Texcoord).rgb;
 	
 	// Evaluate direct light.
-	float spotFalloff = saturate(dot(-toLight, LightDirection) - LightCosHalfAngle) / (1.0 - LightCosHalfAngle);
-	spotFalloff = sqrt(spotFalloff);
 	float cosTheta = saturate(dot(toLight, worldNormal));
-	vec3 irradiance = LightIntensity * (spotFalloff * cosTheta / lightDistanceSq);
+	vec3 irradiance = LightIntensity * (ComputeSpotFalloff(toLight) * cosTheta / lightDistanceSq);
 	OutputColor = BRDF(toLight, toCamera, diffuseColor) * irradiance;
 }

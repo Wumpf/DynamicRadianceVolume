@@ -31,10 +31,15 @@ layout(binding = 2, shared) uniform PerObject
 };
 
 // UBO for a single spot light. Likely to be changed in something more general.
-layout(binding = 3, std140) uniform SpotLight
+layout(binding = 3, shared) uniform SpotLight
 {
 	vec3 LightIntensity;
+	
 	vec3 LightPosition;
+	uint ShadowMapResolution;
+
 	vec3 LightDirection;
 	float LightCosHalfAngle;
+
+	mat4 ShadowMapMatrix;
 };

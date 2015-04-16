@@ -144,9 +144,6 @@
     <ClCompile Include="..\dependencies\glhelper\glhelper\shaderobject.cpp">
       <Filter>dependencies\glhelper</Filter>
     </ClCompile>
-    <ClCompile Include="..\dependencies\glhelper\glhelper\shaderstoragebufferview.cpp">
-      <Filter>dependencies\glhelper</Filter>
-    </ClCompile>
     <ClCompile Include="..\dependencies\glhelper\glhelper\texture.cpp">
       <Filter>dependencies\glhelper</Filter>
     </ClCompile>
@@ -160,9 +157,6 @@
       <Filter>dependencies\glhelper</Filter>
     </ClCompile>
     <ClCompile Include="..\dependencies\glhelper\glhelper\textureformats.cpp">
-      <Filter>dependencies\glhelper</Filter>
-    </ClCompile>
-    <ClCompile Include="..\dependencies\glhelper\glhelper\uniformbufferview.cpp">
       <Filter>dependencies\glhelper</Filter>
     </ClCompile>
     <ClCompile Include="..\dependencies\glhelper\glhelper\vertexarrayobject.cpp">
@@ -290,9 +284,6 @@
     <ClInclude Include="..\dependencies\glhelper\glhelper\shaderobject.hpp">
       <Filter>dependencies\glhelper</Filter>
     </ClInclude>
-    <ClInclude Include="..\dependencies\glhelper\glhelper\shaderstoragebufferview.hpp">
-      <Filter>dependencies\glhelper</Filter>
-    </ClInclude>
     <ClInclude Include="..\dependencies\glhelper\glhelper\texture.hpp">
       <Filter>dependencies\glhelper</Filter>
     </ClInclude>
@@ -306,9 +297,6 @@
       <Filter>dependencies\glhelper</Filter>
     </ClInclude>
     <ClInclude Include="..\dependencies\glhelper\glhelper\textureformats.hpp">
-      <Filter>dependencies\glhelper</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dependencies\glhelper\glhelper\uniformbufferview.hpp">
       <Filter>dependencies\glhelper</Filter>
     </ClInclude>
     <ClInclude Include="..\dependencies\glhelper\glhelper\vertexarrayobject.hpp">

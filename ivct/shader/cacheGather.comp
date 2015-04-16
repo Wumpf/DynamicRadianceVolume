@@ -8,72 +8,71 @@
 #include "gbuffer.glsl"
 #include "utils.glsl"
 
+shared uint NumAddedCaches;
 
 layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 void main()
 {
+	bool isThread0 = gl_LocalInvocationID.xy == uvec2(0);
+	if(isThread0)
+	{
+		NumAddedCaches = 0;
+	}
+	barrier();
+
+	// Get pixel world position ...
+	ivec2 pixelPosition = ivec2(gl_GlobalInvocationID.xy);
+	float depthBufferDepth = texelFetch(GBuffer_Depth, pixelPosition, 0).r;
+
+	ivec3 addressCoord[8];
+
+	// Return not allowed since barrier() is invalid aferwards!
+	if(depthBufferDepth > 0.00001 || any(greaterThanEqual(gl_GlobalInvocationID.xy, BackbufferResolution)))
+	{
+		vec2 screenCor = (pixelPosition + vec2(0.5)) / BackbufferResolution * 2.0 - vec2(1.0);
+		vec4 worldPosition4D = vec4(screenCor, depthBufferDepth, 1.0) * InverseViewProjection;
+		vec3 worldPosition = worldPosition4D.xyz / worldPosition4D.w;
+
+		// Get normal
+		vec3 worldNormal = UnpackNormal16I(texelFetch(GBuffer_Normal, pixelPosition, 0).rg);
+
+
+		// Allocate caches ...
+		addressCoord[0] = ivec3((worldPosition - VolumeWorldMin) / AddressVolumeVoxelSize);
+		addressCoord[1] = addressCoord[0] + ivec3(1,0,0);
+		addressCoord[2] = addressCoord[0] + ivec3(0,1,0);
+		addressCoord[3] = addressCoord[0] + ivec3(1,1,0);
+		addressCoord[4] = addressCoord[0] + ivec3(0,0,1);
+		addressCoord[5] = addressCoord[0] + ivec3(1,0,1);
+		addressCoord[6] = addressCoord[0] + ivec3(0,1,1);
+		addressCoord[7] = addressCoord[0] + ivec3(1,1,1);
+
+		for(int i=0; i<8; ++i)
+		{
+			// Try lock.
+			// TODO: Cache this group wide, since it is very likely that most threads of the group access the same caches!
+			uint oldAddressValue = imageAtomicCompSwap(VoxelAddressVolume, addressCoord[i], 0, 0xFFFFFFFF);
+			if(oldAddressValue == 0) // Lock successful?
+			{
+				uint lightCacheIndex = atomicAdd(TotalLightCacheCount, 1);
+
+				LightCacheEntries[lightCacheIndex].Position = addressCoord[i] * AddressVolumeVoxelSize + VolumeWorldMin;
+
+				// No need for atomic now since we keep it locked up
+				imageStore(VoxelAddressVolume, addressCoord[i], uvec4(lightCacheIndex + 1)); // +1 since zero means "cleared"
+				
+				// Need to write number of thread groups for cache lighting.
+				// Alternative approach would be a separate pass that computes it from the final TotalLightCacheCount. ... but this would be another pass :/
+				uint expectedTotalLightCacheCount = lightCacheIndex + 1;
+				atomicMax(NumCacheLightingThreadGroupsX, (expectedTotalLightCacheCount + LIGHTING_THREADS_PER_GROUP - 1) / LIGHTING_THREADS_PER_GROUP);
+			}
+		}
+	}
+
 	// TODO: Remove the need of this by not clearing that part of the buffer
 	if(gl_GlobalInvocationID.xy == uvec2(0, 0))
 	{
 		NumCacheLightingThreadGroupsY = 1;
 		NumCacheLightingThreadGroupsZ = 1;
-	}
-
-	ivec2 pixelPosition = ivec2(gl_GlobalInvocationID.xy);
-	if(any(greaterThanEqual(gl_GlobalInvocationID.xy, BackbufferResolution)))
-		return;
-
-	// Get pixel world position.
-	float depthBufferDepth = texelFetch(GBuffer_Depth, pixelPosition, 0).r;
-	if(depthBufferDepth < 0.00001)
-	{
-		return;
-	}
-	vec2 screenCor = (pixelPosition + vec2(0.5)) / BackbufferResolution * 2.0 - vec2(1.0);
-	vec4 worldPosition4D = vec4(screenCor, depthBufferDepth, 1.0) * InverseViewProjection;
-	vec3 worldPosition = worldPosition4D.xyz / worldPosition4D.w;
-
-	// Get normal
-	vec3 worldNormal = UnpackNormal16I(texelFetch(GBuffer_Normal, pixelPosition, 0).rg);
-
-
-
-	// Allocate caches ...
-	ivec3 addressCoord00 = ivec3((worldPosition - VoxelVolumeWorldMin) / AddressVolumeVoxelSize);
-
-	ivec3 offsets[8] =
-	{
-		ivec3(0,0,0),
-		ivec3(1,0,0),
-		ivec3(0,1,0),
-		ivec3(1,1,0),
-
-		ivec3(0,0,1),
-		ivec3(1,0,1),
-		ivec3(0,1,1),
-		ivec3(1,1,1)
-	};
-
-	for(int i=0; i<8; ++i)
-	{
-		ivec3 addressCoord = addressCoord00 + offsets[i];
-
-		// Try lock.
-		// TODO: Cache this group wide, since it is very likely that most threads of the group access the same caches!
-		uint oldAddressValue = imageAtomicCompSwap(VoxelAddressVolume, addressCoord, 0, 0xFFFFFFFF);
-		if(oldAddressValue == 0) // Lock successful?
-		{
-			uint lightCacheIndex = atomicAdd(TotalLightCacheCount, 1);
-
-			LightCacheEntries[lightCacheIndex].Position = addressCoord * AddressVolumeVoxelSize + VoxelVolumeWorldMin;
-
-			// No need for atomic now since we keep it locked up
-			imageStore(VoxelAddressVolume, addressCoord, uvec4(lightCacheIndex + 1)); // +1 since zero means "cleared"
-			
-			// Need to write number of thread groups for cache lighting.
-			// Alternative approach would be a separate pass that computes it from the final TotalLightCacheCount. ... but this would be another pass :/
-			uint expectedTotalLightCacheCount = lightCacheIndex + 1;
-			atomicMax(NumCacheLightingThreadGroupsX, (expectedTotalLightCacheCount + LIGHTING_THREADS_PER_GROUP - 1) / LIGHTING_THREADS_PER_GROUP);
-		}
 	}
 }
