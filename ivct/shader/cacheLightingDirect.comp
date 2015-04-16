@@ -5,6 +5,7 @@
 #define LIGHTCACHEMODE LIGHTCACHEMODE_LIGHT
 #include "lightcache.glsl"
 
+layout(binding=0) uniform sampler2DShadow ShadowMap;
 
 layout (local_size_x = LIGHTING_THREADS_PER_GROUP, local_size_y = 1, local_size_z = 1) in;
 void main()
@@ -14,6 +15,12 @@ void main()
 
 
 	vec3 worldPosition = LightCacheEntries[gl_GlobalInvocationID.x].Position;
+
+	// Shadow mapping
+	vec4 shadowProjection = vec4(worldPosition, 1.0) * LightViewProjection;
+	shadowProjection.xy = shadowProjection.xy * 0.5 + vec2(0.5 * shadowProjection.w);
+	shadowProjection.z += ShadowBias;
+	float shadowing = textureProjLod(ShadowMap, shadowProjection, 0);
 
 	// Direction and distance to light.
 	vec3 toLight = LightPosition - worldPosition;
@@ -27,7 +34,7 @@ void main()
 	float spotFalloff = saturate(dot(-toLight, LightDirection) - LightCosHalfAngle) / (1.0 - LightCosHalfAngle);
 	spotFalloff = sqrt(spotFalloff);
 	
-	vec3 scaledIntensity = LightIntensity * (spotFalloff / lightDistanceSq);
+	vec3 scaledIntensity = LightIntensity * (shadowing * spotFalloff / lightDistanceSq);
 
 
 	// -----------------------------------------------

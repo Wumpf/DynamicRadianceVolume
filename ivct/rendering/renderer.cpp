@@ -228,7 +228,7 @@ void Renderer::Draw(const Camera& camera)
 	DrawShadowMaps();
 
 	// Light cache generation.
-	//GatherLightCaches();
+	GatherLightCaches();
 
 	// No more object drawing from now on.
 	m_uboRing_PerObject->CompleteFrame();
@@ -238,12 +238,12 @@ void Renderer::Draw(const Camera& camera)
 	
 	DrawLights();
 
-	//DirectCacheLighting();
+	DirectCacheLighting();
 
 	// No light data needed from now on.
 	m_uboRing_SpotLight->CompleteFrame();
 	
-	//ApplyLightCaches();
+	ApplyLightCaches();
 	
 	OutputHDRTextureToBackbuffer();
 
@@ -389,12 +389,12 @@ void Renderer::DrawLights()
 	m_samplerNearest.BindSampler(0);
 	m_samplerNearest.BindSampler(1);
 	m_samplerNearest.BindSampler(2);
-	
+	m_samplerShadow.BindSampler(3);
 
 	for (unsigned int lightIndex = 0; lightIndex < m_scene->GetLights().size(); ++lightIndex)
 	{
 		m_shadowMaps[lightIndex].depth->Bind(3);
-		m_samplerShadow.BindSampler(3);
+		
 		m_uboRing_SpotLight->BindBlockAsUBO(m_uboInfoSpotLight.bufferBinding, lightIndex);
 		m_screenTriangle->Draw();
 	}
@@ -408,14 +408,16 @@ void Renderer::DirectCacheLighting()
 	m_shaderLightCachesDirect->BindSSBO(*m_lightCacheBuffer, "LightCacheBuffer");
 	m_shaderLightCachesDirect->BindSSBO(*m_lightCacheCounter, "LightCacheCounter");
 
+	m_samplerShadow.BindSampler(0);
+
 	m_shaderLightCachesDirect->Activate();
 
 	GL_CALL(glMemoryBarrier, GL_SHADER_STORAGE_BARRIER_BIT | GL_COMMAND_BARRIER_BIT);
 
-	auto& spotuboInfo = m_shaderLightCachesDirect->GetUniformBufferInfo()["SpotLight"];
-
 	for (unsigned int lightIndex = 0; lightIndex < m_scene->GetLights().size(); ++lightIndex)
 	{
+		m_shadowMaps[lightIndex].depth->Bind(0);
+
 		m_uboRing_SpotLight->BindBlockAsUBO(m_uboInfoSpotLight.bufferBinding, lightIndex);
 		GL_CALL(glDispatchComputeIndirect, 0);
 	}
@@ -439,9 +441,15 @@ void Renderer::GatherLightCaches()
 	//m_lightCacheHashMap->GetBuffer()->ClearToZero();
 	m_lightCacheAddressVolume->ClearToZero();
 
+	m_GBuffer_diffuse->Bind(0);
+	m_GBuffer_normal->Bind(1);
+	m_GBuffer_depth->Bind(2);
+	m_samplerNearest.BindSampler(0);
+	m_samplerNearest.BindSampler(1);
+	m_samplerNearest.BindSampler(2);
 
-	m_shaderCacheGather->BindSSBO(*m_lightCacheCounter, "LightCacheBuffer");
-	m_shaderCacheGather->BindSSBO(*m_lightCacheBuffer, "LightCacheCounter");
+	m_shaderCacheGather->BindSSBO(*m_lightCacheCounter, "LightCacheCounter");
+	m_shaderCacheGather->BindSSBO(*m_lightCacheBuffer, "LightCacheBuffer");
 	//m_shaderCacheGather->BindSSBO(*m_lightCacheHashMap);
 	m_lightCacheAddressVolume->BindImage(0, gl::Texture::ImageAccess::READ_WRITE);
 
