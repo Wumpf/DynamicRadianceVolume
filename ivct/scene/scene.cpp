@@ -3,6 +3,10 @@
 #include "model.hpp"
 #include <ei/3dfunctions.hpp>
 
+// TODO: Need some kind of meaningful measure.
+const float Light::nearPlane = 0.1f;
+const float Light::farPlane = 10000.0f;
+
 Scene::Scene() :
 	m_boundingBox()
 {

@@ -105,7 +105,8 @@ private:
 	// Direct lighting / RSM
 
 	ShaderPtr m_shaderDebugGBuffer;
-	ShaderPtr m_shaderFillGBuffer_noskinning;
+	ShaderPtr m_shaderFillGBuffer;
+	ShaderPtr m_shaderFillRSM;
 
 	ShaderPtr m_shaderDeferredDirectLighting_Spot;
 
@@ -120,14 +121,21 @@ private:
 
 	struct ShadowMap
 	{
+		ShadowMap(ShadowMap& old);
+		ShadowMap();
+		~ShadowMap() { DeInit(); }
+
 		/// Initializes all textures and the fbo with the given resolution (square)
 		/// Will recreate if already initialized.
 		void Init(unsigned int resolution);
 
-		Texture2DPtr irradiance;
-		Texture2DPtr normal;
-		Texture2DPtr depth;
-		std::unique_ptr<gl::FramebufferObject> fbo;
+		gl::Texture2D* flux;
+		gl::Texture2D* normal;
+		gl::Texture2D* depth;
+		gl::FramebufferObject* fbo;
+
+	private:
+		void DeInit();
 	};
 	std::vector<ShadowMap> m_shadowMaps; ///< A shadowmap for every light.
 
@@ -155,6 +163,7 @@ private:
 
 	const gl::SamplerObject& m_samplerLinear;
 	const gl::SamplerObject& m_samplerNearest;
+	const gl::SamplerObject& m_samplerShadow;
 
 	/// List of all shaders for convenience purposes.
 	std::vector<gl::ShaderObject*> m_allShaders;

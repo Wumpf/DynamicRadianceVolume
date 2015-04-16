@@ -41,5 +41,5 @@ layout(binding = 3, shared) uniform SpotLight
 	vec3 LightDirection;
 	float LightCosHalfAngle;
 
-	mat4 ShadowMapMatrix;
+	mat4 LightViewProjection;
 };

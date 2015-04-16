@@ -18,8 +18,12 @@
 #include <glhelper/utils/flagoperators.hpp>
 
 Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& resolution) :
-	m_samplerLinear(gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Border::REPEAT))),
-	m_samplerNearest(gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::NEAREST, gl::SamplerObject::Filter::NEAREST, gl::SamplerObject::Filter::NEAREST, gl::SamplerObject::Border::REPEAT))),
+	m_samplerLinear(gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR,
+															gl::SamplerObject::Border::REPEAT))),
+	m_samplerNearest(gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::NEAREST, gl::SamplerObject::Filter::NEAREST, gl::SamplerObject::Filter::NEAREST, 
+															gl::SamplerObject::Border::REPEAT))),
+	m_samplerShadow(gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::NEAREST, 
+															gl::SamplerObject::Border::BORDER, 1, gl::Vec4(0.0), gl::SamplerObject::CompareMode::GREATER))),
 
 	m_readLightCacheCount(false),
 	m_lastNumLightCaches(0)
@@ -105,10 +109,15 @@ void Renderer::LoadShader()
 	m_shaderDebugGBuffer->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/debuggbuffer.frag");
 	m_shaderDebugGBuffer->CreateProgram();
 
-	m_shaderFillGBuffer_noskinning = std::make_unique<gl::ShaderObject>("fill gbuffer noskinning");
-	m_shaderFillGBuffer_noskinning->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/defaultmodel_noskinning.vert");
-	m_shaderFillGBuffer_noskinning->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/fillgbuffer.frag");
-	m_shaderFillGBuffer_noskinning->CreateProgram();
+	m_shaderFillGBuffer = std::make_unique<gl::ShaderObject>("fill gbuffer");
+	m_shaderFillGBuffer->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/defaultmodel.vert");
+	m_shaderFillGBuffer->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/fillgbuffer.frag");
+	m_shaderFillGBuffer->CreateProgram();
+
+	m_shaderFillRSM = std::make_unique<gl::ShaderObject>("fill rsm");
+	m_shaderFillRSM->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/defaultmodel_rsm.vert");
+	m_shaderFillRSM->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/fillrsm.frag");
+	m_shaderFillRSM->CreateProgram();
 
 	m_shaderDeferredDirectLighting_Spot = std::make_unique<gl::ShaderObject>("direct lighting - spot");
 	m_shaderDeferredDirectLighting_Spot->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
@@ -135,7 +144,7 @@ void Renderer::LoadShader()
 
 
 	// Register all shader for auto reload on change.
-	m_allShaders = { m_shaderDebugGBuffer.get(), m_shaderFillGBuffer_noskinning.get(), m_shaderDeferredDirectLighting_Spot.get(), 
+	m_allShaders = { m_shaderDebugGBuffer.get(), m_shaderFillGBuffer.get(), m_shaderDeferredDirectLighting_Spot.get(), 
 						m_shaderTonemap.get(), m_shaderCacheGather.get(), m_shaderCacheApply.get(), m_shaderLightCachesDirect.get() };
 	for (auto it : m_allShaders)
 		ShaderFileWatcher::Instance().RegisterShaderForReloadOnChange(it);
@@ -261,6 +270,8 @@ void Renderer::UpdatePerObjectUBORingBuffer()
 
 void Renderer::PrepareLights()
 {
+	m_shadowMaps.resize(m_scene->GetLights().size());
+
 	for (unsigned int lightIndex = 0; lightIndex < m_scene->GetLights().size(); ++lightIndex)
 	{
 		const Light& light = m_scene->GetLights()[lightIndex];
@@ -277,6 +288,16 @@ void Renderer::PrepareLights()
 		uboView["LightPosition"].Set(light.position);
 		uboView["LightDirection"].Set(ei::normalize(light.direction));
 		uboView["LightCosHalfAngle"].Set(cosf(light.halfAngle));
+
+		ei::Mat4x4 lightView = ei::camera(light.position, light.direction);
+		ei::Mat4x4 lightProjection = ei::perspectiveDX(light.halfAngle * 2.0f, 1.0f, light.farPlane, light.nearPlane); // far and near intentionally swapped!
+		uboView["LightViewProjection"].Set(lightProjection * lightView);
+
+		// (Re)Init shadow map if necessary.
+		if (!m_shadowMaps[lightIndex].depth || m_shadowMaps[lightIndex].depth->GetWidth() != light.shadowMapResolution)
+		{
+			m_shadowMaps[lightIndex].Init(light.shadowMapResolution);
+		}
 	}
 }
 
@@ -305,7 +326,7 @@ void Renderer::DrawSceneToGBuffer()
 
 	m_samplerLinear.BindSampler(0);
 
-	m_shaderFillGBuffer_noskinning->Activate();
+	m_shaderFillGBuffer->Activate();
 	m_GBuffer->Bind(false);
 	GL_CALL(glClear, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	DrawScene(true);
@@ -313,7 +334,21 @@ void Renderer::DrawSceneToGBuffer()
 
 void Renderer::DrawShadowMaps()
 {
+	gl::Enable(gl::Cap::DEPTH_TEST);
+	GL_CALL(glDepthMask, GL_TRUE);
 
+	m_samplerLinear.BindSampler(0);
+
+	m_shaderFillRSM->Activate();
+
+	for (unsigned int lightIndex = 0; lightIndex < m_scene->GetLights().size(); ++lightIndex)
+	{
+		m_uboRing_SpotLight->BindBlockAsUBO(m_uboInfoSpotLight.bufferBinding, lightIndex);
+		
+		m_shadowMaps[lightIndex].fbo->Bind(true);
+		GL_CALL(glClear, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		DrawScene(true);
+	}
 }
 
 void Renderer::DrawGBufferDebug()
@@ -330,7 +365,6 @@ void Renderer::DrawGBufferDebug()
 	m_samplerNearest.BindSampler(0);
 	m_samplerNearest.BindSampler(1);
 	m_samplerNearest.BindSampler(2);
-	m_samplerNearest.BindSampler(3);
 
 	m_screenTriangle->Draw();
 }
@@ -347,9 +381,15 @@ void Renderer::DrawLights()
 	m_GBuffer_normal->Bind(1);
 	m_GBuffer_depth->Bind(2);
 
+	m_samplerNearest.BindSampler(0);
+	m_samplerNearest.BindSampler(1);
+	m_samplerNearest.BindSampler(2);
+	
 
 	for (unsigned int lightIndex = 0; lightIndex < m_scene->GetLights().size(); ++lightIndex)
 	{
+		m_shadowMaps[lightIndex].depth->Bind(3);
+		m_samplerShadow.BindSampler(3);
 		m_uboRing_SpotLight->BindBlockAsUBO(m_uboInfoSpotLight.bufferBinding, lightIndex);
 		m_screenTriangle->Draw();
 	}
@@ -476,7 +516,38 @@ unsigned int Renderer::GetLightCacheActiveCount() const
 	return m_lastNumLightCaches;
 }
 
+Renderer::ShadowMap::ShadowMap(ShadowMap& old) :
+	flux(old.flux),
+	normal(old.normal),
+	depth(old.depth),
+	fbo(old.fbo)
+{
+	old.flux = nullptr;
+	old.normal = nullptr;
+	old.depth = nullptr;
+	old.fbo = nullptr;
+}
+Renderer::ShadowMap::ShadowMap() :
+	flux(nullptr),
+	normal(nullptr),
+	depth(nullptr),
+	fbo(nullptr)
+{}
+
+void Renderer::ShadowMap::DeInit()
+{
+	delete flux;
+	delete normal;
+	delete depth;
+	delete fbo;
+}
+
 void Renderer::ShadowMap::Init(unsigned int resolution)
 {
+	DeInit();
 
+	flux = new gl::Texture2D(resolution, resolution, gl::TextureFormat::R11F_G11F_B10F, 1, 0); // Format hopefully sufficient!
+	normal = new gl::Texture2D(resolution, resolution, gl::TextureFormat::RG16I, 1, 0);
+	depth = new gl::Texture2D(resolution, resolution, gl::TextureFormat::DEPTH_COMPONENT32F, 1, 0);
+	fbo = new gl::FramebufferObject({ gl::FramebufferObject::Attachment(flux), gl::FramebufferObject::Attachment(normal) }, gl::FramebufferObject::Attachment(depth));
 }
