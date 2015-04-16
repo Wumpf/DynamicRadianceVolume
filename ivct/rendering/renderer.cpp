@@ -40,17 +40,15 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	m_uboPerFrame = std::make_unique<gl::Buffer>(m_uboInfoPerFrame.bufferDataSizeByte, gl::Buffer::MAP_WRITE);
 	m_allShaders[0]->BindUBO(*m_uboPerFrame, "PerFrame");
 
-	// Expecting about 16 objects. Doing triple buffering!
-	m_perObjectUBOSize = m_allShaders[0]->GetUniformBufferInfo()["PerObject"].bufferDataSizeByte;
-	m_perObjectUBOSize += (m_UBOAlignment - m_perObjectUBOSize % m_UBOAlignment) % m_UBOAlignment;
-	unsigned int perObjectUBORingBufferSize = 16 * 3 * m_perObjectUBOSize;
-	m_uboRing_PerObject = std::make_unique<gl::PersistentRingBuffer>(perObjectUBORingBufferSize);
-	m_perObjectUBOBindingPoint = m_allShaders[0]->GetUniformBufferInfo()["PerObject"].bufferBinding;
+	// Expecting about 16 objects.
+	const unsigned int maxExpectedObjects = 16;
+	m_uboInfoPerObject = m_allShaders[0]->GetUniformBufferInfo()["PerObject"];
+	m_uboRing_PerObject = std::make_unique<gl::PersistentRingBuffer>(maxExpectedObjects * RoundSizeToUBOAlignment(m_uboInfoPerObject.bufferDataSizeByte) * 3);
 
-	// Init specific ubos.
+	// Light UBO.
+	const unsigned int maxExpectedLights = 16;
 	m_uboInfoSpotLight = m_allShaders[0]->GetUniformBufferInfo()["SpotLight"];
-	m_uboSpotLight = std::make_unique<gl::Buffer>(m_uboInfoSpotLight.bufferDataSizeByte, gl::Buffer::MAP_WRITE);
-	m_shaderDeferredDirectLighting_Spot->BindUBO(*m_uboSpotLight, "SpotLight");
+	m_uboRing_SpotLight = std::make_unique<gl::PersistentRingBuffer>(maxExpectedLights * RoundSizeToUBOAlignment(m_uboInfoSpotLight.bufferDataSizeByte) * 3);
 
 	// Create voxelization module.
 	m_voxelization = std::make_unique<Voxelization>(64);
@@ -214,6 +212,7 @@ void Renderer::Draw(const Camera& camera)
 	// Update data.
 	UpdatePerFrameUBO(camera);
 	UpdatePerObjectUBORingBuffer();
+	PrepareLights();
 
 	// Scene dependent renderings.
 	DrawSceneToGBuffer();
@@ -231,6 +230,9 @@ void Renderer::Draw(const Camera& camera)
 	DrawLights();
 
 	//DirectCacheLighting();
+
+	// No light data needed from now on.
+	m_uboRing_SpotLight->CompleteFrame();
 	
 	//ApplyLightCaches();
 	
@@ -257,9 +259,30 @@ void Renderer::UpdatePerObjectUBORingBuffer()
 	m_uboRing_PerObject->FlushAllBlocks();
 }
 
+void Renderer::PrepareLights()
+{
+	for (unsigned int lightIndex = 0; lightIndex < m_scene->GetLights().size(); ++lightIndex)
+	{
+		const Light& light = m_scene->GetLights()[lightIndex];
+		Assert(light.type == Light::Type::SPOT, "Only spot lights are supported so far!");
+
+
+		void* blockMemory = nullptr;
+		size_t blockIndex = 0;
+		m_uboRing_SpotLight->AddBlock(blockMemory, blockIndex, m_uboInfoSpotLight.bufferDataSizeByte, m_UBOAlignment);
+		Assert(blockIndex == lightIndex, "Light index and memory block index are different.");
+
+		gl::MappedUBOView uboView(m_uboInfoSpotLight, blockMemory);
+		uboView["LightIntensity"].Set(light.intensity);
+		uboView["LightPosition"].Set(light.position);
+		uboView["LightDirection"].Set(ei::normalize(light.direction));
+		uboView["LightCosHalfAngle"].Set(cosf(light.halfAngle));
+	}
+}
+
 void Renderer::BindObjectUBO(unsigned int _objectIndex)
 {
-	m_uboRing_PerObject->BindBlockAsUBO(m_perObjectUBOBindingPoint, _objectIndex);
+	m_uboRing_PerObject->BindBlockAsUBO(m_uboInfoPerObject.bufferBinding, _objectIndex);
 }
 
 void Renderer::OutputHDRTextureToBackbuffer()
@@ -325,17 +348,9 @@ void Renderer::DrawLights()
 	m_GBuffer_depth->Bind(2);
 
 
-	for (auto light : m_scene->GetLights())
+	for (unsigned int lightIndex = 0; lightIndex < m_scene->GetLights().size(); ++lightIndex)
 	{
-		Assert(light.type == Light::Type::SPOT, "Only spot lights are supported so far!");
-
-		gl::MappedUBOView uboView(m_uboInfoSpotLight, m_uboSpotLight->Map(gl::Buffer::MapType::WRITE, gl::Buffer::MapWriteFlag::INVALIDATE_BUFFER));
-		uboView["LightIntensity"].Set(light.intensity);
-		uboView["LightPosition"].Set(light.position);
-		uboView["LightDirection"].Set(ei::normalize(light.direction));
-		uboView["LightCosHalfAngle"].Set(cosf(light.halfAngle));
-		m_uboSpotLight->Unmap();
-
+		m_uboRing_SpotLight->BindBlockAsUBO(m_uboInfoSpotLight.bufferBinding, lightIndex);
 		m_screenTriangle->Draw();
 	}
 
@@ -354,17 +369,9 @@ void Renderer::DirectCacheLighting()
 
 	auto& spotuboInfo = m_shaderLightCachesDirect->GetUniformBufferInfo()["SpotLight"];
 
-	for (auto light : m_scene->GetLights())
+	for (unsigned int lightIndex = 0; lightIndex < m_scene->GetLights().size(); ++lightIndex)
 	{
-		Assert(light.type == Light::Type::SPOT, "Only spot lights are supported so far!");
-
-		gl::MappedUBOView uboView(spotuboInfo, m_uboSpotLight->Map(gl::Buffer::MapType::WRITE, gl::Buffer::MapWriteFlag::INVALIDATE_BUFFER));
-		uboView["LightIntensity"].Set(light.intensity);
-		uboView["LightPosition"].Set(light.position);
-		uboView["LightDirection"].Set(ei::normalize(light.direction));
-		uboView["LightCosHalfAngle"].Set(cosf(light.halfAngle));
-		m_uboSpotLight->Unmap();
-		
+		m_uboRing_SpotLight->BindBlockAsUBO(m_uboInfoSpotLight.bufferBinding, lightIndex);
 		GL_CALL(glDispatchComputeIndirect, 0);
 	}
 }

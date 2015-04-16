@@ -47,3 +47,8 @@
 
 # Data
 /models/
+/ivct/FileWatcher/FileWatcherLinux.cpp
+/ivct/FileWatcher/FileWatcherLinux.h
+/ivct/FileWatcher/FileWatcherOSX.cpp
+/ivct/FileWatcher/FileWatcherOSX.h
+/ivct/log.txt

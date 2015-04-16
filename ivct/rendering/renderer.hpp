@@ -49,6 +49,8 @@ private:
 
 	void LoadShader();
 
+	unsigned int RoundSizeToUBOAlignment(unsigned int size) { return size + (m_UBOAlignment - size % m_UBOAlignment) % m_UBOAlignment; }
+
 	void UpdateConstantUBO(); 
 	void UpdatePerFrameUBO(const Camera& camera);
 
@@ -108,7 +110,7 @@ private:
 	ShaderPtr m_shaderDeferredDirectLighting_Spot;
 
 	gl::UniformBufferMetaInfo m_uboInfoSpotLight;
-	BufferPtr m_uboSpotLight;
+	std::unique_ptr<gl::PersistentRingBuffer> m_uboRing_SpotLight;
 
 
 	Texture2DPtr m_GBuffer_diffuse;
@@ -148,10 +150,8 @@ private:
 	BufferPtr m_uboConstant;
 	gl::UniformBufferMetaInfo m_uboInfoPerFrame;
 	BufferPtr m_uboPerFrame;
-
+	gl::UniformBufferMetaInfo m_uboInfoPerObject;
 	std::unique_ptr<gl::PersistentRingBuffer> m_uboRing_PerObject;
-	unsigned int m_perObjectUBOBindingPoint;
-	unsigned int m_perObjectUBOSize;
 
 	const gl::SamplerObject& m_samplerLinear;
 	const gl::SamplerObject& m_samplerNearest;
