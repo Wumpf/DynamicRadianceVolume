@@ -33,11 +33,11 @@ void main()
 	FragColor = vec4(abs(rayDirection), 1.0);
 
 	float rayHit = 0.0;
-	if(IntersectBox(CameraPosition, rayDirection, VoxelVolumeWorldMin, VoxelVolumeWorldMax, rayHit))
+	if(IntersectBox(CameraPosition, rayDirection, VolumeWorldMin, VolumeWorldMax, rayHit))
 	{
 		float stepSize = VoxelSizeInWorld.x * 0.1;
 
-		vec3 voxelHitPos = (CameraPosition + (rayHit + stepSize) * rayDirection - VoxelVolumeWorldMin) / VoxelSizeInWorld;
+		vec3 voxelHitPos = (CameraPosition + (rayHit + stepSize) * rayDirection - VolumeWorldMin) / VoxelSizeInWorld;
 		float totalIntensity = 0.0f;
 
 		vec3 rayMarchStep = rayDirection * stepSize / VoxelSizeInWorld;

@@ -11,6 +11,7 @@ namespace gl
 	class ShaderObject;
 	class ScreenAlignedTriangle;
 	class Texture2D;
+	class Texture3D;
 	class SamplerObject;
 	class UniformBufferView;
 	class PersistentRingBuffer;
@@ -33,9 +34,8 @@ public:
 
 	void Draw(const Camera& camera);
 
-	void SetTrackLightCacheCreationStats(bool trackLightCacheCreationStats);
-	bool GetTrackLightCacheCreationStats() const;
-	unsigned int GetLightCacheHashCollisionCount() const;
+	void SetReadLightCacheCount(bool trackLightCacheCreationStats);
+	bool GetReadLightCacheCount() const;
 	unsigned int GetLightCacheActiveCount() const;
 
 	void BindObjectUBO(unsigned int _objectIndex);
@@ -54,17 +54,23 @@ private:
 	void DrawSceneToGBuffer();
 	/// Draws GBuffer directly to the (hardware) backbuffer.
 	void DrawGBufferDebug();
+
 	/// Performs direct lighting for all lights.
 	void DrawLights();
-
-	void WriteCacheRequests();
-
+	
 	void OutputHDRTextureToBackbuffer();
+
+	void GatherLightCaches();
+	void ApplyLightCaches();
+
+	/// Applies direct light to caches (mainly for debug purposes)
+	void DirectCacheLighting();
 
 	/// Draws scene, mesh by mesh.
 	///
 	/// Does set VAO, VBO and index buffers but nothing else. No culling!
 	void DrawScene(bool setTextures);
+
 
 	int m_UBOAlignment;
 
@@ -84,9 +90,25 @@ private:
 	unsigned int m_perObjectUBOBindingPoint;
 	unsigned int m_perObjectUBOSize;
 
-	std::unique_ptr<gl::ShaderObject> m_shaderRequestLightCaches;
-	std::unique_ptr<gl::ShaderObject> m_shaderApplyLightCaches;
-	
+
+
+	std::unique_ptr<gl::ShaderObject> m_shaderCacheGather;
+	std::unique_ptr<gl::ShaderObject> m_shaderCacheApply;
+
+	//unsigned int m_lightCacheHashMapSize;
+	//std::unique_ptr<gl::ShaderStorageBufferView> m_lightCacheHashMap;
+
+	std::unique_ptr<gl::Texture3D> m_lightCacheAddressVolume;
+
+	unsigned int m_maxNumLightCaches;
+	bool m_readLightCacheCount;
+	unsigned int m_lastNumLightCaches;
+	std::unique_ptr<gl::ShaderStorageBufferView> m_lightCacheBuffer;
+	std::unique_ptr<gl::ShaderStorageBufferView> m_lightCacheCounter;
+
+	std::unique_ptr<gl::ShaderObject> m_shaderLightCachesDirect;
+
+
 
 	std::unique_ptr<gl::Texture2D> m_GBuffer_diffuse;
 	std::unique_ptr<gl::Texture2D> m_GBuffer_normal;

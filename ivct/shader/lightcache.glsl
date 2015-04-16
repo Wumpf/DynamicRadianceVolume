@@ -1,67 +1,86 @@
+#define LIGHTCACHEMODE_CREATE 0
+#define LIGHTCACHEMODE_LIGHT 1
+#define LIGHTCACHEMODE_APPLY 2
+
+#if LIGHTCACHEMODE == LIGHTCACHEMODE_CREATE
+	#define LIGHTCACHE_BUFFER_MODIFIER restrict writeonly
+	#define LIGHTCACHE_HASHMAP_MODIFIER restrict
+	#define LIGHTCACHE_COUNTER_MODIFIER restrict coherent
+#elif LIGHTCACHEMODE == LIGHTCACHEMODE_LIGHT
+	#define LIGHTCACHE_BUFFER_MODIFIER restrict
+	#define LIGHTCACHE_HASHMAP_MODIFIER restrict readonly
+	#define LIGHTCACHE_COUNTER_MODIFIER restrict readonly
+#elif LIGHTCACHEMODE == LIGHTCACHEMODE_APPLY
+	#define LIGHTCACHE_BUFFER_MODIFIER restrict readonly
+	#define LIGHTCACHE_HASHMAP_MODIFIER restrict readonly
+	#define LIGHTCACHE_COUNTER_MODIFIER restrict readonly
+#else
+	#error "Please specify LIGHTCACHEMODE!"
+#endif
+
+
+
 struct LightCacheEntry
 {
-	// x + y * WIDTH + z * WIDTH*HEIGHT + 1 (+1 by convetion for easy clear -> 0 is nothing)
-	vec3 Normal;
-	int Position;
+	vec3 Position; // Consider storing packed identifier!
+	float _padding0;
+
+
+	// Irradiance via SH (band, coefficient)
+	// Consider packing!
+	vec3 SH1neg1;
+	float SH00_r;
+	vec3 SH10;
+	float SH00_g;
+	vec3 SH1pos1;
+	float SH00_b;
+
+/*	vec3 SH2neg2;
+	float SH20_r;
+	vec3 SH2neg1;
+	float SH20_g;
+	vec3 SH2pos1;
+	float SH20_b;
+	vec3 SH2pos2;
+	float _padding1;*/
 };
-layout(std430, binding = 0) restrict buffer LightCaches
+
+layout(std430, binding = 0) LIGHTCACHE_BUFFER_MODIFIER buffer LightCacheBuffer
 {
 	LightCacheEntry[] LightCacheEntries;
 };
 
-#ifdef LIGHTCACHE_CREATION_STATS
-	layout(std430, binding = 1) restrict buffer LightCacheStats
-	{
-		int LightCacheHashCollisionCount;
-		int LightCacheActiveCount;
-	};
+layout(std430, binding = 1) LIGHTCACHE_COUNTER_MODIFIER buffer LightCacheCounter
+{
+	uint NumCacheLightingThreadGroupsX; // Should be (TotalLightCacheCount + LIGHTING_THREADS_PER_GROUP - 1) / LIGHTING_THREADS_PER_GROUP
+    uint NumCacheLightingThreadGroupsY; // Should be 1
+    uint NumCacheLightingThreadGroupsZ; // Should be 1
+
+    int TotalLightCacheCount;
+};
+
+
+// Alternative adress storing
+/*struct LightCacheHashEntry
+{
+	uint Identifier;
+	uint Address;
+};
+
+layout(std430, binding = 2) LIGHTCACHE_HASHMAP_MODIFIER buffer LightCacheHashMap
+{
+	LightCacheHashEntry[] LightCacheHashEntries;
+};*/
+
+// Grid address storage
+#if LIGHTCACHEMODE == LIGHTCACHEMODE_CREATE
+	layout(binding = 0, r32ui) restrict coherent uniform uimage3D VoxelAddressVolume;
+#else
+	layout(binding = 3) uniform usampler3D VoxelAddressVolume;
 #endif
 
 
+#define LIGHTING_THREADS_PER_GROUP 512
+
 // Infos encoded in 8bit voxel grid
-#define CACHE_NEEDED_BIT uint(1)
 #define SOLID_BIT uint(2)
-
-
-int CacheHashFunction(int cachePositionInt)
-{
-	return cachePositionInt % MaxNumLightCaches;
-}
-
-int GetCacheHash(ivec3 voxelPosition, out int cachePositionInt)
-{
-	cachePositionInt = int(voxelPosition.x + (voxelPosition.y + voxelPosition.z * VoxelResolution) * VoxelResolution);
-	return CacheHashFunction(cachePositionInt);
-}
-
-int GetCacheHash(vec3 worldPosition, out int cachePositionInt)
-{
-	ivec3 voxelPosition = ivec3((worldPosition - VoxelVolumeWorldMin) / VoxelSizeInWorld + vec3(0.5));
-	return GetCacheHash(voxelPosition, cachePositionInt);
-}
-
-// Indices:
-#define INDEX_000 0
-#define INDEX_100 1
-#define INDEX_010 2
-#define INDEX_110 3
-#define INDEX_001 4
-#define INDEX_101 5
-#define INDEX_011 6
-#define INDEX_111 7
-void GetCacheHashNeighbors(vec3 worldPosition, out int cachePosition[8], out int cacheHash[8])
-{
-	ivec3 cachePositionVec3Grid = ivec3((worldPosition - VoxelVolumeWorldMin) / VoxelSizeInWorld + vec3(0.001));
-
-	cachePosition[INDEX_000] = int(cachePositionVec3Grid.x + (cachePositionVec3Grid.y + cachePositionVec3Grid.z * VoxelResolution) * VoxelResolution);
-	cachePosition[INDEX_100] = cachePosition[INDEX_000] + 1;
-	cachePosition[INDEX_010] = cachePosition[INDEX_000] + VoxelResolution;
-	cachePosition[INDEX_110] = cachePosition[INDEX_010] + 1;
-	cachePosition[INDEX_001] = cachePosition[INDEX_000] + VoxelResolution * VoxelResolution;
-	cachePosition[INDEX_101] = cachePosition[INDEX_001] + 1;
-	cachePosition[INDEX_011] = cachePosition[INDEX_001] + VoxelResolution;
-	cachePosition[INDEX_111] = cachePosition[INDEX_011] + 1;
-
-	for(int i=0; i<8; ++i)
-		cacheHash[i] = CacheHashFunction(cachePosition[i]);
-}

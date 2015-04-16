@@ -11,59 +11,11 @@ layout(location = 1) in vec2 gs_out_Texcoord;
 layout(location = 2) in flat int gs_out_SideIndex;
 layout(location = 3) in flat vec4 gs_out_RasterAABB;
 
-layout(binding = 0, r8ui) restrict uniform uimage3D VoxelVolume;
+layout(binding = 0, r8ui) restrict writeonly uniform uimage3D VoxelVolume;
 
 ivec3 UnswizzlePos(ivec3 pos)
 {
 	return gs_out_SideIndex == 0 ? pos.zyx : (gs_out_SideIndex == 1 ? pos.xzy : pos.xyz);
-}
-
-void RecordCache(ivec3 voxelPos)
-{
-	int cachePositionInt;
-	int cacheIndex = GetCacheHash(voxelPos, cachePositionInt);
-
-	// If no position was written to this cache, change position.
-	int oldCachePosition = atomicCompSwap(LightCacheEntries[cacheIndex].Position, 0, cachePositionInt+1);
-
-	#ifdef LIGHTCACHE_CREATION_STATS
-		if(oldCachePosition == 0)
-		{
-			atomicAdd(LightCacheActiveCount, 1);
-		}
-	#endif
-
-	// Already used and not this position
-	while(oldCachePosition != cachePositionInt+1 && oldCachePosition != 0)
-	{
-		#ifdef LIGHTCACHE_CREATION_STATS
-			atomicAdd(LightCacheHashCollisionCount, 1);
-		#endif
-
-		cacheIndex = (cacheIndex + 1) % MaxNumLightCaches;
-		oldCachePosition = atomicCompSwap(LightCacheEntries[cacheIndex].Position, 0, cachePositionInt+1);
-	}
-
-	atomicAdd(LightCacheEntries[cacheIndex].Normal.x, gs_out_Normal.x);
-	atomicAdd(LightCacheEntries[cacheIndex].Normal.y, gs_out_Normal.y);
-	atomicAdd(LightCacheEntries[cacheIndex].Normal.z, gs_out_Normal.z);
-}
-
-void StoreVoxelAndCache(ivec3 voxelPosSwizzledI)
-{
-	ivec3 voxelPos = UnswizzlePos(voxelPosSwizzledI);
-	uint oldVoxelValue = imageLoad(VoxelVolume, voxelPos).r;
-
-	// Store cache only if a cache is ordered
-	if((oldVoxelValue & CACHE_NEEDED_BIT) != 0)
-	{
-		RecordCache(voxelPos);
-	}
-	// Store voxel only if there is not already one (needed to read it anyways)
-	if((oldVoxelValue & SOLID_BIT) == 0) // Branch helpful?
-	{
-		imageStore(VoxelVolume, voxelPos, uvec4(oldVoxelValue | SOLID_BIT));
-	}
 }
 
 void main()
@@ -81,7 +33,7 @@ void main()
 	voxelPosSwizzled.z = gl_FragCoord.z*VoxelResolution;
 	ivec3 voxelPosSwizzledI = ivec3(voxelPosSwizzled + vec3(0.5));
 
-	StoreVoxelAndCache(voxelPosSwizzledI);
+	imageStore(VoxelVolume, UnswizzlePos(voxelPosSwizzledI), uvec4(1));
 
 	// "Depth Conservative"
 	float depthDx = dFdxCoarse(voxelPosSwizzled.z);
@@ -98,12 +50,12 @@ void main()
 	{
 		ivec3 voxelPosMin = voxelPosSwizzledI;
 		voxelPosMin -= 1;
-		StoreVoxelAndCache(voxelPosMin);
+		imageStore(VoxelVolume, UnswizzlePos(voxelPosMin), uvec4(1));
 	}
 	if(voxelPosSwizzledI.z != maxDepthVoxel)
   	{
   		ivec3 voxelPosMax = voxelPosSwizzledI;
 		voxelPosMax.z += 1;
-  		StoreVoxelAndCache(voxelPosMax);
+  		imageStore(VoxelVolume, UnswizzlePos(voxelPosMax), uvec4(1));
   	}
 }

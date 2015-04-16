@@ -24,6 +24,12 @@ float GetLuminance(vec3 rgb)
 	return dot(rgb, W);
 }
 
+// Expects: vec2(atan(normal.y, normal.x), normal.z)
+vec3 UnpackNormal(vec2 packedNormal)
+{
+	float sinPhi = sqrt(1.0 - packedNormal.y*packedNormal.y);
+	return normalize(vec3(cos(packedNormal.x)*sinPhi, sin(packedNormal.x)*sinPhi, packedNormal.y));
+}
 
 // Expects: vec2(atan(normal.y, normal.x), normal.z), remapped to 16bit int
 vec3 UnpackNormal16I(vec2 packedNormal)
@@ -32,12 +38,12 @@ vec3 UnpackNormal16I(vec2 packedNormal)
 	packedNormal.x *= PI / 32767.0;
 	packedNormal.y *= 1.0 / 32767.0;
 
-	float sinPhi = sqrt(1.0 - packedNormal.y*packedNormal.y);
-	return normalize(vec3(cos(packedNormal.x)*sinPhi, sin(packedNormal.x)*sinPhi, packedNormal.y));
+	return UnpackNormal(packedNormal);
 }
 
-// Returns: vec2(atan(normal.y, normal.x), normal.z)
-ivec2 PackNormal16I(vec3 normal)
+
+// Returns: vec2(atan(normal.y, normal.x), normal.z), packed for 16 bit signed integer output
+vec2 PackNormal(vec3 normal)
 {
 	// Invalid implementation which tries to remove division by 0 with an epsilon:
 	//const float ATAN_EPS = 0.0001;
@@ -50,9 +56,24 @@ ivec2 PackNormal16I(vec3 normal)
 	// Alternative fix (selfmade):
 	// When x is zero then cos(packedNormal0)==0. So packedNormal0 may be +-PI/2
 	// dependent on the sign of y.
-	float packedNormal0 = normal.x == 0.0 ? (sign(normal.y)*PI/2) : atan(normal.y, normal.x);
-	float packedNormal1 = normal.z;
+	vec2 packedNormal;
+	packedNormal.x = normal.x == 0.0 ? (sign(normal.y)*PI/2) : atan(normal.y, normal.x);
+	packedNormal.y = normal.z;
+
+	return packedNormal;
+}
+
+// Returns: vec2(atan(normal.y, normal.x), normal.z)
+ivec2 PackNormal16I(vec3 normal)
+{
+	vec2 packedNormal = PackNormal(normal);
 
 	// Pack to 16bit signed int.
-	return ivec2(packedNormal0 * (32767.0 / PI), packedNormal1 * 32767.0);
+	return ivec2(packedNormal.x * (32767.0 / PI), packedNormal.y * 32767.0);
+}
+
+bool IsOnScreen(vec4 clipspaceCoordinate)
+{
+	return all(lessThanEqual(clipspaceCoordinate.xyz, clipspaceCoordinate.www)) && 
+			all(lessThanEqual(vec3(-clipspaceCoordinate.ww, 0.0), clipspaceCoordinate.xyz));
 }

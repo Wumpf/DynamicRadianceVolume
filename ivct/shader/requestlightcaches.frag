@@ -20,7 +20,7 @@ void main()
 	vec4 worldPosition4D = vec4(Texcoord * 2.0 - vec2(1.0), depthBufferDepth, 1.0) * InverseViewProjection;
 	vec3 worldPosition = worldPosition4D.xyz / worldPosition4D.w;
 
-	ivec3 voxelPosition = ivec3((worldPosition - VoxelVolumeWorldMin) / VoxelSizeInWorld  + vec3(0.001));
+	ivec3 voxelPosition = ivec3((worldPosition - VolumeWorldMin) / VoxelSizeInWorld  + vec3(0.001));
 	voxelPosition = clamp(voxelPosition, ivec3(0), ivec3(VoxelResolution-2));
 
 	imageStore(VoxelVolume, voxelPosition + ivec3(0, 0, 0), uvec4(CACHE_NEEDED_BIT));
