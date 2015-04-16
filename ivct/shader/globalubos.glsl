@@ -34,12 +34,16 @@ layout(binding = 2, shared) uniform PerObject
 layout(binding = 3, shared) uniform SpotLight
 {
 	vec3 LightIntensity;
+	float ShadowNormalOffset;
+	float ShadowBias;
 	
 	vec3 LightPosition;
-	uint ShadowMapResolution;
+	
 
 	vec3 LightDirection;
 	float LightCosHalfAngle;
 
 	mat4 LightViewProjection;
+
+	int ShadowMapResolution;
 };

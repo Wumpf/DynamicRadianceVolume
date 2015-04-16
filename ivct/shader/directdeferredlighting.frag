@@ -27,22 +27,27 @@ void main()
 	vec3 worldPosition = worldPosition4D.xyz / worldPosition4D.w;
 	vec3 worldNormal = UnpackNormal16I(texture(GBuffer_Normal, Texcoord).rg);
 
-	// Check if shadowed
-	vec4 shadowProjection = vec4(worldPosition, 1.0) * World * LightViewProjection;
-	shadowProjection.xyz /= shadowProjection.w;
-	shadowProjection.xy = shadowProjection.xy * 0.5 + vec2(0.5);
-	shadowProjection.z += 0.001;
-	float shadowing = textureLod(ShadowMap, shadowProjection.xyz, 0);
-
-	if(shadowing == 0.0)
-		discard;
-
 	// Direction and distance to light.
 	vec3 toLight = LightPosition - worldPosition;
 //	if(dot(toLight, worldNormal) > 0) // Early out if facing away from the light. 
 //		discard;
 	float lightDistanceSq = dot(toLight, toLight);
 	toLight *= inversesqrt(lightDistanceSq);
+	float cosTheta = saturate(dot(toLight, worldNormal));
+
+	// Check if shadowed - Using normal offset shadow bias http://www.dissidentlogic.com/old/#Normal%20Offset%20Shadows
+	//float shadowMapTexelSize = 1.0 / ShadowMapResolution; // Could be scaled with distance. Recheck if there are problems with distant objects.
+	float normalOffsetScale = ShadowNormalOffset * (1.0 - cosTheta);// * shadowMapTexelSize;
+	vec4 shadowProjection;
+	shadowProjection.xy = (vec4(worldPosition + normalOffsetScale * worldNormal, 1.0) * LightViewProjection).xy;
+	shadowProjection.zw = (vec4(worldPosition, 1.0) * LightViewProjection).zw;
+	shadowProjection.xy = shadowProjection.xy * 0.5 + vec2(0.5 * shadowProjection.w);
+	shadowProjection.z += ShadowBias;
+	float shadowing = textureProjLod(ShadowMap, shadowProjection, 0);
+
+	if(shadowing == 0.0)
+		discard;
+
 
 	// Direction to camera.
 	vec3 toCamera = normalize(vec3(CameraPosition - worldPosition));
@@ -51,7 +56,6 @@ void main()
 	vec3 diffuseColor = textureLod(GBuffer_Diffuse, Texcoord, 0).rgb;
 	
 	// Evaluate direct light.
-	float cosTheta = saturate(dot(toLight, worldNormal));
 	vec3 irradiance = LightIntensity * (shadowing * ComputeSpotFalloff(toLight) * cosTheta / lightDistanceSq);
 	OutputColor = BRDF(toLight, toCamera, diffuseColor) * irradiance;
 }

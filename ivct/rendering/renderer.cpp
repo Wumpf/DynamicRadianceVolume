@@ -285,6 +285,9 @@ void Renderer::PrepareLights()
 
 		gl::MappedUBOView uboView(m_uboInfoSpotLight, blockMemory);
 		uboView["LightIntensity"].Set(light.intensity);
+		uboView["ShadowNormalOffset"].Set(light.normalOffsetShadowBias);
+		uboView["ShadowBias"].Set(light.shadowBias);
+		
 		uboView["LightPosition"].Set(light.position);
 		uboView["LightDirection"].Set(ei::normalize(light.direction));
 		uboView["LightCosHalfAngle"].Set(cosf(light.halfAngle));
@@ -292,6 +295,8 @@ void Renderer::PrepareLights()
 		ei::Mat4x4 lightView = ei::camera(light.position, light.direction);
 		ei::Mat4x4 lightProjection = ei::perspectiveDX(light.halfAngle * 2.0f, 1.0f, light.farPlane, light.nearPlane); // far and near intentionally swapped!
 		uboView["LightViewProjection"].Set(lightProjection * lightView);
+
+		uboView["ShadowMapResolution"].Set(static_cast<int>(light.shadowMapResolution));
 
 		// (Re)Init shadow map if necessary.
 		if (!m_shadowMaps[lightIndex].depth || m_shadowMaps[lightIndex].depth->GetWidth() != light.shadowMapResolution)

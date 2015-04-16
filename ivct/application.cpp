@@ -213,7 +213,10 @@ void Application::ChangeLightCount(unsigned int lightCount)
 		m_tweakBar->Remove(namePrefix + "Intensity");
 		m_tweakBar->Remove(namePrefix + "Position");
 		m_tweakBar->Remove(namePrefix + "Direction");
-		m_tweakBar->Remove(namePrefix + "HalfAngle");		
+		m_tweakBar->Remove(namePrefix + "HalfAngle");	
+		m_tweakBar->Remove(namePrefix + "ShadowMapResolution");
+		m_tweakBar->Remove(namePrefix + "NormalBias");
+		m_tweakBar->Remove(namePrefix + "Bias");
 	}
 	for (size_t i = oldLightCount; i < lightCount; ++i)
 	{
@@ -233,7 +236,16 @@ void Application::ChangeLightCount(unsigned int lightCount)
 			[=](const ei::Vec3& v){ m_scene->GetLights()[i].direction = v; }, groupSetting + " label=Direction");
 
 		m_tweakBar->AddReadWrite<float>(namePrefix + "HalfAngle", [=](){ return m_scene->GetLights()[i].halfAngle; },
-			[=](const float& f){ m_scene->GetLights()[i].halfAngle = f; }, groupSetting + " label=HalfAngle min=0.01 max=1.57 step=0.01 label=HalfAngle");
+			[=](const float& f){ m_scene->GetLights()[i].halfAngle = f; }, groupSetting + " label=HalfAngle min=0.01 max=1.57 step=0.01");
+
+		m_tweakBar->AddReadWrite<int>(namePrefix + "ShadowMap Resolution", [=](){ return m_scene->GetLights()[i].shadowMapResolution; },
+			[=](const int& res){ m_scene->GetLights()[i].shadowMapResolution = res; }, groupSetting + " label=\"Shadow Map Resolution\" min=16 max=2048 step=16");
+
+		m_tweakBar->AddReadWrite<float>(namePrefix + "NormalBias", [=](){ return m_scene->GetLights()[i].normalOffsetShadowBias; },
+			[=](const float& f){ m_scene->GetLights()[i].normalOffsetShadowBias = f; }, groupSetting + " label=\"NormalOffset Shadow Bias\" min=0.00 max=100.0 step=0.001");
+
+		m_tweakBar->AddReadWrite<float>(namePrefix + "Bias", [=](){ return m_scene->GetLights()[i].shadowBias; },
+			[=](const float& f){ m_scene->GetLights()[i].shadowBias = f; }, groupSetting + " label=\"Shadow Bias\" min=0.00 max=1.0 step=0.00001");
 
 		m_tweakBar->SetGroupProperties(lightGroup, "Lights", lightGroup, false);
 	}
