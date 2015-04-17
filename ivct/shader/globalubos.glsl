@@ -35,8 +35,8 @@ layout(binding = 3, shared) uniform SpotLight
 {
 	vec3 LightIntensity;
 	float ShadowNormalOffset;
+
 	float ShadowBias;
-	
 	vec3 LightPosition;
 	
 	vec3 LightDirection;
@@ -46,4 +46,5 @@ layout(binding = 3, shared) uniform SpotLight
 	mat4 InverseLightViewProjection;
 
 	int ShadowMapResolution;
+	float ValAreaFactor; // NearClipWidth * NearClipHeight / (NearClipPlaneDepth² * RSMResolution * RSMResolution)
 };

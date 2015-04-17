@@ -39,28 +39,34 @@ void main()
 		for(; rsmSamplePos.y<ShadowMapResolution; ++rsmSamplePos.y)
 		{
 			float lightDepth = texelFetch(RSM_Depth, rsmSamplePos, 0).r;
-			vec4 vplPosition = vec4((rsmSamplePos + vec2(0.5)) / ShadowMapResolution * 2.0 - vec2(1.0), lightDepth, 1.0) * InverseLightViewProjection;
-			vplPosition.xyz /= vplPosition.w;
+			vec4 valPosition = vec4((rsmSamplePos + vec2(0.5)) / ShadowMapResolution * 2.0 - vec2(1.0), lightDepth, 1.0) * InverseLightViewProjection;
+			valPosition.xyz /= valPosition.w;
 
 			// Direction and distance to light.
-			vec3 toVpl = vplPosition.xyz - worldPosition;
+			vec3 toVal = valPosition.xyz - worldPosition;
 			//if(dot(toVpl, worldNormal) > 0) // Early out if facing away from the light. 
 			//	continue;
-			float lightDistanceSq = dot(toVpl, toVpl);
-			toVpl *= inversesqrt(lightDistanceSq);
-			float cosTheta = saturate(dot(toVpl, worldNormal));
+			float lightDistanceSq = dot(toVal, toVal);
+			toVal *= inversesqrt(lightDistanceSq);
+			float cosTheta = saturate(dot(toVal, worldNormal));
 
 			// Light intensity
-			vec3 vplFlux = texelFetch(RSM_Flux, rsmSamplePos, 0).rgb;
-			vec3 vplNormal = UnpackNormal16I(texelFetch(RSM_Normal, rsmSamplePos, 0).xy);
-			vec3 vplIntensity = vplFlux * saturate(dot(vplNormal, -toVpl));
+			vec3 valTotalExitantFlux = texelFetch(RSM_Flux, rsmSamplePos, 0).rgb;
+			vec3 valNormal = UnpackNormal16I(texelFetch(RSM_Normal, rsmSamplePos, 0).xy);
 
 			// Direction to camera.
 			vec3 toCamera = normalize(vec3(CameraPosition - worldPosition));
 			
-			// Evaluate light.
-			vec3 irradiance = vplIntensity * (cosTheta / lightDistanceSq);
-			OutputColor += BRDF(toVpl, toCamera, diffuseColor) * irradiance;
+			// Handle light as disc with area. This can be computed analytically for the diffuse term.
+			vec3 valToLight = valPosition.xyz - LightPosition;
+			float valToLightDistSq = dot(valToLight, valToLight); // todo: Compute directly from lightDepth
+			float valArea = valToLightDistSq * ValAreaFactor;
+			float fluxToIntensity = saturate(dot(valNormal, -toVal)) / PI;
+			float fluxToIrradiance = fluxToIntensity * cosTheta / (lightDistanceSq * PI + valArea); // lightDistanceSq * PI? TODO: Be more sure of this. The VPL variant is currently much brighter.
+			//float fluxToIrradiance = fluxToIntensity * cosTheta / (lightDistanceSq); // VPL instead of VAL
+
+			vec3 irradiance = valTotalExitantFlux * fluxToIrradiance;
+			OutputColor += /*BRDF(toVal, toCamera, diffuseColor)*/ diffuseColor * irradiance;
 		}	
 	}
 }

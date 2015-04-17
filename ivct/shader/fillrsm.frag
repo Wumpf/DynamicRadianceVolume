@@ -17,9 +17,14 @@ void main()
 {
 	vec3 toLight = normalize(LightPosition - Position);
 	float cosToLight = dot(-toLight, LightDirection);
-	float pixelSrPercentage = cosToLight;
-	float spotFalloff = ComputeSpotFalloff(cosToLight);
-	OutFlux = texture(DiffuseTexture, Texcoord).rgb * LightIntensity * 
-					(spotFalloff * pixelSrPercentage / ShadowMapResolution / ShadowMapResolution);
+	float pixelSteradian = cosToLight / ShadowMapResolution / ShadowMapResolution; // cos(alpha) / pixel area
+	float spotFalloff = ComputeSpotFalloff(cosToLight); 
+
+	// Actual intensity for given Direction = spotFallOff * LightIntensity
+	// Remember: Intensity = Flux per Steradian
+	// -> total incoming flux = Intensity * PixelSteradian
+	// -> total outgoing flux = Incoming Flux * "reflectivity"
+
+	OutFlux = texture(DiffuseTexture, Texcoord).rgb * LightIntensity * (spotFalloff * pixelSteradian);
 	OutPackedNormal = PackNormal16I(normalize(Normal));
 }

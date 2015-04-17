@@ -301,12 +301,19 @@ void Renderer::PrepareLights()
 		uboView["LightDirection"].Set(ei::normalize(light.direction));
 		uboView["LightCosHalfAngle"].Set(cosf(light.halfAngle));
 
-		ei::Mat4x4 lightView = ei::camera(light.position, light.position + light.direction);
-		ei::Mat4x4 lightProjection = ei::perspectiveDX(light.halfAngle * 2.0f, 1.0f, light.farPlane, light.nearPlane); // far and near intentionally swapped!
-		uboView["LightViewProjection"].Set(lightProjection * lightView);
-		uboView["InverseLightViewProjection"].Set(ei::invert(lightProjection * lightView));
+		ei::Mat4x4 view = ei::camera(light.position, light.position + light.direction);
+		ei::Mat4x4 projection = ei::perspectiveDX(light.halfAngle * 2.0f, 1.0f, light.farPlane, light.nearPlane); // far and near intentionally swapped!
+		ei::Mat4x4 viewProjection = projection * view;
+		ei::Mat4x4 inverseViewProjection = ei::invert(viewProjection);
+		uboView["LightViewProjection"].Set(viewProjection);
+		uboView["InverseLightViewProjection"].Set(inverseViewProjection);
 
 		uboView["ShadowMapResolution"].Set(static_cast<int>(light.shadowMapResolution));
+
+		float clipPlaneWidth = sinf(light.halfAngle) * light.nearPlane * 2.0f;
+		float valAreaFactor = clipPlaneWidth * clipPlaneWidth / (light.nearPlane * light.nearPlane * light.shadowMapResolution * light.shadowMapResolution);
+		//float valAreaFactor = powf(sinf(light.halfAngle) * 2.0f / light.shadowMapResolution, 2.0);
+		uboView["ValAreaFactor"].Set(valAreaFactor);
 
 		// (Re)Init shadow map if necessary.
 		if (!m_shadowMaps[lightIndex].depth || m_shadowMaps[lightIndex].depth->GetWidth() != light.shadowMapResolution)
