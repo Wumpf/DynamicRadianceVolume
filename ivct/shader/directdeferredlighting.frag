@@ -10,16 +10,6 @@ layout(binding=3) uniform sampler2DShadow ShadowMap;
 in vec2 Texcoord;
 out vec3 OutputColor;
 
-// Evaluates BRDF.
-// Attention: Parameter directions are not as (often) given in theoretical notation!
-vec3 BRDF(vec3 toLight, vec3 toCamera, vec3 diffuseColor)
-{
-	// Diffuse Term
-	vec3 brdf = diffuseColor; // Omitted 1/PI!
-
-	return brdf;
-}
-
 void main()
 {
 	// Get world position and normal.

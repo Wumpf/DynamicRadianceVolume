@@ -238,7 +238,7 @@ void Application::ChangeLightCount(unsigned int lightCount)
 		m_tweakBar->AddReadWrite<float>(namePrefix + "HalfAngle", [=](){ return m_scene->GetLights()[i].halfAngle; },
 			[=](const float& f){ m_scene->GetLights()[i].halfAngle = f; }, groupSetting + " label=HalfAngle min=0.01 max=1.57 step=0.01");
 
-		m_tweakBar->AddReadWrite<int>(namePrefix + "ShadowMap Resolution", [=](){ return m_scene->GetLights()[i].shadowMapResolution; },
+		m_tweakBar->AddReadWrite<int>(namePrefix + "ShadowMapResolution", [=](){ return m_scene->GetLights()[i].shadowMapResolution; },
 			[=](const int& res){ m_scene->GetLights()[i].shadowMapResolution = res; }, groupSetting + " label=\"Shadow Map Resolution\" min=16 max=2048 step=16");
 
 		m_tweakBar->AddReadWrite<float>(namePrefix + "NormalBias", [=](){ return m_scene->GetLights()[i].normalOffsetShadowBias; },

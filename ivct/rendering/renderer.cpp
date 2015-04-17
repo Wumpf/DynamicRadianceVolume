@@ -93,6 +93,8 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 
 	// The OpenGL clip space convention uses depth -1 to 1 which is remapped again. In GL4.5 it is possible to disable this
 	GL_CALL(glClipControl, GL_LOWER_LEFT, GL_ZERO_TO_ONE);
+
+	GL_CALL(glBlendFunc, GL_ONE, GL_ONE);
 }
 
 Renderer::~Renderer()
@@ -142,10 +144,15 @@ void Renderer::LoadShader()
 	m_shaderLightCachesDirect->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cacheLightingDirect.comp");
 	m_shaderLightCachesDirect->CreateProgram();
 
+	m_shaderIndirectLightingBruteForceRSM = std::make_unique<gl::ShaderObject>("apply caches");
+	m_shaderIndirectLightingBruteForceRSM->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
+	m_shaderIndirectLightingBruteForceRSM->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/bruteforcersm.frag");
+	m_shaderIndirectLightingBruteForceRSM->CreateProgram();
 
 	// Register all shader for auto reload on change.
 	m_allShaders = { m_shaderDebugGBuffer.get(), m_shaderFillGBuffer.get(), m_shaderDeferredDirectLighting_Spot.get(), 
-						m_shaderTonemap.get(), m_shaderCacheGather.get(), m_shaderCacheApply.get(), m_shaderLightCachesDirect.get() };
+						m_shaderTonemap.get(), m_shaderCacheGather.get(), m_shaderCacheApply.get(), m_shaderLightCachesDirect.get(),
+						m_shaderFillRSM.get(), m_shaderIndirectLightingBruteForceRSM.get() };
 	for (auto it : m_allShaders)
 		ShaderFileWatcher::Instance().RegisterShaderForReloadOnChange(it);
 }
@@ -228,7 +235,7 @@ void Renderer::Draw(const Camera& camera)
 	DrawShadowMaps();
 
 	// Light cache generation.
-	GatherLightCaches();
+	//GatherLightCaches();
 
 	// No more object drawing from now on.
 	m_uboRing_PerObject->CompleteFrame();
@@ -238,12 +245,14 @@ void Renderer::Draw(const Camera& camera)
 	
 	DrawLights();
 
-	DirectCacheLighting();
+	ApplyRSMsBruteForce();
+
+	//DirectCacheLighting();
 
 	// No light data needed from now on.
 	m_uboRing_SpotLight->CompleteFrame();
 	
-	ApplyLightCaches();
+	//ApplyLightCaches();
 	
 	OutputHDRTextureToBackbuffer();
 
@@ -292,9 +301,10 @@ void Renderer::PrepareLights()
 		uboView["LightDirection"].Set(ei::normalize(light.direction));
 		uboView["LightCosHalfAngle"].Set(cosf(light.halfAngle));
 
-		ei::Mat4x4 lightView = ei::camera(light.position, light.direction);
+		ei::Mat4x4 lightView = ei::camera(light.position, light.position + light.direction);
 		ei::Mat4x4 lightProjection = ei::perspectiveDX(light.halfAngle * 2.0f, 1.0f, light.farPlane, light.nearPlane); // far and near intentionally swapped!
 		uboView["LightViewProjection"].Set(lightProjection * lightView);
+		uboView["InverseLightViewProjection"].Set(ei::invert(lightProjection * lightView));
 
 		uboView["ShadowMapResolution"].Set(static_cast<int>(light.shadowMapResolution));
 
@@ -378,7 +388,6 @@ void Renderer::DrawLights()
 {
 	gl::Disable(gl::Cap::DEPTH_TEST);
 	gl::Enable(gl::Cap::BLEND);
-	glBlendFunc(GL_ONE, GL_ONE);
 
 	m_shaderDeferredDirectLighting_Spot->Activate();
 
@@ -402,9 +411,40 @@ void Renderer::DrawLights()
 	gl::Disable(gl::Cap::BLEND);
 }
 
+void Renderer::ApplyRSMsBruteForce()
+{
+	gl::Disable(gl::Cap::DEPTH_TEST);
+	gl::Enable(gl::Cap::BLEND);
+
+	m_shaderIndirectLightingBruteForceRSM->Activate();
+
+	m_GBuffer_diffuse->Bind(0);
+	m_GBuffer_normal->Bind(1);
+	m_GBuffer_depth->Bind(2);
+
+	m_samplerNearest.BindSampler(0);
+	m_samplerNearest.BindSampler(1);
+	m_samplerNearest.BindSampler(2);
+	m_samplerNearest.BindSampler(3);
+	m_samplerNearest.BindSampler(4);
+	m_samplerNearest.BindSampler(5);
+
+	for (unsigned int lightIndex = 0; lightIndex < m_scene->GetLights().size(); ++lightIndex)
+	{
+		m_shadowMaps[lightIndex].flux->Bind(3);
+		m_shadowMaps[lightIndex].depth->Bind(4);
+		m_shadowMaps[lightIndex].normal->Bind(5);
+
+		m_uboRing_SpotLight->BindBlockAsUBO(m_uboInfoSpotLight.bufferBinding, lightIndex);
+		m_screenTriangle->Draw();
+	}
+
+	gl::Disable(gl::Cap::BLEND);
+}
+
 void Renderer::DirectCacheLighting()
 {
-	GL_CALL(glBindBuffer, GL_DISPATCH_INDIRECT_BUFFER, m_lightCacheCounter->GetInternHandle());
+	m_lightCacheCounter->BindIndirectDispatchBuffer();
 	m_shaderLightCachesDirect->BindSSBO(*m_lightCacheBuffer, "LightCacheBuffer");
 	m_shaderLightCachesDirect->BindSSBO(*m_lightCacheCounter, "LightCacheCounter");
 

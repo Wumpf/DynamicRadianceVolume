@@ -59,6 +59,7 @@ private:
 
 	/// Fills GBuffer.
 	void DrawSceneToGBuffer();
+	/// Fills shadow maps.
 	void DrawShadowMaps();
 
 	/// Draws GBuffer directly to the (hardware) backbuffer.
@@ -67,6 +68,8 @@ private:
 	/// Performs direct lighting for all lights.
 	void DrawLights();
 	
+	void ApplyRSMsBruteForce();
+
 	void OutputHDRTextureToBackbuffer();
 
 	void GatherLightCaches();
@@ -143,7 +146,7 @@ private:
 	std::unique_ptr<gl::FramebufferObject> m_HDRBackbuffer;
 	ShaderPtr m_shaderTonemap;
 
-
+	ShaderPtr m_shaderIndirectLightingBruteForceRSM;
 
 	// ------------------------------------------------------------
 	// General
