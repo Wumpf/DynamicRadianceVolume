@@ -52,7 +52,7 @@ void Voxelization::DrawVoxelRepresentation()
 {
 	// Disable depthbuffering.
 	gl::Disable(gl::Cap::DEPTH_TEST);
-	GL_CALL(glDepthMask, GL_FALSE);
+	gl::SetDepthWrite(false);
 
 	m_samplerLinearMipNearest.BindSampler(0);
 	m_voxelSceneTexture->Bind(0);
@@ -62,14 +62,14 @@ void Voxelization::DrawVoxelRepresentation()
 
 	// Reenable depth buffer.
 	gl::Enable(gl::Cap::DEPTH_TEST);
-	GL_CALL(glDepthMask, GL_TRUE);
+	gl::SetDepthWrite(true);
 }
 
 void Voxelization::VoxelizeAndCreateCaches(Renderer& renderer)
 {
 	// Disable depthbuffering & culling
 	gl::Disable(gl::Cap::DEPTH_TEST);
-	GL_CALL(glDepthMask, GL_FALSE);
+	gl::SetDepthWrite(false);
 	gl::Disable(gl::Cap::CULL_FACE);
 	GL_CALL(glClipControl, GL_LOWER_LEFT, GL_NEGATIVE_ONE_TO_ONE); // The single one case where z -1 to 1 is actual practical. Makes the shader easier
 

@@ -88,7 +88,7 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	// -> need to use real depthbuffer
 	// --> precision issues
 	// --> better precision with flipped depth test + R32F depthbuffers
-	GL_CALL(glDepthFunc, GL_GREATER);
+	gl::SetDepthFunc(gl::DepthFunc::GREATER);
 	GL_CALL(glClearDepth, 0.0f);
 
 	// The OpenGL clip space convention uses depth -1 to 1 which is remapped again. In GL4.5 it is possible to disable this
@@ -344,7 +344,7 @@ void Renderer::OutputHDRTextureToBackbuffer()
 void Renderer::DrawSceneToGBuffer()
 {
 	gl::Enable(gl::Cap::DEPTH_TEST);
-	GL_CALL(glDepthMask, GL_TRUE);
+	gl::SetDepthWrite(true);
 
 	m_samplerLinear.BindSampler(0);
 
@@ -357,7 +357,7 @@ void Renderer::DrawSceneToGBuffer()
 void Renderer::DrawShadowMaps()
 {
 	gl::Enable(gl::Cap::DEPTH_TEST);
-	GL_CALL(glDepthMask, GL_TRUE);
+	gl::SetDepthWrite(true);
 
 	m_samplerLinear.BindSampler(0);
 
@@ -473,7 +473,7 @@ void Renderer::DirectCacheLighting()
 void Renderer::GatherLightCaches()
 {
 	gl::Disable(gl::Cap::DEPTH_TEST);
-	GL_CALL(glDepthMask, GL_FALSE);
+	gl::SetDepthWrite(false);
 
 	// Optionally read old light cache count
 	if (m_readLightCacheCount)
