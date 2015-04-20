@@ -1,5 +1,6 @@
 #include "renderer.hpp"
 #include "voxelization.hpp"
+#include "hdrimage.hpp"
 
 #include "../scene/model.hpp"
 #include "../scene/sceneentity.hpp"
@@ -228,6 +229,10 @@ void Renderer::SetScene(const std::shared_ptr<const Scene>& scene)
 
 void Renderer::Draw(const Camera& camera)
 {
+	// All SRGB frame buffer textures should be do a conversion on writing to them.
+	// This also applies to the backbuffer.
+	gl::Enable(gl::Cap::FRAMEBUFFER_SRGB);
+
 	// Update data.
 	UpdatePerFrameUBO(camera);
 	UpdatePerObjectUBORingBuffer();
@@ -248,7 +253,7 @@ void Renderer::Draw(const Camera& camera)
 	
 	DrawLights();
 
-	ApplyRSMsBruteForce();
+	//ApplyRSMsBruteForce();
 
 	//DirectCacheLighting();
 
@@ -261,6 +266,10 @@ void Renderer::Draw(const Camera& camera)
 
 //	m_voxelization->DrawVoxelRepresentation();
 //	DrawGBufferDebug();
+
+
+	// Turn SRGB conversions off, since ui will look odd otherwise.
+	gl::Disable(gl::Cap::FRAMEBUFFER_SRGB);
 }
 
 void Renderer::UpdatePerObjectUBORingBuffer()
@@ -334,14 +343,12 @@ void Renderer::BindObjectUBO(unsigned int _objectIndex)
 void Renderer::OutputHDRTextureToBackbuffer()
 {
 	gl::FramebufferObject::BindBackBuffer();
-	gl::Enable(gl::Cap::FRAMEBUFFER_SRGB);
 	m_shaderTonemap->Activate();
 
 	m_samplerNearest.BindSampler(0);
 	m_HDRBackbufferTexture->Bind(0);
 
 	m_screenTriangle->Draw();
-	gl::Disable(gl::Cap::FRAMEBUFFER_SRGB);
 }
 
 void Renderer::DrawSceneToGBuffer()
@@ -397,7 +404,7 @@ void Renderer::DrawGBufferDebug()
 void Renderer::DrawLights()
 {
 	gl::Disable(gl::Cap::DEPTH_TEST);
-	gl::Enable(gl::Cap::BLEND);
+	//gl::Enable(gl::Cap::BLEND);
 
 	m_shaderDeferredDirectLighting_Spot->Activate();
 
@@ -586,9 +593,13 @@ void Renderer::SetExposure(float exposure)
 	GL_CALL(glUniform1f, 0, m_exposure);
 }
 
-
-
-
+void Renderer::SaveToPFM(const std::string& filename) const
+{
+	std::unique_ptr<ei::Vec4[]> imageData(new ei::Vec4[m_HDRBackbufferTexture->GetWidth() * m_HDRBackbufferTexture->GetHeight()]);
+	m_HDRBackbufferTexture->ReadImage(0, gl::TextureReadFormat::RGBA, gl::TextureReadType::FLOAT, m_HDRBackbufferTexture->GetWidth() * m_HDRBackbufferTexture->GetHeight() * sizeof(ei::Vec4), imageData.get());
+	if (WritePfm(imageData.get(), ei::IVec2(m_HDRBackbufferTexture->GetWidth(), m_HDRBackbufferTexture->GetHeight()), filename))
+		LOG_INFO("Wrote screenshot \"" + filename + "\"");
+}
 
 
 

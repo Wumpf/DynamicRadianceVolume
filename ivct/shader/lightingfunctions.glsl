@@ -2,8 +2,13 @@
 
 float ComputeSpotFalloff(float cosToLight)
 {
-	return sqrt(saturate(cosToLight - LightCosHalfAngle) / (1.0 - LightCosHalfAngle));
+	// Linear falloff as used in the Mitsuba renderer
+	//return saturate(acos(LightCosHalfAngle) - acos(cosToLight)) / (acos(LightCosHalfAngle));
+
+	// Much nicer and faster falloff
+	return saturate(cosToLight - LightCosHalfAngle) / (1.0 - LightCosHalfAngle);
 }
+
 float ComputeSpotFalloff(vec3 toLight)
 {
 	return ComputeSpotFalloff(dot(-toLight, LightDirection));
@@ -15,7 +20,7 @@ float ComputeSpotFalloff(vec3 toLight)
 vec3 BRDF(vec3 toLight, vec3 toCamera, vec3 diffuseColor)
 {
 	// Diffuse Term
-	vec3 brdf = diffuseColor; // Omitted 1/PI!
+	vec3 brdf = diffuseColor / PI;
 
 	return brdf;
 }

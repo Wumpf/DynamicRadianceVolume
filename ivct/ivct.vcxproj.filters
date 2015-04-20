@@ -183,6 +183,9 @@
     <ClCompile Include="..\dependencies\glhelper\glhelper\persistentringbuffer.cpp">
       <Filter>dependencies\glhelper</Filter>
     </ClCompile>
+    <ClCompile Include="rendering\hdrimage.cpp">
+      <Filter>source\rendering</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="outputwindow.hpp">
@@ -328,6 +331,9 @@
     </ClInclude>
     <ClInclude Include="..\dependencies\glhelper\glhelper\persistentringbuffer.hpp">
       <Filter>dependencies\glhelper</Filter>
+    </ClInclude>
+    <ClInclude Include="rendering\hdrimage.hpp">
+      <Filter>source\rendering</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

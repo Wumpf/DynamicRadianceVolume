@@ -17,6 +17,22 @@ vec4 saturate(vec4 x)
 {
 	return clamp(x, vec4(0.0), vec4(1.0));
 }
+float sqr(float x)
+{
+	return x*x;
+}
+vec2 sqr(vec2 x)
+{
+	return x*x;
+}
+vec3 sqr(vec3 x)
+{
+	return x*x;
+}
+vec4 sqr(vec4 x)
+{
+	return x*x;
+}
 
 float GetLuminance(vec3 rgb)
 {

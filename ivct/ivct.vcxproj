@@ -187,6 +187,7 @@
     <ClCompile Include="FileWatcher\FileWatcherWin32.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="outputwindow.cpp" />
+    <ClCompile Include="rendering\hdrimage.cpp" />
     <ClCompile Include="rendering\renderer.cpp" />
     <ClCompile Include="rendering\voxelization.cpp" />
     <ClCompile Include="scene\model.cpp" />
@@ -231,6 +232,7 @@
     <ClInclude Include="FileWatcher\FileWatcherWin32.h" />
     <ClInclude Include="glhelperconfig.hpp" />
     <ClInclude Include="outputwindow.hpp" />
+    <ClInclude Include="rendering\hdrimage.hpp" />
     <ClInclude Include="rendering\renderer.hpp" />
     <ClInclude Include="rendering\voxelization.hpp" />
     <ClInclude Include="scene\light.hpp" />

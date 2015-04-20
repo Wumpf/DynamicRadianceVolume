@@ -213,7 +213,7 @@ void Application::ChangeLightCount(unsigned int lightCount)
 		m_tweakBar->Remove(namePrefix + "Intensity");
 		m_tweakBar->Remove(namePrefix + "Position");
 		m_tweakBar->Remove(namePrefix + "Direction");
-		m_tweakBar->Remove(namePrefix + "HalfAngle");	
+		m_tweakBar->Remove(namePrefix + "SpotAngle");	
 		m_tweakBar->Remove(namePrefix + "ShadowMapResolution");
 		m_tweakBar->Remove(namePrefix + "NormalBias");
 		m_tweakBar->Remove(namePrefix + "Bias");
@@ -235,8 +235,8 @@ void Application::ChangeLightCount(unsigned int lightCount)
 		m_tweakBar->AddReadWrite<ei::Vec3>(namePrefix + "Direction", [=](){ return m_scene->GetLights()[i].direction; },
 			[=](const ei::Vec3& v){ m_scene->GetLights()[i].direction = v; }, groupSetting + " label=Direction");
 
-		m_tweakBar->AddReadWrite<float>(namePrefix + "HalfAngle", [=](){ return m_scene->GetLights()[i].halfAngle; },
-			[=](const float& f){ m_scene->GetLights()[i].halfAngle = f; }, groupSetting + " label=HalfAngle min=0.01 max=1.57 step=0.01");
+		m_tweakBar->AddReadWrite<float>(namePrefix + "SpotAngle", [=](){ return m_scene->GetLights()[i].halfAngle / (ei::PI / 180.0f); },
+			[=](const float& f){ m_scene->GetLights()[i].halfAngle = f  * (ei::PI / 180.0f); }, groupSetting + " label=\"Spot Angle\" min=1.0 max=179 step=1.0");
 
 		m_tweakBar->AddReadWrite<int>(namePrefix + "ShadowMapResolution", [=](){ return m_scene->GetLights()[i].shadowMapResolution; },
 			[=](const int& res){ m_scene->GetLights()[i].shadowMapResolution = res; }, groupSetting + " label=\"Shadow Map Resolution\" min=16 max=2048 step=16");
@@ -258,6 +258,7 @@ void Application::SetupTweakBarBinding()
 	m_tweakBar->AddReadOnly("Frametime (ms)", [&](){ return std::to_string(m_timeSinceLastUpdate.GetMilliseconds()); });
 	m_tweakBar->AddButton("Save Settings", [&](){ m_tweakBar->SaveReadWriteValuesToJSON(SaveFileDialog("settings.json", ".json")); });
 	m_tweakBar->AddButton("Load Settings", [&](){ m_tweakBar->LoadReadWriteValuesToJSON(OpenFileDialog()); });
+	m_tweakBar->AddButton("Save HDR Image", [&](){ std::string filename = SaveFileDialog("image.pfm", ".pfm"); if(!filename.empty()) m_renderer->SaveToPFM(filename); });
 	
 
 	// Camera

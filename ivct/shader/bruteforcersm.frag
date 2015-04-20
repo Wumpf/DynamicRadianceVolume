@@ -61,12 +61,12 @@ void main()
 			vec3 valToLight = valPosition.xyz - LightPosition;
 			float valToLightDistSq = dot(valToLight, valToLight); // todo: Compute directly from lightDepth
 			float valArea = valToLightDistSq * ValAreaFactor;
-			float fluxToIntensity = saturate(dot(valNormal, -toVal)) / PI; // 1/pi is brdf of 
+			float fluxToIntensity = saturate(dot(valNormal, -toVal)) / PI;
 			float fluxToIrradiance = fluxToIntensity * cosTheta / (lightDistanceSq + valArea);
 			//float fluxToIrradiance = fluxToIntensity * cosTheta / (lightDistanceSq); // VPL instead of VAL
 
 			vec3 irradiance = valTotalExitantFlux * fluxToIrradiance;
-			OutputColor += /*BRDF(toVal, toCamera, diffuseColor)*/ diffuseColor * irradiance;
+			OutputColor += BRDF(toVal, toCamera, diffuseColor) * irradiance;
 		}	
 	}
 }

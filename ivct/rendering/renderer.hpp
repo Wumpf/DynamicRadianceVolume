@@ -38,6 +38,9 @@ public:
 
 	void Draw(const Camera& camera);
 
+	/// Saves HDR buffer to a pfm file.
+	void SaveToPFM(const std::string& filename) const;
+
 	void SetReadLightCacheCount(bool trackLightCacheCreationStats);
 	bool GetReadLightCacheCount() const;
 	unsigned int GetLightCacheActiveCount() const;
