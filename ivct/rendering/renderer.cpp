@@ -26,7 +26,8 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 															gl::SamplerObject::Border::BORDER, 1, gl::Vec4(0.0), gl::SamplerObject::CompareMode::GREATER))),
 
 	m_readLightCacheCount(false),
-	m_lastNumLightCaches(0)
+	m_lastNumLightCaches(0),
+	m_exposure(1.0f)
 {
 	glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &m_UBOAlignment);
 	LOG_INFO("Uniform buffer alignment is " << m_UBOAlignment);
@@ -130,6 +131,8 @@ void Renderer::LoadShader()
 	m_shaderTonemap->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
 	m_shaderTonemap->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/tonemapping.frag");
 	m_shaderTonemap->CreateProgram();
+	m_shaderTonemap->Activate();
+	GL_CALL(glUniform1f, 0, m_exposure);
 
 	m_shaderCacheGather = std::make_unique<gl::ShaderObject>("cache gather");
 	m_shaderCacheGather->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cacheGather.comp");
@@ -575,6 +578,22 @@ unsigned int Renderer::GetLightCacheActiveCount() const
 {
 	return m_lastNumLightCaches;
 }
+
+void Renderer::SetExposure(float exposure)
+{
+	m_exposure = exposure;
+	m_shaderTonemap->Activate();
+	GL_CALL(glUniform1f, 0, m_exposure);
+}
+
+
+
+
+
+
+
+
+
 
 Renderer::ShadowMap::ShadowMap(ShadowMap& old) :
 	flux(old.flux),

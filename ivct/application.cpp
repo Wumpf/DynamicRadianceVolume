@@ -265,6 +265,9 @@ void Application::SetupTweakBarBinding()
 	m_tweakBar->AddReadWrite<ei::Vec3>("Camera Direction", [&](){ return m_camera->GetDirection(); }, [&](const ei::Vec3& v){ return m_camera->SetLookAt(v + m_camera->GetPosition()); }, "label=Direction group=Camera");
 	m_tweakBar->AddReadWrite<ei::Vec3>("Camera Position", [&](){ return m_camera->GetPosition(); }, [&](const ei::Vec3& v){ return m_camera->SetPosition(v); }, "label=Position group=Camera", AntTweakBarInterface::TypeHint::POSITION);
 
+	// Tonemap
+	m_tweakBar->AddReadWrite<float>("Exposure", [&](){ return m_renderer->GetExposure(); }, [&](float f){ return m_renderer->SetExposure(f); }, " min=0.1 max=100 step=0.05 ");
+
 	/// Light cache settings
 	m_tweakBar->AddSeperator("Light Cache settings");
 	m_tweakBar->AddReadWrite<bool>("Track Light Cache Count", [&](){ return m_renderer->GetReadLightCacheCount(); }, 

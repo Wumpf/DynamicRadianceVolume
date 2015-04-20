@@ -44,6 +44,9 @@ public:
 
 	void BindObjectUBO(unsigned int objectIndex);
 
+	void SetExposure(float exposure);
+	float GetExposure() const { return m_exposure; }
+
 private:
 	std::shared_ptr<const Scene> m_scene;
 
@@ -121,6 +124,7 @@ private:
 	Texture2DPtr m_GBuffer_normal;
 	Texture2DPtr m_GBuffer_depth;
 	std::unique_ptr<gl::FramebufferObject> m_GBuffer;
+	float m_exposure;
 
 	struct ShadowMap
 	{
