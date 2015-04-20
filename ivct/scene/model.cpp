@@ -38,7 +38,6 @@ std::shared_ptr<Model> Model::FromFile(const std::string& filename)
 
 	const aiScene* scene = importer.ReadFile(filename,
 		//aiProcess_CalcTangentSpace |
-		aiProcess_MakeLeftHanded |
 		//aiProcess_PreTransformVertices |
 		aiProcess_Triangulate |
 		aiProcess_GenSmoothNormals |

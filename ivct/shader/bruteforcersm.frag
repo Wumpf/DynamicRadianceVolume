@@ -61,8 +61,8 @@ void main()
 			vec3 valToLight = valPosition.xyz - LightPosition;
 			float valToLightDistSq = dot(valToLight, valToLight); // todo: Compute directly from lightDepth
 			float valArea = valToLightDistSq * ValAreaFactor;
-			float fluxToIntensity = saturate(dot(valNormal, -toVal)) / PI;
-			float fluxToIrradiance = fluxToIntensity * cosTheta / (lightDistanceSq * PI + valArea); // lightDistanceSq * PI? TODO: Be more sure of this. The VPL variant is currently much brighter.
+			float fluxToIntensity = saturate(dot(valNormal, -toVal)) / PI; // 1/pi is brdf of 
+			float fluxToIrradiance = fluxToIntensity * cosTheta / (lightDistanceSq + valArea);
 			//float fluxToIrradiance = fluxToIntensity * cosTheta / (lightDistanceSq); // VPL instead of VAL
 
 			vec3 irradiance = valTotalExitantFlux * fluxToIrradiance;

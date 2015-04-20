@@ -36,7 +36,7 @@ Application::Application(int argc, char** argv)
 
 	// Create "global" camera.
 	auto resolution = m_window->GetResolution();
-	m_camera.reset(new InteractiveCamera(m_window->GetGLFWWindow(), ei::Vec3(0.0f, 2.5f, -5.0f), ei::Vec3(0.0f),
+	m_camera.reset(new InteractiveCamera(m_window->GetGLFWWindow(), ei::Vec3(0.0f, 2.5f, 5.0f), ei::Vec3(0.0f),
 		static_cast<float>(resolution.x) / resolution.y, 0.1f, 1000.0f, 60.0f, ei::Vec3(0, 1, 0)));
 
 	// Scene
@@ -61,8 +61,8 @@ Application::Application(int argc, char** argv)
 	ChangeLightCount(1);
 	m_scene->GetLights()[0].type = Light::Type::SPOT;
 	m_scene->GetLights()[0].intensity = ei::Vec3(100.0f, 100.0f, 100.0f);
-	m_scene->GetLights()[0].position = ei::Vec3(0.0f, 1.7f, -3.3f);
-	m_scene->GetLights()[0].direction = ei::Vec3(0.0f, 0.0f, 1.0f);
+	m_scene->GetLights()[0].position = ei::Vec3(0.0f, 1.7f, 3.3f);
+	m_scene->GetLights()[0].direction = ei::Vec3(0.0f, 0.0f, -1.0f);
 	m_scene->GetLights()[0].halfAngle = 30.0f * (ei::PI / 180.0f);
 }
 
