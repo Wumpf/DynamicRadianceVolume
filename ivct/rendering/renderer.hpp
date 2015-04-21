@@ -82,7 +82,9 @@ private:
 	void ApplyLightCaches();
 
 	/// Applies direct light to caches (mainly for debug purposes)
-	void DirectCacheLighting();
+	void CacheLightingDirect();
+	/// Applies indirect light to caches (the way its meant to be used)
+	void CacheLightingRSM();
 
 	/// Draws scene, mesh by mesh.
 	///
@@ -108,6 +110,7 @@ private:
 	BufferPtr m_lightCacheCounter;
 
 	ShaderPtr m_shaderLightCachesDirect;
+	ShaderPtr m_shaderLightCachesRSM;
 
 
 	// ------------------------------------------------------------

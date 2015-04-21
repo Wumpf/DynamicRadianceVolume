@@ -417,5 +417,8 @@
     <None Include="shader\fillgbuffer.frag">
       <Filter>shader</Filter>
     </None>
+    <None Include="shader\cacheLightingRSM.comp">
+      <Filter>shader</Filter>
+    </None>
   </ItemGroup>
 </Project>

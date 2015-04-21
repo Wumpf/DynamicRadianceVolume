@@ -1,0 +1,91 @@
+#version 450 core
+
+#include "globalubos.glsl"
+#include "utils.glsl"
+#define LIGHTCACHEMODE LIGHTCACHEMODE_LIGHT
+#include "lightcache.glsl"
+
+layout(binding=0) uniform sampler2D RSM_Flux;
+layout(binding=1) uniform sampler2D RSM_Depth;
+layout(binding=2) uniform isampler2D RSM_Normal;
+
+
+layout (local_size_x = LIGHTING_THREADS_PER_GROUP, local_size_y = 1, local_size_z = 1) in;
+void main()
+{
+	if(gl_GlobalInvocationID.x >= TotalLightCacheCount)
+		return;
+
+
+	vec3 worldPosition = LightCacheEntries[gl_GlobalInvocationID.x].Position;
+
+
+	// -----------------------------------------------
+	// IRRADIANCE VIA SH (test)
+
+	vec3 SH00 = vec3(0);
+	vec3 SH1neg1 = vec3(0);
+	vec3 SH10 = vec3(0);
+	vec3 SH1pos1 = vec3(0);
+
+	// Analytical clamped cosine lobe transformation into SH basis
+	// Derivation: Assume light direction = z-axis, then rotate resulting zonal harmonics
+
+	ivec2 rsmSamplePos = ivec2(0);
+	for(; rsmSamplePos.x<ShadowMapResolution; ++rsmSamplePos.x)
+	{
+		rsmSamplePos.y = 0;
+		for(; rsmSamplePos.y<ShadowMapResolution; ++rsmSamplePos.y)
+		{
+			float lightDepth = texelFetch(RSM_Depth, rsmSamplePos, 0).r;
+			vec4 valPosition = vec4((rsmSamplePos + vec2(0.5)) / ShadowMapResolution * 2.0 - vec2(1.0), lightDepth, 1.0) * InverseLightViewProjection;
+			valPosition.xyz /= valPosition.w;
+
+			// Direction and distance to light.
+			vec3 toVal = valPosition.xyz - worldPosition;
+			//if(dot(toVpl, worldNormal) > 0) // Early out if facing away from the light. 
+			//	continue;
+			float lightDistanceSq = dot(toVal, toVal);
+			toVal *= inversesqrt(lightDistanceSq);
+
+			// Light intensity
+			vec3 valTotalExitantFlux = texelFetch(RSM_Flux, rsmSamplePos, 0).rgb;
+			vec3 valNormal = UnpackNormal16I(texelFetch(RSM_Normal, rsmSamplePos, 0).xy);
+
+			// Handle light as disc with area. This can be computed analytically for the diffuse term.
+			vec3 valToLight = valPosition.xyz - LightPosition;
+			float valToLightDistSq = dot(valToLight, valToLight); // todo: Compute directly from lightDepth
+			float valArea = valToLightDistSq * ValAreaFactor;
+			float fluxToIntensity = saturate(dot(valNormal, -toVal)) / PI;
+			vec3 scaledIntensity = valTotalExitantFlux * (fluxToIntensity / (lightDistanceSq + valArea));
+			//vec3 scaledIntensity = valTotalExitantFlux * (fluxToIntensity / lightDistanceSq); // VPL instead of VAL
+
+
+
+			const float factor0 = sqrt(PI) / 2.0;
+			const float factor1 = sqrt(PI / 3.0);
+
+			SH00 += factor0 * scaledIntensity;
+			SH1neg1 += (factor1 * toVal.y) * scaledIntensity;
+			SH10 += (factor1 * toVal.z) * scaledIntensity;
+			SH1pos1 += (factor1 * toVal.x) * scaledIntensity;
+
+			// TODO: Don't know the rotation of the second zonal harmonic
+			// cosine lobe second band zonal is sqrt(5*PI)/8 according to https://d3cw3dd2w32x2b.cloudfront.net/wp-content/uploads/2011/06/10-14.pdf
+			/*vec3 SH2neg2 = 
+			vec3 SH2neg1 = 
+			vec3 SH20 = 
+			vec3 SH2pos1 = 
+			vec3 SH2pos2 =*/
+		}
+	}
+		
+
+	// Save to buffer.
+	LightCacheEntries[gl_GlobalInvocationID.x].SH1neg1 = SH1neg1;
+	LightCacheEntries[gl_GlobalInvocationID.x].SH00_r = SH00.r;
+	LightCacheEntries[gl_GlobalInvocationID.x].SH10 = SH10;
+	LightCacheEntries[gl_GlobalInvocationID.x].SH00_g = SH00.g;
+	LightCacheEntries[gl_GlobalInvocationID.x].SH1pos1 = SH1pos1;
+	LightCacheEntries[gl_GlobalInvocationID.x].SH00_b = SH00.b;
+}

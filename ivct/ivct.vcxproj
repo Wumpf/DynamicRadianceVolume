@@ -267,6 +267,7 @@
     <None Include="shader\cacheApply.frag" />
     <None Include="shader\cacheGather.comp" />
     <None Include="shader\cacheLightingDirect.comp" />
+    <None Include="shader\cacheLightingRSM.comp" />
     <None Include="shader\debuggbuffer.frag" />
     <None Include="shader\defaultmodel_noskinning.vert" />
     <None Include="shader\directdeferredlighting.frag" />
