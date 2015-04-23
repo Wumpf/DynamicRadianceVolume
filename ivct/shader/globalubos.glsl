@@ -3,6 +3,7 @@ layout(binding = 0, shared) uniform Constant
 {
 	ivec2 BackbufferResolution;
 	int VoxelResolution;
+	int AddressVolumeResolution;
 	uint MaxNumLightCaches;
 };
 

@@ -274,6 +274,8 @@ void Application::SetupTweakBarBinding()
 	m_tweakBar->AddReadWrite<bool>("Track Light Cache Count", [&](){ return m_renderer->GetReadLightCacheCount(); }, 
 																[&](bool b){ return m_renderer->SetReadLightCacheCount(b); });
 	m_tweakBar->AddReadOnly("#Active Caches", [&](){ return std::to_string(m_renderer->GetLightCacheActiveCount()); });
+	m_tweakBar->AddReadWrite<int>("Address Volume Size", [&](){ return m_renderer->GetCacheAddressVolumeSize(); },
+															[&](int i){ return m_renderer->SetCacheAdressVolumeSize(i); }, " min=16 max=256 step=16");
 
 
 	m_tweakBar->AddSeperator("Scene Settings");

@@ -33,14 +33,15 @@ void main()
 
 
 		// Allocate caches ...
-		addressCoord[0] = ivec3((worldPosition - VolumeWorldMin) / AddressVolumeVoxelSize);
-		addressCoord[1] = addressCoord[0] + ivec3(1,0,0);
-		addressCoord[2] = addressCoord[0] + ivec3(0,1,0);
-		addressCoord[3] = addressCoord[0] + ivec3(1,1,0);
-		addressCoord[4] = addressCoord[0] + ivec3(0,0,1);
-		addressCoord[5] = addressCoord[0] + ivec3(1,0,1);
-		addressCoord[6] = addressCoord[0] + ivec3(0,1,1);
-		addressCoord[7] = addressCoord[0] + ivec3(1,1,1);
+		addressCoord[0] = clamp(ivec3((worldPosition - VolumeWorldMin) / AddressVolumeVoxelSize), ivec3(0), ivec3(AddressVolumeResolution-1));
+		addressCoord[7] = clamp(addressCoord[0] + ivec3(1,1,1), ivec3(0), ivec3(AddressVolumeResolution-1));
+		addressCoord[1] = ivec3(addressCoord[7].x, addressCoord[0].y, addressCoord[0].z);
+		addressCoord[2] = ivec3(addressCoord[0].x, addressCoord[7].y, addressCoord[0].z);
+		addressCoord[3] = ivec3(addressCoord[7].x, addressCoord[7].y, addressCoord[0].z);
+		addressCoord[4] = ivec3(addressCoord[0].x, addressCoord[0].y, addressCoord[7].z);
+		addressCoord[5] = ivec3(addressCoord[7].x, addressCoord[0].y, addressCoord[7].z);
+		addressCoord[6] = ivec3(addressCoord[0].x, addressCoord[7].y, addressCoord[7].z);
+		
 
 		for(int i=0; i<8; ++i)
 		{

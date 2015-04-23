@@ -45,6 +45,9 @@ public:
 	bool GetReadLightCacheCount() const;
 	unsigned int GetLightCacheActiveCount() const;
 
+	unsigned int GetCacheAddressVolumeSize();
+	void SetCacheAdressVolumeSize(unsigned int size);
+
 	void BindObjectUBO(unsigned int objectIndex);
 
 	void SetExposure(float exposure);

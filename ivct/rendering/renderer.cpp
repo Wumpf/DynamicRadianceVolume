@@ -36,7 +36,7 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	m_screenTriangle = std::make_unique<gl::ScreenAlignedTriangle>();
 
 	LoadShader();
-
+	
 	// Init global ubos.
 	m_uboInfoConstant = m_allShaders[0]->GetUniformBufferInfo()["Constant"];
 	m_uboConstant = std::make_unique<gl::Buffer>(m_uboInfoConstant.bufferDataSizeByte, gl::Buffer::MAP_WRITE);
@@ -70,8 +70,7 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	m_lightCacheHashMap = std::make_unique<gl::ShaderStorageBufferView>(std::make_shared<gl::Buffer>(m_lightCacheHashMapSize * lightCacheSizeInBytes, gl::Buffer::IMMUTABLE, nullptr), "LightCacheHashMap");
 	*/
 
-	const unsigned int addressGridSize = 128;
-	m_lightCacheAddressVolume = std::make_unique<gl::Texture3D>(addressGridSize, addressGridSize, addressGridSize, gl::TextureFormat::R32UI, 1);
+	SetCacheAdressVolumeSize(64);
 
 	// Basic settings.
 	SetScene(scene);
@@ -167,9 +166,12 @@ void Renderer::LoadShader()
 
 void Renderer::UpdateConstantUBO()
 {
+	if (!m_HDRBackbufferTexture) return;
+
 	gl::MappedUBOView mappedMemory(m_uboInfoConstant, m_uboConstant->Map(gl::Buffer::MapType::WRITE, gl::Buffer::MapWriteFlag::INVALIDATE_BUFFER));
 	mappedMemory["BackbufferResolution"].Set(ei::IVec2(m_HDRBackbufferTexture->GetWidth(), m_HDRBackbufferTexture->GetHeight()));
 	mappedMemory["VoxelResolution"].Set(m_voxelization->GetVoxelTexture().GetWidth());
+	mappedMemory["AddressVolumeResolution"].Set(m_lightCacheAddressVolume->GetWidth());
 	mappedMemory["MaxNumLightCaches"].Set(m_maxNumLightCaches);
 	m_uboConstant->Unmap();
 }
@@ -621,6 +623,17 @@ bool Renderer::GetReadLightCacheCount() const
 unsigned int Renderer::GetLightCacheActiveCount() const
 {
 	return m_lastNumLightCaches;
+}
+
+unsigned int Renderer::GetCacheAddressVolumeSize()
+{
+	return m_lightCacheAddressVolume->GetWidth();
+}
+
+void Renderer::SetCacheAdressVolumeSize(unsigned int size)
+{
+	m_lightCacheAddressVolume = std::make_unique<gl::Texture3D>(size, size, size, gl::TextureFormat::R32UI, 1);
+	UpdateConstantUBO();
 }
 
 void Renderer::SetExposure(float exposure)
