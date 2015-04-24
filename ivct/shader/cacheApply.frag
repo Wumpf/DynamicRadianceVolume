@@ -11,6 +11,11 @@ in vec2 Texcoord;
 
 out vec3 OutputColor;
 
+vec3 Interp(vec3 x)
+{
+	return x;
+	//return x*x*(3.0 - 2.0*x);
+}
 
 void main()
 {
@@ -85,7 +90,7 @@ void main()
 	}
 
 	// trilinear interpolation
-	vec3 interp = addressCoord - addressCoord00;
+	vec3 interp = Interp(addressCoord - addressCoord00);
 	vec3 interpolatedIrradiance = 
 		mix(mix(mix(irradiance[0], irradiance[1], interp.x),
 				mix(irradiance[2], irradiance[3], interp.x), interp.y),

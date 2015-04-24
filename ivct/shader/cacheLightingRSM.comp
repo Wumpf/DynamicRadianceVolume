@@ -17,6 +17,7 @@ struct LightInfo
 };
 shared LightInfo RSMCache[LIGHTING_THREADS_PER_GROUP];
 
+
 layout (local_size_x = LIGHTING_THREADS_PER_GROUP, local_size_y = 1, local_size_z = 1) in;
 void main()
 {
@@ -30,6 +31,8 @@ void main()
 	// Analytical clamped cosine lobe transformation into SH basis
 	// Derivation: Assume light direction = z-axis, then rotate resulting zonal harmonics
 
+
+	float distThreshholdSq = dot(AddressVolumeVoxelSize, AddressVolumeVoxelSize);
 
 	int localIndex = int(gl_LocalInvocationID.x);
 
@@ -76,6 +79,12 @@ void main()
 			float valToLightDistSq = dot(valToLight, valToLight); // todo: Compute directly from lightDepth
 			float valArea = valToLightDistSq * ValAreaFactor;
 			float fluxToIntensity = saturate(dot(valNormal, -toVal)) / PI;
+
+			// Ignore too close light sources due to 
+			if(lightDistanceSq < distThreshholdSq)
+				fluxToIntensity = 0; // continue; // Continue, even is placed as early as possible, is slower.
+
+
 			vec3 scaledIntensity = valTotalExitantFlux * (fluxToIntensity / (lightDistanceSq + valArea));
 			//vec3 scaledIntensity = valTotalExitantFlux * (fluxToIntensity / lightDistanceSq); // VPL instead of VAL
 
