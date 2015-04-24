@@ -65,8 +65,10 @@ void Voxelization::DrawVoxelRepresentation()
 	gl::SetDepthWrite(true);
 }
 
-void Voxelization::VoxelizeAndCreateCaches(Renderer& renderer)
+void Voxelization::UpdateVoxel(Renderer& renderer)
 {
+	m_voxelSceneTexture->ClearToZero();
+
 	// Disable depthbuffering & culling
 	gl::Disable(gl::Cap::DEPTH_TEST);
 	gl::SetDepthWrite(false);

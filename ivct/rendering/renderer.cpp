@@ -189,6 +189,7 @@ void Renderer::UpdatePerFrameUBO(const Camera& camera)
 	gl::MappedUBOView mappedMemory(m_allShaders[0]->GetUniformBufferInfo()["PerFrame"], m_uboPerFrame->Map(gl::Buffer::MapType::WRITE, gl::Buffer::MapWriteFlag::INVALIDATE_BUFFER));
 	mappedMemory["Projection"].Set(projection);
 	mappedMemory["ViewProjection"].Set(viewProjection);
+	mappedMemory["InverseView"].Set(ei::invert(view));
 	mappedMemory["InverseViewProjection"].Set(ei::invert(viewProjection));
 	mappedMemory["CameraPosition"].Set(camera.GetPosition());
 	mappedMemory["CameraDirection"].Set(camera.GetDirection());
@@ -243,6 +244,9 @@ void Renderer::Draw(const Camera& camera)
 	UpdatePerFrameUBO(camera);
 	UpdatePerObjectUBORingBuffer();
 	PrepareLights();
+
+	m_voxelization->UpdateVoxel(*this);
+	GL_CALL(glViewport, 0, 0, m_HDRBackbufferTexture->GetWidth(), m_HDRBackbufferTexture->GetHeight());
 
 	// Scene dependent renderings.
 	DrawSceneToGBuffer();
@@ -452,6 +456,9 @@ void Renderer::ApplyRSMsBruteForce()
 	m_samplerNearest.BindSampler(3);
 	m_samplerNearest.BindSampler(4);
 	m_samplerNearest.BindSampler(5);
+	m_samplerLinear.BindSampler(6);
+
+	m_voxelization->GetVoxelTexture().Bind(6);
 
 	for (unsigned int lightIndex = 0; lightIndex < m_scene->GetLights().size(); ++lightIndex)
 	{
