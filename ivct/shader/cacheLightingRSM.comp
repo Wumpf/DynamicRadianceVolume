@@ -9,19 +9,18 @@ layout(binding=0) uniform sampler2D RSM_Flux;
 layout(binding=1) uniform sampler2D RSM_Depth;
 layout(binding=2) uniform isampler2D RSM_Normal;
 
+struct LightInfo
+{
+	vec3 Flux;
+	vec3 Position;
+	vec3 Normal;
+};
+shared LightInfo RSMCache[LIGHTING_THREADS_PER_GROUP];
 
 layout (local_size_x = LIGHTING_THREADS_PER_GROUP, local_size_y = 1, local_size_z = 1) in;
 void main()
 {
-	if(gl_GlobalInvocationID.x >= TotalLightCacheCount)
-		return;
-
-
 	vec3 worldPosition = LightCacheEntries[gl_GlobalInvocationID.x].Position;
-
-
-	// -----------------------------------------------
-	// IRRADIANCE VIA SH (test)
 
 	vec3 SH00 = vec3(0);
 	vec3 SH1neg1 = vec3(0);
@@ -31,15 +30,35 @@ void main()
 	// Analytical clamped cosine lobe transformation into SH basis
 	// Derivation: Assume light direction = z-axis, then rotate resulting zonal harmonics
 
-	ivec2 rsmSamplePos = ivec2(0);
-	for(; rsmSamplePos.x<ShadowMapResolution; ++rsmSamplePos.x)
+
+	int localIndex = int(gl_LocalInvocationID.x);
+
+	int totalNumRSMPixels = ShadowMapResolution * ShadowMapResolution;
+	for(int rsmPixelPos = 0; rsmPixelPos < totalNumRSMPixels; rsmPixelPos += LIGHTING_THREADS_PER_GROUP)
 	{
-		rsmSamplePos.y = 0;
-		for(; rsmSamplePos.y<ShadowMapResolution; ++rsmSamplePos.y)
+		// Load LIGHTING_THREADS_PER_GROUP RMS pixels
+		LightInfo cacheEntry;
+
+		int localRsmPixelPos = rsmPixelPos + localIndex;
+		ivec2 rsmSamplePos = ivec2(localRsmPixelPos / ShadowMapResolution, localRsmPixelPos % ShadowMapResolution);
+		vec2 rsmSamplePosF = (rsmSamplePos + vec2(0.5)) / ShadowMapResolution;
+
+		cacheEntry.Flux = textureLod(RSM_Flux, rsmSamplePosF, 0).rgb;
+
+		float lightDepth = textureLod(RSM_Depth, rsmSamplePosF, 0).r;
+		vec4 valPositionCS = vec4(rsmSamplePosF * 2.0 - vec2(1.0), lightDepth, 1.0) * InverseLightViewProjection;
+		cacheEntry.Position = valPositionCS.xyz / valPositionCS.w;
+		
+		cacheEntry.Normal = UnpackNormal16I(textureLod(RSM_Normal, rsmSamplePosF, 0).xy);
+
+		// Write into cache.
+		barrier();
+ 		RSMCache[localIndex] = cacheEntry;
+		barrier();
+
+		for(int i=0; i<LIGHTING_THREADS_PER_GROUP; ++i)
 		{
-			float lightDepth = texelFetch(RSM_Depth, rsmSamplePos, 0).r;
-			vec4 valPosition = vec4((rsmSamplePos + vec2(0.5)) / ShadowMapResolution * 2.0 - vec2(1.0), lightDepth, 1.0) * InverseLightViewProjection;
-			valPosition.xyz /= valPosition.w;
+			vec3 valPosition = RSMCache[i].Position;
 
 			// Direction and distance to light.
 			vec3 toVal = valPosition.xyz - worldPosition;
@@ -49,8 +68,8 @@ void main()
 			toVal *= inversesqrt(lightDistanceSq);
 
 			// Light intensity
-			vec3 valTotalExitantFlux = texelFetch(RSM_Flux, rsmSamplePos, 0).rgb;
-			vec3 valNormal = UnpackNormal16I(texelFetch(RSM_Normal, rsmSamplePos, 0).xy);
+			vec3 valTotalExitantFlux = RSMCache[i].Flux;
+			vec3 valNormal = RSMCache[i].Normal;
 
 			// Handle light as disc with area. This can be computed analytically for the diffuse term.
 			vec3 valToLight = valPosition.xyz - LightPosition;
@@ -81,11 +100,14 @@ void main()
 	}
 		
 
-	// Save to buffer.
-	LightCacheEntries[gl_GlobalInvocationID.x].SH1neg1 = SH1neg1;
-	LightCacheEntries[gl_GlobalInvocationID.x].SH00_r = SH00.r;
-	LightCacheEntries[gl_GlobalInvocationID.x].SH10 = SH10;
-	LightCacheEntries[gl_GlobalInvocationID.x].SH00_g = SH00.g;
-	LightCacheEntries[gl_GlobalInvocationID.x].SH1pos1 = SH1pos1;
-	LightCacheEntries[gl_GlobalInvocationID.x].SH00_b = SH00.b;
+	if(gl_GlobalInvocationID.x < TotalLightCacheCount)
+	{
+		// Save to buffer.
+		LightCacheEntries[gl_GlobalInvocationID.x].SH1neg1 = SH1neg1;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH00_r = SH00.r;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH10 = SH10;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH00_g = SH00.g;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH1pos1 = SH1pos1;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH00_b = SH00.b;
+	}
 }

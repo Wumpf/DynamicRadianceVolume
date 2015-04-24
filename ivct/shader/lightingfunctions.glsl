@@ -3,10 +3,10 @@
 float ComputeSpotFalloff(float cosToLight)
 {
 	// Linear falloff as used in the Mitsuba renderer
-	//return saturate(acos(LightCosHalfAngle) - acos(cosToLight)) / (acos(LightCosHalfAngle));
+	return saturate(acos(LightCosHalfAngle) - acos(cosToLight)) / (acos(LightCosHalfAngle));
 
 	// Much nicer and faster falloff
-	return saturate(cosToLight - LightCosHalfAngle) / (1.0 - LightCosHalfAngle);
+	//return saturate(cosToLight - LightCosHalfAngle) / (1.0 - LightCosHalfAngle);
 }
 
 float ComputeSpotFalloff(vec3 toLight)
