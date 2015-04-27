@@ -15,6 +15,7 @@
 #include <glhelper/screenalignedtriangle.hpp>
 #include <glhelper/statemanagement.hpp>
 #include <glhelper/utils/flagoperators.hpp>
+#include <glhelper/framebufferobject.hpp>
 
 
 Voxelization::Voxelization(unsigned int resolution) :
@@ -53,6 +54,7 @@ void Voxelization::DrawVoxelRepresentation()
 	// Disable depthbuffering.
 	gl::Disable(gl::Cap::DEPTH_TEST);
 	gl::SetDepthWrite(false);
+	gl::FramebufferObject::BindBackBuffer();
 
 	m_samplerLinearMipNearest.BindSampler(0);
 	m_voxelSceneTexture->Bind(0);

@@ -31,6 +31,18 @@ public:
 	Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& resolution);
 	~Renderer();
 
+	enum class Mode
+	{
+		RSM_BRUTEFORCE,
+		RSM_CACHE,
+		GBUFFER_DEBUG,
+		DIRECTONLY,
+		DIRECTONLY_CACHE,
+		VOXELVIS
+	};
+
+	void SetMode(Mode mode) { m_mode = mode; }
+
 	void OnScreenResize(const ei::UVec2& newResolution);
 
 	void SetScene(const std::shared_ptr<const Scene>& scene);
@@ -165,6 +177,8 @@ private:
 	// General
 
 	int m_UBOAlignment; ///< Memory alignment for UBOs (driver value)
+
+	Mode m_mode;
 
 	std::unique_ptr<gl::ScreenAlignedTriangle> m_screenTriangle;
 

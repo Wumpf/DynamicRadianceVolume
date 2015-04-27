@@ -28,7 +28,8 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 
 	m_readLightCacheCount(false),
 	m_lastNumLightCaches(0),
-	m_exposure(1.0f)
+	m_exposure(1.0f),
+	m_mode(Renderer::Mode::RSM_CACHE)
 {
 	glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &m_UBOAlignment);
 	LOG_INFO("Uniform buffer alignment is " << m_UBOAlignment);
@@ -245,38 +246,88 @@ void Renderer::Draw(const Camera& camera)
 	UpdatePerObjectUBORingBuffer();
 	PrepareLights();
 
-	m_voxelization->UpdateVoxel(*this);
-	GL_CALL(glViewport, 0, 0, m_HDRBackbufferTexture->GetWidth(), m_HDRBackbufferTexture->GetHeight());
-
 	// Scene dependent renderings.
 	DrawSceneToGBuffer();
-	DrawShadowMaps();
 
-	// Light cache generation.
-	GatherLightCaches();
+	switch (m_mode)
+	{
+	case Mode::RSM_BRUTEFORCE:
+		DrawShadowMaps();
+		m_uboRing_PerObject->CompleteFrame();
 
-	// No more object drawing from now on.
-	m_uboRing_PerObject->CompleteFrame();
+		m_HDRBackbuffer->Bind(true);
+		GL_CALL(glClear, GL_COLOR_BUFFER_BIT);
+		DrawLights();
 
-	m_HDRBackbuffer->Bind(true);
-	GL_CALL(glClear, GL_COLOR_BUFFER_BIT);
-	
-	DrawLights();
+		ApplyRSMsBruteForce();
 
-	//ApplyRSMsBruteForce();
+		m_uboRing_SpotLight->CompleteFrame();
+
+		OutputHDRTextureToBackbuffer();
+		break;
+
+	case Mode::DIRECTONLY_CACHE:
+	case Mode::RSM_CACHE:
+		DrawShadowMaps();
+		m_uboRing_PerObject->CompleteFrame();
+
+		GatherLightCaches();
+
+		m_HDRBackbuffer->Bind(true);
+		GL_CALL(glClear, GL_COLOR_BUFFER_BIT);
+		
+		if (m_mode == Mode::DIRECTONLY_CACHE)
+			CacheLightingDirect();
+		else
+		{
+			DrawLights();
+			CacheLightingRSM();
+		}
+
+		m_uboRing_SpotLight->CompleteFrame();
+
+		ApplyLightCaches();
+
+		OutputHDRTextureToBackbuffer();
+		break;
+
+
+	case Mode::DIRECTONLY:
+		DrawShadowMaps();
+		m_uboRing_PerObject->CompleteFrame();
+
+		m_HDRBackbuffer->Bind(true);
+		GL_CALL(glClear, GL_COLOR_BUFFER_BIT);
+		DrawLights();
+
+		m_uboRing_SpotLight->CompleteFrame();
+
+		OutputHDRTextureToBackbuffer();
+		break;
+
+
+	case Mode::GBUFFER_DEBUG:
+		m_uboRing_PerObject->CompleteFrame();
+		m_uboRing_SpotLight->CompleteFrame();
+
+		DrawGBufferDebug();
+		break;
+
+
+	case Mode::VOXELVIS:
+		m_uboRing_SpotLight->CompleteFrame();
+
+		m_voxelization->UpdateVoxel(*this);
+
+		m_uboRing_PerObject->CompleteFrame();
+
+		GL_CALL(glViewport, 0, 0, m_HDRBackbufferTexture->GetWidth(), m_HDRBackbufferTexture->GetHeight());
+		m_voxelization->DrawVoxelRepresentation();
+		break;
+	}
+
 
 	//CacheLightingDirect();
-	CacheLightingRSM();
-
-	// No light data needed from now on.
-	m_uboRing_SpotLight->CompleteFrame();
-	
-	ApplyLightCaches();
-	
-	OutputHDRTextureToBackbuffer();
-
-//	m_voxelization->DrawVoxelRepresentation();
-//	DrawGBufferDebug();
 
 
 	// Turn SRGB conversions off, since ui will look odd otherwise.
@@ -397,6 +448,7 @@ void Renderer::DrawShadowMaps()
 void Renderer::DrawGBufferDebug()
 {
 	gl::Disable(gl::Cap::DEPTH_TEST);
+	GL_CALL(glViewport, 0, 0, m_HDRBackbufferTexture->GetWidth(), m_HDRBackbufferTexture->GetHeight());
 
 	m_shaderDebugGBuffer->Activate();
 	gl::FramebufferObject::BindBackBuffer();
