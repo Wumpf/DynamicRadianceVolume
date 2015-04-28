@@ -42,6 +42,7 @@ public:
 	};
 
 	void SetMode(Mode mode) { m_mode = mode; }
+	Mode GetMode() const { return m_mode; }
 
 	void OnScreenResize(const ei::UVec2& newResolution);
 

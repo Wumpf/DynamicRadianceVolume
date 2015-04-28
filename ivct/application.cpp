@@ -259,7 +259,19 @@ void Application::SetupTweakBarBinding()
 	m_tweakBar->AddButton("Save Settings", [&](){ m_tweakBar->SaveReadWriteValuesToJSON(SaveFileDialog("settings.json", ".json")); });
 	m_tweakBar->AddButton("Load Settings", [&](){ m_tweakBar->LoadReadWriteValuesToJSON(OpenFileDialog()); });
 	m_tweakBar->AddButton("Save HDR Image", [&](){ std::string filename = SaveFileDialog("image.pfm", ".pfm"); if(!filename.empty()) m_renderer->SaveToPFM(filename); });
-	
+	m_tweakBar->AddSeperator("main");
+
+	// Render mode
+	std::vector<TwEnumVal> renderModeVals =
+	{
+		TwEnumVal{ (int)Renderer::Mode::RSM_BRUTEFORCE, "RSM Bruteforce" },
+		TwEnumVal{ (int)Renderer::Mode::RSM_CACHE, "RSM Cache (default)" },
+		TwEnumVal{ (int)Renderer::Mode::GBUFFER_DEBUG, "GBuffer Debug" },
+		TwEnumVal{ (int)Renderer::Mode::DIRECTONLY, "DirectLight only" },
+		TwEnumVal{ (int)Renderer::Mode::DIRECTONLY_CACHE, "DirectLight only - via Cache" },
+		TwEnumVal{ (int)Renderer::Mode::VOXELVIS, "Voxelization Display" },
+	};
+	m_tweakBar->AddEnum("RenderMode", renderModeVals, [&](){ return (int)m_renderer->GetMode(); }, [&](int mode){ return m_renderer->SetMode(static_cast<Renderer::Mode>(mode)); });
 
 	// Camera
 	m_tweakBar->AddReadWrite<float>("Camera Speed", [&](){ return m_camera->GetMoveSpeed(); }, [&](float f){ return m_camera->SetMoveSpeed(f); }, " min=0.01 max=100 step=0.01 label=Speed group=Camera");

@@ -44,6 +44,9 @@ public:
 	void AddReadWrite(const std::string& name, const std::function<T()> &getValue, const std::function<void(const T&)>& setValue, 
 						const std::string& additionalTwDefines = "", TypeHint typeHint = TypeHint::AUTO);
 
+	void AddEnum(const std::string& name, const std::vector<TwEnumVal>& values, const std::function<std::int32_t()> &getValue,
+						const std::function<void(std::int32_t)>& setValue, const std::string& additionalTwDefines = "");
+
 	/// Read/Write value from variable.
 	/// \param typeHint
 	///		Use if the AntTweakBar display is ambiguous. For enum types cast the TwType into TypeHint.
