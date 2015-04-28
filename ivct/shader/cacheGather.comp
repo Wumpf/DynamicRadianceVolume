@@ -8,67 +8,91 @@
 #include "gbuffer.glsl"
 #include "utils.glsl"
 
+#define LOCAL_SIZE 16
 
-layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+#define ADDRESS_COORD_CACHE_SIZE 23 // should be a prime number smaller than LOCAL_SIZE*LOCAL_SIZE whose increment is dividable by 4
+shared int addressCoordCache[ADDRESS_COORD_CACHE_SIZE];
+shared uint cacheListSize;
+shared int cacheList[LOCAL_SIZE*LOCAL_SIZE * 4]; // Should be LOCAL_SIZE * LOCAL_SIZE * 8. Super unlikely to use full list
+
+
+layout (local_size_x = LOCAL_SIZE, local_size_y = LOCAL_SIZE, local_size_z = 1) in;
 void main()
 {
-	//bool isThread0 = gl_LocalInvocationID.xy == uvec2(0);
+	int invocationID1D = int(gl_LocalInvocationID.x) + int(gl_LocalInvocationID.y) * LOCAL_SIZE;
 
-	// Get pixel world position ...
-	ivec2 pixelPosition = ivec2(gl_GlobalInvocationID.xy);
-	float depthBufferDepth = texelFetch(GBuffer_Depth, pixelPosition, 0).r;
-
-	ivec3 addressCoord[8];
-
-
-	// Return not allowed since barrier() is invalid aferwards!
-	if(depthBufferDepth > 0.00001 || any(greaterThanEqual(gl_GlobalInvocationID.xy, BackbufferResolution)))
+	// Prepare shared memory
+	if(invocationID1D < ADDRESS_COORD_CACHE_SIZE)
 	{
+		addressCoordCache[invocationID1D] = -1;
+	}
+	if(gl_LocalInvocationID.xy == uvec2(0))
+	{
+		cacheListSize = 0;
+	}
+	barrier();
+
+	int addressVolumeResolutionSq = AddressVolumeResolution*AddressVolumeResolution;
+
+	if(!any(greaterThanEqual(gl_GlobalInvocationID.xy, BackbufferResolution)))
+	{
+		// Get pixel world position ...
+		vec2 pixelPosition = vec2(gl_GlobalInvocationID.xy);
+		float depthBufferDepth = texture(GBuffer_Depth, pixelPosition / BackbufferResolution, 0).r;
 		vec2 screenCor = (pixelPosition + vec2(0.5)) / BackbufferResolution * 2.0 - vec2(1.0);
 		vec4 worldPosition4D = vec4(screenCor, depthBufferDepth, 1.0) * InverseViewProjection;
 		vec3 worldPosition = worldPosition4D.xyz / worldPosition4D.w;
 
 		// Get normal
-		vec3 worldNormal = UnpackNormal16I(texelFetch(GBuffer_Normal, pixelPosition, 0).rg);
+		//vec3 worldNormal = UnpackNormal16I(texelFetch(GBuffer_Normal, pixelPosition, 0).rg);
 
-
-		// Allocate caches ...
-		addressCoord[0] = clamp(ivec3((worldPosition - VolumeWorldMin) / AddressVolumeVoxelSize), ivec3(0), ivec3(AddressVolumeResolution-1));
-		addressCoord[7] = clamp(addressCoord[0] + ivec3(1,1,1), ivec3(0), ivec3(AddressVolumeResolution-1));
-		addressCoord[1] = ivec3(addressCoord[7].x, addressCoord[0].y, addressCoord[0].z);
-		addressCoord[2] = ivec3(addressCoord[0].x, addressCoord[7].y, addressCoord[0].z);
-		addressCoord[3] = ivec3(addressCoord[7].x, addressCoord[7].y, addressCoord[0].z);
-		addressCoord[4] = ivec3(addressCoord[0].x, addressCoord[0].y, addressCoord[7].z);
-		addressCoord[5] = ivec3(addressCoord[7].x, addressCoord[0].y, addressCoord[7].z);
-		addressCoord[6] = ivec3(addressCoord[0].x, addressCoord[7].y, addressCoord[7].z);
-		
-
-		for(int i=0; i<8; ++i)
+		// Cache only "main pixel address".
+		// This still leads to a lot of redundant writes in the address volume, but is clearly faster than performing the lookup for all addressCoord
+		ivec3 addressGridPos = clamp(ivec3((worldPosition - VolumeWorldMin) / AddressVolumeVoxelSize), ivec3(0), ivec3(AddressVolumeResolution-2));
+		int cacheLookup = addressGridPos.x + addressGridPos.y * AddressVolumeResolution + addressGridPos.z * addressVolumeResolutionSq;
+		int cacheAddress = cacheLookup % ADDRESS_COORD_CACHE_SIZE;
+		int oldVal = atomicCompSwap(addressCoordCache[cacheAddress], -1, cacheLookup);
+		if(oldVal != cacheLookup)
 		{
-			// Try lock.
-			// TODO: Cache this group wide, since it is very likely that most threads of the group access the same caches!
-			uint oldAddressValue = imageAtomicCompSwap(VoxelAddressVolume, addressCoord[i], 0, 0xFFFFFFFF);
-			if(oldAddressValue == 0) // Lock successful?
-			{
-				uint lightCacheIndex = atomicAdd(TotalLightCacheCount, 1);
+			uint oldCacheSize = atomicAdd(cacheListSize, uint(8));
 
-				LightCacheEntries[lightCacheIndex].Position = addressCoord[i] * AddressVolumeVoxelSize + VolumeWorldMin;
-
-				// No need for atomic now since we keep it locked up
-				imageStore(VoxelAddressVolume, addressCoord[i], uvec4(lightCacheIndex + 1)); // +1 since zero means "cleared"
-				
-				// Need to write number of thread groups for cache lighting.
-				// Alternative approach would be a separate pass that computes it from the final TotalLightCacheCount. ... but this would be another pass :/
-				uint expectedTotalLightCacheCount = lightCacheIndex + 1;
-				atomicMax(NumCacheLightingThreadGroupsX, (expectedTotalLightCacheCount + LIGHTING_THREADS_PER_GROUP - 1) / LIGHTING_THREADS_PER_GROUP);
-			}
+			// Add caches to hashlist/cache
+			int cacheLookup_Y = cacheLookup + AddressVolumeResolution;
+			int cacheLookup_Z = cacheLookup + addressVolumeResolutionSq;
+			cacheList[oldCacheSize + 0] = cacheLookup;
+			cacheList[oldCacheSize + 1] = cacheLookup + 1;
+			cacheList[oldCacheSize + 2] = cacheLookup_Y;
+			cacheList[oldCacheSize + 3] = cacheLookup_Y + 1;
+			cacheList[oldCacheSize + 4] = cacheLookup_Z;
+			cacheList[oldCacheSize + 5] = cacheLookup_Z + 1;
+			cacheList[oldCacheSize + 6] = cacheLookup_Z + AddressVolumeResolution;
+			cacheList[oldCacheSize + 7] = cacheLookup_Z + AddressVolumeResolution + 1;
 		}
 	}
 
-	// TODO: Remove the need of this by not clearing that part of the buffer
-	if(gl_GlobalInvocationID.xy == uvec2(0, 0))
+	barrier();
+
+	// Now allocate caches.
+	uint loopEnd = cacheListSize; // Helping the compiler to realize that this variable is not changed anymore
+	for(uint i=invocationID1D; i<loopEnd; i += LOCAL_SIZE*LOCAL_SIZE)
 	{
-		NumCacheLightingThreadGroupsY = 1;
-		NumCacheLightingThreadGroupsZ = 1;
+		int cacheCoordToWrite = cacheList[i];
+
+		ivec3 unpackedAddressCoord;
+		unpackedAddressCoord.z = cacheCoordToWrite / addressVolumeResolutionSq;
+		unpackedAddressCoord.y = (cacheCoordToWrite - unpackedAddressCoord.z * addressVolumeResolutionSq) / AddressVolumeResolution;
+		unpackedAddressCoord.x = cacheCoordToWrite % AddressVolumeResolution;
+
+		// Try lock.
+		uint oldAddressValue = imageAtomicCompSwap(VoxelAddressVolume, unpackedAddressCoord, 0, 0xFFFFFFFF);
+		if(oldAddressValue == 0) // Lock successful?
+		{
+			uint lightCacheIndex = atomicAdd(TotalLightCacheCount, 1);
+
+			LightCacheEntries[lightCacheIndex].Position = unpackedAddressCoord * AddressVolumeVoxelSize + VolumeWorldMin;
+
+			// No need for atomic now since we keep it locked up
+			imageStore(VoxelAddressVolume, unpackedAddressCoord, uvec4(lightCacheIndex + 1)); // +1 since zero means "cleared"
+		}
 	}
 }

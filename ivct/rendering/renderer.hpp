@@ -124,6 +124,7 @@ private:
 	BufferPtr m_lightCacheBuffer;
 	BufferPtr m_lightCacheCounter;
 
+	ShaderPtr m_shaderLightCachePrepare;
 	ShaderPtr m_shaderLightCachesDirect;
 	ShaderPtr m_shaderLightCachesRSM;
 

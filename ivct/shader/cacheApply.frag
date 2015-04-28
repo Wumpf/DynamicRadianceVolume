@@ -99,6 +99,6 @@ void main()
 
 
 	OutputColor = interpolatedIrradiance * diffuse;
-	//OutputColor = mod(addressCoord00, vec3(64)) / 64.0;
+	//OutputColor = mod(addressCoord00, vec3(16)) / 256.0;
 	//OutputColor = worldNormal * 0.5 + vec3(0.5);
 } 

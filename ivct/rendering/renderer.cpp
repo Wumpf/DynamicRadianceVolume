@@ -152,6 +152,10 @@ void Renderer::LoadShader()
 	m_shaderLightCachesRSM->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cacheLightingRSM.comp");
 	m_shaderLightCachesRSM->CreateProgram();
 
+	m_shaderLightCachePrepare = std::make_unique<gl::ShaderObject>("cache lighting prepare");
+	m_shaderLightCachePrepare->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cachePrepareLighting.comp");
+	m_shaderLightCachePrepare->CreateProgram();
+
 	m_shaderIndirectLightingBruteForceRSM = std::make_unique<gl::ShaderObject>("apply caches");
 	m_shaderIndirectLightingBruteForceRSM->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
 	m_shaderIndirectLightingBruteForceRSM->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/bruteforcersm.frag");
@@ -160,7 +164,7 @@ void Renderer::LoadShader()
 	// Register all shader for auto reload on change.
 	m_allShaders = { m_shaderDebugGBuffer.get(), m_shaderFillGBuffer.get(), m_shaderDeferredDirectLighting_Spot.get(), 
 					m_shaderTonemap.get(), m_shaderCacheGather.get(), m_shaderCacheApply.get(), m_shaderLightCachesDirect.get(), m_shaderLightCachesRSM.get(),
-						m_shaderFillRSM.get(), m_shaderIndirectLightingBruteForceRSM.get() };
+					m_shaderFillRSM.get(), m_shaderIndirectLightingBruteForceRSM.get(), m_shaderLightCachePrepare.get() };
 	for (auto it : m_allShaders)
 		ShaderFileWatcher::Instance().RegisterShaderForReloadOnChange(it);
 }
@@ -610,6 +614,12 @@ void Renderer::GatherLightCaches()
 	unsigned numThreadGroupsX = (m_HDRBackbufferTexture->GetWidth() + threadsPerGroupX - 1) / threadsPerGroupX;
 	unsigned numThreadGroupsY = (m_HDRBackbufferTexture->GetHeight() + threadsPerGroupY - 1) / threadsPerGroupY;
 	GL_CALL(glDispatchCompute, numThreadGroupsX, numThreadGroupsY, 1);
+
+
+	// Write command buffer.
+	GL_CALL(glMemoryBarrier, GL_SHADER_STORAGE_BARRIER_BIT);
+	m_shaderLightCachePrepare->Activate();
+	GL_CALL(glDispatchCompute, 1, 1, 1);
 }
 
 void Renderer::ApplyLightCaches()
