@@ -11,7 +11,7 @@ layout(location = 1) in vec2 gs_out_Texcoord;
 layout(location = 2) in flat int gs_out_SideIndex;
 layout(location = 3) in flat vec4 gs_out_RasterAABB;
 
-layout(binding = 0, r8ui) restrict writeonly uniform uimage3D VoxelVolume;
+layout(binding = 0, r8) restrict writeonly uniform 	image3D VoxelVolume;
 
 ivec3 UnswizzlePos(ivec3 pos)
 {
@@ -31,31 +31,28 @@ void main()
 	vec3 voxelPosSwizzled;
 	voxelPosSwizzled.xy = gl_FragCoord.xy;
 	voxelPosSwizzled.z = gl_FragCoord.z*VoxelResolution;
-	ivec3 voxelPosSwizzledI = ivec3(voxelPosSwizzled + vec3(0.5));
+	ivec3 voxelPosSwizzledI = ivec3(voxelPosSwizzled);
 
-	imageStore(VoxelVolume, UnswizzlePos(voxelPosSwizzledI), uvec4(1));
+	imageStore(VoxelVolume, UnswizzlePos(voxelPosSwizzledI), vec4(1));
 
 	// "Depth Conservative"
 	float depthDx = dFdxCoarse(voxelPosSwizzled.z);
 	float depthDy = dFdyCoarse(voxelPosSwizzled.z);
-	float maxChange = length(vec2(depthDx, depthDy)) * 1.414; //inversesqrt(2);
+	float maxChange = length(vec2(depthDx, depthDy)) * 1.414; // * inversesqrt(2);
 
 	float minDepth = voxelPosSwizzled.z - maxChange;
 	float maxDepth = voxelPosSwizzled.z + maxChange;
 
-	int minDepthVoxel = int(minDepth * VoxelResolution + vec3(0.5));
-	int maxDepthVoxel = int(maxDepth * VoxelResolution + vec3(0.5));
-
-	if(voxelPosSwizzledI.z != minDepthVoxel)
+	if(voxelPosSwizzledI.z != int(minDepth))
 	{
 		ivec3 voxelPosMin = voxelPosSwizzledI;
-		voxelPosMin -= 1;
-		imageStore(VoxelVolume, UnswizzlePos(voxelPosMin), uvec4(1));
+		voxelPosMin.z -= 1;
+		imageStore(VoxelVolume, UnswizzlePos(voxelPosMin), vec4(1));
 	}
-	if(voxelPosSwizzledI.z != maxDepthVoxel)
+	if(voxelPosSwizzledI.z != int(maxDepth))
   	{
   		ivec3 voxelPosMax = voxelPosSwizzledI;
 		voxelPosMax.z += 1;
-  		imageStore(VoxelVolume, UnswizzlePos(voxelPosMax), uvec4(1));
+  		imageStore(VoxelVolume, UnswizzlePos(voxelPosMax), vec4(1));
   	}
 }

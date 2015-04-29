@@ -5,7 +5,7 @@
 // input
 layout(location = 0) in vec2 Texcoord;
 
-layout(binding = 0) uniform isampler3D VoxelScene;
+layout(binding = 0) uniform sampler3D VoxelScene;
 
 // output
 layout(location = 0, index = 0) out vec4 FragColor;
@@ -27,39 +27,38 @@ bool IntersectBox(vec3 rayOrigin, vec3 rayDir, vec3 aabbMin, vec3 aabbMax, out f
 
 void main()
 {
+	const int lod = 0;
+	vec3 voxelSizeInWorld = VoxelSizeInWorld * pow(2, lod);
+
 	vec4 rayDir4D = vec4(Texcoord * 2.0 - vec2(1.0), 1.0f, 1.0f) * InverseViewProjection;
 	vec3 rayDirection = normalize(rayDir4D.xyz / rayDir4D.w - CameraPosition);
 
-	FragColor = vec4(abs(rayDirection), 1.0);
+
+	FragColor= vec4(0);	
 
 	float rayHit = 0.0;
 	if(IntersectBox(CameraPosition, rayDirection, VolumeWorldMin, VolumeWorldMax, rayHit))
 	{
-		float stepSize = VoxelSizeInWorld.x * 0.1;
+		float stepSize = voxelSizeInWorld.x * 0.1;
 
-		vec3 voxelHitPos = (CameraPosition + (rayHit + stepSize) * rayDirection - VolumeWorldMin) / VoxelSizeInWorld;
+		vec3 voxelHitPos = (CameraPosition + (rayHit + stepSize) * rayDirection - VolumeWorldMin) / voxelSizeInWorld;
 		float totalIntensity = 0.0f;
 
-		vec3 rayMarchStep = rayDirection * stepSize / VoxelSizeInWorld;
+		vec3 rayMarchStep = rayDirection * stepSize / voxelSizeInWorld;
 
 		// Simple raycast
-		vec3 voxelVolumeSize = vec3(textureSize(VoxelScene, 0));
+		vec3 voxelVolumeSize = vec3(textureSize(VoxelScene, lod));
 		while(all(greaterThanEqual(voxelHitPos, vec3(0))) && 
 			  all(lessThan(voxelHitPos, voxelVolumeSize)))
 		{
 			// Check current voxel.
 			ivec3 voxelCoord = ivec3(voxelHitPos + vec3(0.5));
-			totalIntensity += texelFetch(VoxelScene, voxelCoord, 0).r;	
+			float voxelIntensity = texelFetch(VoxelScene, voxelCoord, lod).r;	
+			totalIntensity += voxelIntensity;
+			FragColor += vec4(mod(voxelCoord/32.0, vec3(1.0)), 1.0) * voxelIntensity;
+
 			if(totalIntensity >= 1.0)
 			{
-				// mark edges red.
-				/*vec3 edgeDist = clamp(abs(voxelCoord - voxelHitPos) * 2.0, vec3(0.0), vec3(1.0));
-				edgeDist = pow(edgeDist, vec3(8.0));
-				float edgeFactor = max(max(edgeDist.x*edgeDist.y, edgeDist.x * edgeDist.z), edgeDist.y * edgeDist.z);
-				FragColor = vec4(mix(vec3(0.0), vec3(1.0, 0.2, 0.2), edgeFactor), 1.0);*/
-
-				FragColor = vec4(mod(voxelCoord/32.0, vec3(1.0)), 1.0);
-
 				break;
 			}
 
@@ -69,4 +68,6 @@ void main()
 
 		//FragColor = vec4(mix(FragColor.xyz, vec3(1.0), totalIntensity), 0);
 	}
+	else
+		FragColor = vec4(abs(rayDirection), 1.0);
 }

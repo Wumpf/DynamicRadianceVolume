@@ -31,7 +31,9 @@ public:
 	/// Caches are created on previously marked voxels (no clear happens here!)
 	/// Grid world size settings are currently handled via the global "Constant" ubo.
 	/// Changed renderstates: Viewport, VAO, depth write/read off, culling off.
-	void UpdateVoxel(Renderer& renderer);
+	void VoxelizeScene(Renderer& renderer);
+
+	void GenMipMap();
 
 	const gl::Texture3D& GetVoxelTexture() const { return *m_voxelSceneTexture; }
 	gl::Texture3D& GetVoxelTexture()			 { return *m_voxelSceneTexture; }

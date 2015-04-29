@@ -35,7 +35,7 @@ Voxelization::Voxelization(unsigned int resolution) :
 	m_shaderVoxelDebug->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/voxeldebug.frag");
 	m_shaderVoxelDebug->CreateProgram();
 
-	m_voxelSceneTexture = std::make_unique<gl::Texture3D>(resolution, resolution, resolution, gl::TextureFormat::R8UI, 1);
+	m_voxelSceneTexture = std::make_unique<gl::Texture3D>(resolution, resolution, resolution, gl::TextureFormat::R8, 0);
 
 
 	// Register all shader for auto reload on change.
@@ -67,7 +67,7 @@ void Voxelization::DrawVoxelRepresentation()
 	gl::SetDepthWrite(true);
 }
 
-void Voxelization::UpdateVoxel(Renderer& renderer)
+void Voxelization::VoxelizeScene(Renderer& renderer)
 {
 	m_voxelSceneTexture->ClearToZero();
 
@@ -105,4 +105,9 @@ void Voxelization::UpdateVoxel(Renderer& renderer)
 
 	// Reenable color write
 	GL_CALL(glColorMask, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+}
+
+void Voxelization::GenMipMap()
+{
+	m_voxelSceneTexture->GenMipMaps();
 }
