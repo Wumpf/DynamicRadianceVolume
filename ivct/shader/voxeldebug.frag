@@ -28,7 +28,7 @@ bool IntersectBox(vec3 rayOrigin, vec3 rayDir, vec3 aabbMin, vec3 aabbMax, out f
 void main()
 {
 	const int lod = 0;
-	vec3 voxelSizeInWorld = VoxelSizeInWorld * pow(2, lod);
+	float voxelSizeInWorldLod = VoxelSizeInWorld * pow(2, lod);
 
 	vec4 rayDir4D = vec4(Texcoord * 2.0 - vec2(1.0), 1.0f, 1.0f) * InverseViewProjection;
 	vec3 rayDirection = normalize(rayDir4D.xyz / rayDir4D.w - CameraPosition);
@@ -39,12 +39,12 @@ void main()
 	float rayHit = 0.0;
 	if(IntersectBox(CameraPosition, rayDirection, VolumeWorldMin, VolumeWorldMax, rayHit))
 	{
-		float stepSize = voxelSizeInWorld.x * 0.1;
+		float stepSize = voxelSizeInWorldLod * 0.1;
 
-		vec3 voxelHitPos = (CameraPosition + (rayHit + stepSize) * rayDirection - VolumeWorldMin) / voxelSizeInWorld;
+		vec3 voxelHitPos = (CameraPosition + (rayHit + stepSize) * rayDirection - VolumeWorldMin) / voxelSizeInWorldLod;
 		float totalIntensity = 0.0f;
 
-		vec3 rayMarchStep = rayDirection * stepSize / voxelSizeInWorld;
+		vec3 rayMarchStep = rayDirection * stepSize / voxelSizeInWorldLod;
 
 		// Simple raycast
 		vec3 voxelVolumeSize = vec3(textureSize(VoxelScene, lod));

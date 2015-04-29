@@ -19,8 +19,10 @@
 #include <glhelper/utils/flagoperators.hpp>
 
 Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& resolution) :
-	m_samplerLinear(gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR,
+	m_samplerLinearRepeat(gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR,
 															gl::SamplerObject::Border::REPEAT))),
+	m_samplerLinearClamp(gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR,
+															gl::SamplerObject::Border::CLAMP))),
 	m_samplerNearest(gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::NEAREST, gl::SamplerObject::Filter::NEAREST, gl::SamplerObject::Filter::NEAREST, 
 															gl::SamplerObject::Border::REPEAT))),
 	m_samplerShadow(gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::NEAREST, 
@@ -29,7 +31,7 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	m_readLightCacheCount(false),
 	m_lastNumLightCaches(0),
 	m_exposure(1.0f),
-	m_mode(Renderer::Mode::RSM_CACHE)
+	m_mode(Renderer::Mode::RSM_CACHE_CONETRACESHADOW)
 {
 	glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &m_UBOAlignment);
 	LOG_INFO("Uniform buffer alignment is " << m_UBOAlignment);
@@ -58,7 +60,7 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	m_uboRing_SpotLight = std::make_unique<gl::PersistentRingBuffer>(maxExpectedLights * RoundSizeToUBOAlignment(m_uboInfoSpotLight.bufferDataSizeByte) * 3);
 
 	// Create voxelization module.
-	m_voxelization = std::make_unique<Voxelization>(64);
+	m_voxelization = std::make_unique<Voxelization>(256);
 
 	// Allocate light cache buffer
 	m_maxNumLightCaches = 131072;
@@ -156,15 +158,21 @@ void Renderer::LoadShader()
 	m_shaderLightCachePrepare->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cachePrepareLighting.comp");
 	m_shaderLightCachePrepare->CreateProgram();
 
-	m_shaderIndirectLightingBruteForceRSM = std::make_unique<gl::ShaderObject>("apply caches");
+	m_shaderIndirectLightingBruteForceRSM = std::make_unique<gl::ShaderObject>("brute force rsm");
 	m_shaderIndirectLightingBruteForceRSM->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
 	m_shaderIndirectLightingBruteForceRSM->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/bruteforcersm.frag");
 	m_shaderIndirectLightingBruteForceRSM->CreateProgram();
 
+	m_shaderConeTraceAO = std::make_unique<gl::ShaderObject>("cone trace ao caches");
+	m_shaderConeTraceAO->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
+	m_shaderConeTraceAO->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/ambientocclusion.frag");
+	m_shaderConeTraceAO->CreateProgram();
+	
+
 	// Register all shader for auto reload on change.
 	m_allShaders = { m_shaderDebugGBuffer.get(), m_shaderFillGBuffer.get(), m_shaderDeferredDirectLighting_Spot.get(), 
 					m_shaderTonemap.get(), m_shaderCacheGather.get(), m_shaderCacheApply.get(), m_shaderLightCachesDirect.get(), m_shaderLightCachesRSM.get(),
-					m_shaderFillRSM.get(), m_shaderIndirectLightingBruteForceRSM.get(), m_shaderLightCachePrepare.get() };
+					m_shaderFillRSM.get(), m_shaderIndirectLightingBruteForceRSM.get(), m_shaderLightCachePrepare.get(), m_shaderConeTraceAO.get() };
 	for (auto it : m_allShaders)
 		ShaderFileWatcher::Instance().RegisterShaderForReloadOnChange(it);
 }
@@ -188,8 +196,13 @@ void Renderer::UpdatePerFrameUBO(const Camera& camera)
 	auto viewProjection = projection * view;
 
 
-	ei::Vec3 VolumeWorldMin(m_scene->GetBoundingBox().min - 0.1f);
-	ei::Vec3 VolumeWorldMax(m_scene->GetBoundingBox().max + 0.1f);
+	ei::Vec3 VolumeWorldMin(m_scene->GetBoundingBox().min - 0.001f);
+	ei::Vec3 VolumeWorldMax(m_scene->GetBoundingBox().max + 0.001f);
+
+	// Make it cubic!
+	ei::Vec3 extent = VolumeWorldMax - VolumeWorldMin;
+	float largestExtent = ei::max(extent);
+	VolumeWorldMax += ei::Vec3(largestExtent) - extent;
 
 	gl::MappedUBOView mappedMemory(m_allShaders[0]->GetUniformBufferInfo()["PerFrame"], m_uboPerFrame->Map(gl::Buffer::MapType::WRITE, gl::Buffer::MapWriteFlag::INVALIDATE_BUFFER));
 	mappedMemory["Projection"].Set(projection);
@@ -201,8 +214,8 @@ void Renderer::UpdatePerFrameUBO(const Camera& camera)
 
 	mappedMemory["VolumeWorldMin"].Set(VolumeWorldMin);
 	mappedMemory["VolumeWorldMax"].Set(VolumeWorldMax);
-	mappedMemory["VoxelSizeInWorld"].Set((VolumeWorldMax - VolumeWorldMin) / m_voxelization->GetVoxelTexture().GetWidth());
-	mappedMemory["AddressVolumeVoxelSize"].Set((VolumeWorldMax - VolumeWorldMin) / m_lightCacheAddressVolume->GetWidth());
+	mappedMemory["VoxelSizeInWorld"].Set((VolumeWorldMax.x - VolumeWorldMin.x) / m_voxelization->GetVoxelTexture().GetWidth());
+	mappedMemory["AddressVolumeVoxelSize"].Set((VolumeWorldMax.x - VolumeWorldMin.x) / m_lightCacheAddressVolume->GetWidth());
 
 	m_uboPerFrame->Unmap();
 }
@@ -270,9 +283,11 @@ void Renderer::Draw(const Camera& camera)
 		OutputHDRTextureToBackbuffer();
 		break;
 
+	case Mode::RSM_CACHE_CONETRACESHADOW:
 	case Mode::DIRECTONLY_CACHE:
 	case Mode::RSM_CACHE:
 		DrawShadowMaps();
+
 		m_uboRing_PerObject->CompleteFrame();
 
 		GatherLightCaches();
@@ -321,12 +336,29 @@ void Renderer::Draw(const Camera& camera)
 	case Mode::VOXELVIS:
 		m_uboRing_SpotLight->CompleteFrame();
 
-		m_voxelization->UpdateVoxel(*this);
-
+		m_voxelization->VoxelizeScene(*this);
+		
 		m_uboRing_PerObject->CompleteFrame();
+
+		m_voxelization->GenMipMap();
 
 		GL_CALL(glViewport, 0, 0, m_HDRBackbufferTexture->GetWidth(), m_HDRBackbufferTexture->GetHeight());
 		m_voxelization->DrawVoxelRepresentation();
+		break;
+
+	case Mode::AMBIENTOCCLUSION:
+		m_uboRing_SpotLight->CompleteFrame();
+
+		m_voxelization->VoxelizeScene(*this);
+
+		m_uboRing_PerObject->CompleteFrame();
+
+		m_voxelization->GenMipMap();
+
+		m_HDRBackbuffer->Bind(true);
+		GL_CALL(glClear, GL_COLOR_BUFFER_BIT);
+		ConeTraceAO();
+		OutputHDRTextureToBackbuffer();
 		break;
 	}
 
@@ -401,6 +433,16 @@ void Renderer::PrepareLights()
 	}
 }
 
+void Renderer::BindGBuffer()
+{
+	m_GBuffer_diffuse->Bind(0);
+	m_GBuffer_normal->Bind(1);
+	m_GBuffer_depth->Bind(2);
+	m_samplerNearest.BindSampler(0);
+	m_samplerNearest.BindSampler(1);
+	m_samplerNearest.BindSampler(2);
+}
+
 void Renderer::BindObjectUBO(unsigned int _objectIndex)
 {
 	m_uboRing_PerObject->BindBlockAsUBO(m_uboInfoPerObject.bufferBinding, _objectIndex);
@@ -422,7 +464,7 @@ void Renderer::DrawSceneToGBuffer()
 	gl::Enable(gl::Cap::DEPTH_TEST);
 	gl::SetDepthWrite(true);
 
-	m_samplerLinear.BindSampler(0);
+	m_samplerLinearRepeat.BindSampler(0);
 
 	m_shaderFillGBuffer->Activate();
 	m_GBuffer->Bind(false);
@@ -435,7 +477,7 @@ void Renderer::DrawShadowMaps()
 	gl::Enable(gl::Cap::DEPTH_TEST);
 	gl::SetDepthWrite(true);
 
-	m_samplerLinear.BindSampler(0);
+	m_samplerLinearClamp.BindSampler(0);
 
 	m_shaderFillRSM->Activate();
 
@@ -457,13 +499,7 @@ void Renderer::DrawGBufferDebug()
 	m_shaderDebugGBuffer->Activate();
 	gl::FramebufferObject::BindBackBuffer();
 
-	m_GBuffer_diffuse->Bind(0);
-	m_GBuffer_normal->Bind(1);
-	m_GBuffer_depth->Bind(2);
-
-	m_samplerNearest.BindSampler(0);
-	m_samplerNearest.BindSampler(1);
-	m_samplerNearest.BindSampler(2);
+	BindGBuffer();
 
 	m_screenTriangle->Draw();
 }
@@ -475,13 +511,7 @@ void Renderer::DrawLights()
 
 	m_shaderDeferredDirectLighting_Spot->Activate();
 
-	m_GBuffer_diffuse->Bind(0);
-	m_GBuffer_normal->Bind(1);
-	m_GBuffer_depth->Bind(2);
-
-	m_samplerNearest.BindSampler(0);
-	m_samplerNearest.BindSampler(1);
-	m_samplerNearest.BindSampler(2);
+	BindGBuffer();
 	m_samplerShadow.BindSampler(3);
 
 	for (unsigned int lightIndex = 0; lightIndex < m_scene->GetLights().size(); ++lightIndex)
@@ -502,17 +532,11 @@ void Renderer::ApplyRSMsBruteForce()
 
 	m_shaderIndirectLightingBruteForceRSM->Activate();
 
-	m_GBuffer_diffuse->Bind(0);
-	m_GBuffer_normal->Bind(1);
-	m_GBuffer_depth->Bind(2);
-
-	m_samplerNearest.BindSampler(0);
-	m_samplerNearest.BindSampler(1);
-	m_samplerNearest.BindSampler(2);
+	BindGBuffer();
 	m_samplerNearest.BindSampler(3);
 	m_samplerNearest.BindSampler(4);
 	m_samplerNearest.BindSampler(5);
-	m_samplerLinear.BindSampler(6);
+	m_samplerLinearClamp.BindSampler(6);
 
 	m_voxelization->GetVoxelTexture().Bind(6);
 
@@ -577,6 +601,19 @@ void Renderer::CacheLightingRSM()
 	}
 }
 
+void Renderer::ConeTraceAO()
+{
+	gl::Disable(gl::Cap::DEPTH_TEST);
+	gl::SetDepthWrite(false);
+
+	BindGBuffer();
+	m_samplerLinearClamp.BindSampler(3);
+	m_voxelization->GetVoxelTexture().Bind(3);
+
+	m_shaderConeTraceAO->Activate();
+	m_screenTriangle->Draw();
+}
+
 void Renderer::GatherLightCaches()
 {
 	gl::Disable(gl::Cap::DEPTH_TEST);
@@ -595,12 +632,7 @@ void Renderer::GatherLightCaches()
 	//m_lightCacheHashMap->GetBuffer()->ClearToZero();
 	m_lightCacheAddressVolume->ClearToZero();
 
-	m_GBuffer_diffuse->Bind(0);
-	m_GBuffer_normal->Bind(1);
-	m_GBuffer_depth->Bind(2);
-	m_samplerNearest.BindSampler(0);
-	m_samplerNearest.BindSampler(1);
-	m_samplerNearest.BindSampler(2);
+	BindGBuffer();
 
 	m_shaderCacheGather->BindSSBO(*m_lightCacheCounter, "LightCacheCounter");
 	m_shaderCacheGather->BindSSBO(*m_lightCacheBuffer, "LightCacheBuffer");
@@ -627,12 +659,7 @@ void Renderer::ApplyLightCaches()
 	gl::Disable(gl::Cap::DEPTH_TEST);
 	gl::Enable(gl::Cap::BLEND);
 
-	m_GBuffer_diffuse->Bind(0);
-	m_GBuffer_normal->Bind(1);
-	m_GBuffer_depth->Bind(2);
-	m_samplerNearest.BindSampler(0);
-	m_samplerNearest.BindSampler(1);
-	m_samplerNearest.BindSampler(2);
+	BindGBuffer();
 
 	//m_shaderCacheApply->BindSSBO(*m_lightCacheHashMap);
 	m_shaderCacheApply->BindSSBO(*m_lightCacheBuffer, "LightCacheBuffer");

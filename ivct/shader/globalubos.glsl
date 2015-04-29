@@ -22,8 +22,8 @@ layout(binding = 1, shared) uniform PerFrame
 	// Note that both the voxel and the address volume share sizes but might not be of the same resolution!
 	vec3 VolumeWorldMin; // World min coordinate of voxel volume (currently assumed to be scene-static)
 	vec3 VolumeWorldMax; // || max
-	vec3 VoxelSizeInWorld; 			// (VolumeWorldMax - VolumeWorldMin) / VoxelResolution
-	vec3 AddressVolumeVoxelSize; 	// (VolumeWorldMax - VolumeWorldMin) / AddressGridResolution
+	float VoxelSizeInWorld; 		// Voxels are enforced to be cubic (simplifies several computations and improves quality)
+	float AddressVolumeVoxelSize; 	// ||
 };
 
 // UBO for values that change with each object

@@ -66,7 +66,7 @@ void main()
 		// IRRADIANCE VIA SH (test)
 
 		const float factor0 = 1.0 / (2.0 * sqrt(PI));
-		const float factor1 = sqrt(3.0) / (2.0 * sqrt(PI));
+		const float factor1 = sqrt(3.0) / (2.0 * sqrt(2.0*PI));
 
 		// Band 0
 		irradiance[i] = vec3(LightCacheEntries[cacheAddress].SH00_r,
@@ -74,9 +74,9 @@ void main()
 								LightCacheEntries[cacheAddress].SH00_b) * factor0;
 
 		// Band 1
-		irradiance[i] += LightCacheEntries[cacheAddress].SH1neg1 * (factor1 * worldNormal.y);
+		irradiance[i] -= LightCacheEntries[cacheAddress].SH1neg1 * (factor1 * worldNormal.y);
 		irradiance[i] += LightCacheEntries[cacheAddress].SH10 * (factor1 * worldNormal.z);
-		irradiance[i] += LightCacheEntries[cacheAddress].SH1pos1 * (factor1 * worldNormal.x);
+		irradiance[i] -= LightCacheEntries[cacheAddress].SH1pos1 * (factor1 * worldNormal.x);
 
 		// Band 2
 	/*	irradiance[i] += LightCacheEntries[cacheAddress].SH2neg2 * (sqrt(15.0 / (4.0 * PI)) * worldNormal.x * worldNormal.y);

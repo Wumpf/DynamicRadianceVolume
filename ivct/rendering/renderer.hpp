@@ -35,10 +35,12 @@ public:
 	{
 		RSM_BRUTEFORCE,
 		RSM_CACHE,
+		RSM_CACHE_CONETRACESHADOW,
 		GBUFFER_DEBUG,
 		DIRECTONLY,
 		DIRECTONLY_CACHE,
-		VOXELVIS
+		VOXELVIS,
+		AMBIENTOCCLUSION
 	};
 
 	void SetMode(Mode mode) { m_mode = mode; }
@@ -79,6 +81,9 @@ private:
 	void UpdatePerObjectUBORingBuffer();
 	void PrepareLights();
 
+	/// Binds gbuffer with nearest sampler with bindings according to 
+	void BindGBuffer();
+
 	/// Fills GBuffer.
 	void DrawSceneToGBuffer();
 	/// Fills shadow maps.
@@ -101,6 +106,9 @@ private:
 	void CacheLightingDirect();
 	/// Applies indirect light to caches (the way its meant to be used)
 	void CacheLightingRSM();
+
+
+	void ConeTraceAO();
 
 	/// Draws scene, mesh by mesh.
 	///
@@ -128,6 +136,7 @@ private:
 	ShaderPtr m_shaderLightCachePrepare;
 	ShaderPtr m_shaderLightCachesDirect;
 	ShaderPtr m_shaderLightCachesRSM;
+	ShaderPtr m_shaderConeTraceAO;
 
 
 	// ------------------------------------------------------------
@@ -193,7 +202,8 @@ private:
 	gl::UniformBufferMetaInfo m_uboInfoPerObject;
 	std::unique_ptr<gl::PersistentRingBuffer> m_uboRing_PerObject;
 
-	const gl::SamplerObject& m_samplerLinear;
+	const gl::SamplerObject& m_samplerLinearRepeat;
+	const gl::SamplerObject& m_samplerLinearClamp;
 	const gl::SamplerObject& m_samplerNearest;
 	const gl::SamplerObject& m_samplerShadow;
 

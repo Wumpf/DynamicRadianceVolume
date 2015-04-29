@@ -265,11 +265,13 @@ void Application::SetupTweakBarBinding()
 	std::vector<TwEnumVal> renderModeVals =
 	{
 		TwEnumVal{ (int)Renderer::Mode::RSM_BRUTEFORCE, "RSM Bruteforce" },
-		TwEnumVal{ (int)Renderer::Mode::RSM_CACHE, "RSM Cache (default)" },
+		TwEnumVal{ (int)Renderer::Mode::RSM_CACHE, "RSM Cache" },
+		TwEnumVal{ (int)Renderer::Mode::RSM_CACHE_CONETRACESHADOW, "RSM Cache, VCT shadow" },
 		TwEnumVal{ (int)Renderer::Mode::GBUFFER_DEBUG, "GBuffer Debug" },
 		TwEnumVal{ (int)Renderer::Mode::DIRECTONLY, "DirectLight only" },
 		TwEnumVal{ (int)Renderer::Mode::DIRECTONLY_CACHE, "DirectLight only - via Cache" },
 		TwEnumVal{ (int)Renderer::Mode::VOXELVIS, "Voxelization Display" },
+		TwEnumVal{ (int)Renderer::Mode::AMBIENTOCCLUSION, "VCT AO" },
 	};
 	m_tweakBar->AddEnum("RenderMode", renderModeVals, [&](){ return (int)m_renderer->GetMode(); }, [&](int mode){ return m_renderer->SetMode(static_cast<Renderer::Mode>(mode)); });
 
