@@ -16,8 +16,10 @@ uniform sampler2D DiffuseTexture;
 void main()
 {
 	vec3 toLight = normalize(LightPosition - Position);
-	float cosToLight = dot(-toLight, LightDirection);
-	float pixelSteradian = cosToLight / ShadowMapResolution / ShadowMapResolution; // cos(alpha) / pixel area
+	float cosToLight = saturate(dot(-toLight, LightDirection));
+
+	float totalSpotSteradian = PI_2 * (1.0 - LightCosHalfAngle); // https://en.wikipedia.org/wiki/Steradian#Other_properties
+	float pixelSteradian = totalSpotSteradian * cosToLight / ShadowMapResolution / ShadowMapResolution; // cos(alpha) / pixel area
 	float spotFalloff = ComputeSpotFalloff(cosToLight); 
 
 	// Actual intensity for given Direction = spotFallOff * LightIntensity
