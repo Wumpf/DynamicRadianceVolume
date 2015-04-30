@@ -52,7 +52,8 @@ void main()
 
 	for(int i=0; i<8; ++i)
 	{
-		uint cacheAddress = texelFetch(VoxelAddressVolume, addressCoord00 + offsets[i], 0).r;
+		ivec3 cacheSamplePos = addressCoord00 + offsets[i];
+		uint cacheAddress = texelFetch(VoxelAddressVolume, cacheSamplePos, 0).r;
 
 		// Check if address is valid. (debug code!)
 		/*if(cacheAddress == 0 || cacheAddress == 0xFFFFFFFF)
@@ -66,7 +67,7 @@ void main()
 		// IRRADIANCE VIA SH (test)
 
 		const float factor0 = 1.0 / (2.0 * sqrt(PI));
-		const float factor1 = sqrt(3.0) / (2.0 * sqrt(2.0*PI));
+		const float factor1 = sqrt(3.0) / (2.0 * sqrt(PI));
 
 		// Band 0
 		irradiance[i] = vec3(LightCacheEntries[cacheAddress].SH00_r,
@@ -98,7 +99,7 @@ void main()
 				mix(irradiance[6], irradiance[7], interp.x), interp.y), interp.z);
 
 
-	OutputColor = interpolatedIrradiance * diffuse;
+	OutputColor = max(interpolatedIrradiance, vec3(0.0)) * diffuse;
 	//OutputColor = mod(addressCoord00, vec3(16)) / 256.0;
 	//OutputColor = worldNormal * 0.5 + vec3(0.5);
 } 

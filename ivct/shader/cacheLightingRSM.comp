@@ -28,10 +28,6 @@ void main()
 	vec3 SH10 = vec3(0);
 	vec3 SH1pos1 = vec3(0);
 
-	// Analytical clamped cosine lobe transformation into SH basis
-	// Derivation: Assume light direction = z-axis, then rotate resulting zonal harmonics
-
-
 	float distThreshholdSq = dot(AddressVolumeVoxelSize, AddressVolumeVoxelSize);
 
 	int localIndex = int(gl_LocalInvocationID.x);
@@ -81,22 +77,24 @@ void main()
 			float fluxToIntensity = saturate(dot(valNormal, -toVal)) / PI;
 
 			// Ignore too close light sources due to 
-			if(lightDistanceSq < distThreshholdSq)
-				fluxToIntensity = 0; // continue; // Continue, even is placed as early as possible, is slower.
+			//if(lightDistanceSq < distThreshholdSq)
+			//	fluxToIntensity = 0; // continue; // Continue, even is placed as early as possible, is slower.
 
 
 			vec3 scaledIntensity = valTotalExitantFlux * (fluxToIntensity / (lightDistanceSq + valArea));
 			//vec3 scaledIntensity = valTotalExitantFlux * (fluxToIntensity / lightDistanceSq); // VPL instead of VAL
 
 
-
 			const float factor0 = sqrt(PI) / 2.0;
 			const float factor1 = sqrt(PI / 3.0);
 
+			// Analytical clamped cosine lobe transformation into SH basis
+			// Derivation: Assume light direction = z-axis, then rotate resulting zonal harmonics
+
 			SH00 += factor0 * scaledIntensity;
-			SH1neg1 += (factor1 * toVal.y) * scaledIntensity;
+			SH1neg1 -= (factor1 * toVal.y) * scaledIntensity;
 			SH10 += (factor1 * toVal.z) * scaledIntensity;
-			SH1pos1 += (factor1 * toVal.x) * scaledIntensity;
+			SH1pos1 -= (factor1 * toVal.x) * scaledIntensity;
 
 			// TODO: Don't know the rotation of the second zonal harmonic
 			// cosine lobe second band zonal is sqrt(5*PI)/8 according to https://d3cw3dd2w32x2b.cloudfront.net/wp-content/uploads/2011/06/10-14.pdf
@@ -107,8 +105,8 @@ void main()
 			vec3 SH2pos2 =*/
 		}
 	}
-		
 
+	
 	if(gl_GlobalInvocationID.x < TotalLightCacheCount)
 	{
 		// Save to buffer.
