@@ -19,10 +19,9 @@
 
 #include "glhelper/utils/pathutils.hpp"
 
-#ifdef _WIN32
 #undef APIENTRY
 #include <windows.h>
-#endif
+#include <shlwapi.h>
 
 
 Application::Application(int argc, char** argv)
@@ -83,14 +82,14 @@ std::string Application::OpenFileDialog()
 	char oldCurrentPath[MAX_PATH];
 	GetCurrentDirectoryA(MAX_PATH, oldCurrentPath);
 
-	char fileName[MAX_PATH] = "";
+	char filename[MAX_PATH] = "";
 
 	OPENFILENAMEA ofn = { 0 };
 	ofn.lStructSize = sizeof(ofn);
 	ofn.hwndOwner = m_window->GetWindowHandle();
 	ofn.lpstrFilter = "All Files (*.*)\0*.*\0Json Files (*.json)\0*.json\0Obj Model (*.obj)\0*.obj\0";
 	ofn.nFilterIndex = 1;
-	ofn.lpstrFile = fileName;
+	ofn.lpstrFile = filename;
 	ofn.nMaxFile = MAX_PATH;
 	ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
 	
@@ -99,7 +98,10 @@ std::string Application::OpenFileDialog()
 		// Restore current directory
 		SetCurrentDirectoryA(oldCurrentPath);
 
-		return fileName;
+		char relativePath[MAX_PATH];
+		PathRelativePathToA(relativePath, oldCurrentPath, FILE_ATTRIBUTE_DIRECTORY, filename, FILE_ATTRIBUTE_NORMAL);
+
+		return relativePath;
 	}
 	else
 	{
@@ -113,14 +115,14 @@ std::string Application::SaveFileDialog(const std::string& defaultName, const st
 	char oldCurrentPath[MAX_PATH];
 	GetCurrentDirectoryA(MAX_PATH, oldCurrentPath);
 
-	char szFileName[MAX_PATH];
-	strcpy(szFileName, defaultName.c_str());
+	char filename[MAX_PATH];
+	strcpy(filename, defaultName.c_str());
 
 	OPENFILENAMEA ofn = { 0 };
 	ofn.lStructSize = sizeof(ofn);
 	ofn.hwndOwner = m_window->GetWindowHandle();
 	ofn.lpstrFilter = "All Files (*.*)\0*.*\0Json Files (*.json)\0*.json\0Obj Model (*.obj)\0*.obj\0";
-	ofn.lpstrFile = szFileName;
+	ofn.lpstrFile = filename;
 	ofn.nMaxFile = MAX_PATH;
 	ofn.Flags = OFN_EXPLORER | OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST;
 	ofn.lpstrDefExt = fileEnding.c_str();
@@ -130,7 +132,10 @@ std::string Application::SaveFileDialog(const std::string& defaultName, const st
 		// Restore current directory
 		SetCurrentDirectoryA(oldCurrentPath);
 
-		return szFileName;
+		char relativePath[MAX_PATH];
+		PathRelativePathToA(relativePath, oldCurrentPath, FILE_ATTRIBUTE_DIRECTORY, filename, FILE_ATTRIBUTE_NORMAL);
+
+		return relativePath;
 	}
 	else
 	{
