@@ -34,7 +34,7 @@ Application::Application(int argc, char** argv)
 	m_window.reset(new OutputWindow());
 
 	// Create "global" camera.
-	auto resolution = m_window->GetResolution();
+	auto resolution = m_window->GetFramebufferSize();
 	m_camera.reset(new InteractiveCamera(m_window->GetGLFWWindow(), ei::Vec3(0.0f, 2.5f, 5.0f), -ei::Vec3(0.0f, 2.5f, 5.0f),
 		static_cast<float>(resolution.x) / resolution.y, 0.1f, 1000.0f, 60.0f, ei::Vec3(0, 1, 0)));
 
@@ -44,10 +44,17 @@ Application::Application(int argc, char** argv)
 
 	// Renderer.
 	LOG_INFO("\nSetup renderer ...");
-	m_renderer.reset(new Renderer(m_scene, m_window->GetResolution()));
+	m_renderer.reset(new Renderer(m_scene, m_window->GetFramebufferSize()));	
 
 	// Watch shader dir.
 	ShaderFileWatcher::Instance().SetShaderWatchDirectory("shader");
+
+	// Resize handler.
+	m_window->AddResizeHandler([&](int width, int height){
+		m_renderer->OnScreenResize(ei::UVec2(width, height));
+		m_camera->SetAspectRatio(static_cast<float>(width) / height);
+		m_tweakBar->SetWindowSize(width, height);
+	});
 
 	SetupTweakBarBinding();
 

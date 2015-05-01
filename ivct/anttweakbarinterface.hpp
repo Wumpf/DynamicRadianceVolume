@@ -69,6 +69,9 @@ public:
 
 	void LoadReadWriteValuesToJSON(const std::string& jsonFilename);
 
+
+	void SetWindowSize(int width, int height);
+
 private:
 	void CheckTwError();
 

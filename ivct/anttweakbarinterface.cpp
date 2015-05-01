@@ -55,8 +55,8 @@ AntTweakBarInterface::AntTweakBarInterface(GLFWwindow* glfwWindow) :
 	{
 		// Set GLFW event callbacks
 		int width, height;
-		glfwGetWindowSize(glfwWindow, &width, &height); 
-		TwWindowSize(width, height);
+		glfwGetFramebufferSize(glfwWindow, &width, &height); 
+		SetWindowSize(width, height);
 
 		glfwSetMouseButtonCallback(glfwWindow, (GLFWmousebuttonfun)TwEventMouseButtonGLFW3);
 		glfwSetCursorPosCallback(glfwWindow, (GLFWcursorposfun)TwEventMousePosGLFW3);
@@ -105,6 +105,11 @@ AntTweakBarInterface::~AntTweakBarInterface(void)
 
 	for (auto entry : m_entries)
 		delete entry;
+}
+
+void AntTweakBarInterface::SetWindowSize(int width, int height)
+{
+	TwWindowSize(width, height);
 }
 
 void AntTweakBarInterface::CheckTwError()

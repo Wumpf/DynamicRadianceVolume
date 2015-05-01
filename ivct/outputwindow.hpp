@@ -1,5 +1,8 @@
 #pragma once
 
+#include <unordered_map>
+#include <vector>
+
 #include <glhelper/shaderobject.hpp>
 #include <GLFW/glfw3.h>
 #include <ei/vector.hpp>
@@ -41,7 +44,10 @@ public:
 
 	void SetTitle(const std::string& windowTitle);
 
-	ei::UVec2 GetResolution();
+	ei::UVec2 GetFramebufferSize();
+
+	typedef std::function<void(int framebufferWidth, int framebufferHeight)> ResizeHandlerFunc;
+	void AddResizeHandler(const ResizeHandlerFunc& resizeHandler) { s_resizeHandlers[m_window].push_back(resizeHandler); }
 
 private:
 	void GetGLFWKeystates();
@@ -51,5 +57,9 @@ private:
 	gl::ScreenAlignedTriangle* m_screenTri;
 
 	int oldGLFWKeystates[GLFW_KEY_LAST];
+
+	static std::unordered_map<GLFWwindow*, std::vector<ResizeHandlerFunc>> s_resizeHandlers;
+
+	friend void WindowResizeCallback(GLFWwindow* window, int width, int height);
 };
 
