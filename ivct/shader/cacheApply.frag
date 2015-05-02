@@ -32,7 +32,8 @@ void main()
 	vec3 worldNormal = UnpackNormal16I(textureLod(GBuffer_Normal, Texcoord, 0.0).rg);
 	vec3 diffuse = texture(GBuffer_Diffuse, Texcoord).rgb;
 
-	vec3 addressCoord = (worldPosition - VolumeWorldMin) / AddressVolumeVoxelSize;
+	//vec3 addressCoord = (worldPosition - VolumeWorldMin) / AddressVolumeVoxelSize;
+	vec3 addressCoord = clamp((worldPosition - VolumeWorldMin) / AddressVolumeVoxelSize, vec3(0), vec3(AddressVolumeResolution-0.999));
 	ivec3 addressCoord00 = ivec3(addressCoord);
 
 	ivec3 offsets[8] =
@@ -97,7 +98,6 @@ void main()
 				mix(irradiance[2], irradiance[3], interp.x), interp.y),
 			mix(mix(irradiance[4], irradiance[5], interp.x),
 				mix(irradiance[6], irradiance[7], interp.x), interp.y), interp.z);
-
 
 	OutputColor = max(interpolatedIrradiance, vec3(0.0)) * diffuse;
 	//OutputColor = mod(addressCoord00, vec3(16)) / 256.0;

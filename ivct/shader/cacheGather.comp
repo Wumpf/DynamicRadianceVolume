@@ -48,7 +48,7 @@ void main()
 
 		// Cache only "main pixel address".
 		// This still leads to a lot of redundant writes in the address volume, but is clearly faster than performing the lookup for all addressCoord
-		ivec3 addressGridPos = clamp(ivec3((worldPosition - VolumeWorldMin) / AddressVolumeVoxelSize), ivec3(0), ivec3(AddressVolumeResolution-2));
+		ivec3 addressGridPos = clamp(ivec3((worldPosition - VolumeWorldMin) / AddressVolumeVoxelSize), ivec3(0), ivec3(AddressVolumeResolution-1));
 		int cacheLookup = addressGridPos.x + addressGridPos.y * AddressVolumeResolution + addressGridPos.z * addressVolumeResolutionSq;
 		int cacheAddress = cacheLookup % ADDRESS_COORD_CACHE_SIZE;
 		int oldVal = atomicCompSwap(addressCoordCache[cacheAddress], -1, cacheLookup);
