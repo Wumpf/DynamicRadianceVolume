@@ -43,8 +43,8 @@ void main()
 		vec4(-0.509037, 0.5, -0.700629, 3.0 * PI / 20.0),
 		vec4(-0.823639, 0.5, 0.267617, 3.0 * PI / 20.0),
 	};
-	const float directionRadius = PI/3.0;
-	const float distToSphereRad = sin(directionRadius * 0.5);
+	const float angleBetweenSamples = PI/3.0;
+	const float distToSphereRad = sin(angleBetweenSamples * 0.5);
 
 
 	vec3 U, V;

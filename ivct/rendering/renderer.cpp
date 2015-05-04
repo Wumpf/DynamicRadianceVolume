@@ -60,7 +60,7 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	m_uboRing_SpotLight = std::make_unique<gl::PersistentRingBuffer>(maxExpectedLights * RoundSizeToUBOAlignment(m_uboInfoSpotLight.bufferDataSizeByte) * 3);
 
 	// Create voxelization module.
-	m_voxelization = std::make_unique<Voxelization>(256);
+	m_voxelization = std::make_unique<Voxelization>(128);
 
 	// Allocate light cache buffer
 	m_maxNumLightCaches = 131072;
@@ -266,10 +266,11 @@ void Renderer::Draw(const Camera& camera)
 	// Scene dependent renderings.
 	DrawSceneToGBuffer();
 
+	DrawShadowMaps();
+
 	switch (m_mode)
 	{
 	case Mode::RSM_BRUTEFORCE:
-		DrawShadowMaps();
 		m_uboRing_PerObject->CompleteFrame();
 
 		m_HDRBackbuffer->Bind(true);
@@ -286,10 +287,13 @@ void Renderer::Draw(const Camera& camera)
 	case Mode::RSM_CACHE_CONETRACESHADOW:
 	case Mode::DIRECTONLY_CACHE:
 	case Mode::RSM_CACHE:
-		DrawShadowMaps();
+		m_voxelization->VoxelizeScene(*this);
 
 		m_uboRing_PerObject->CompleteFrame();
 
+		m_voxelization->GenMipMap();
+
+		GL_CALL(glViewport, 0, 0, m_HDRBackbufferTexture->GetWidth(), m_HDRBackbufferTexture->GetHeight());
 		GatherLightCaches();
 
 		m_HDRBackbuffer->Bind(true);
@@ -312,7 +316,6 @@ void Renderer::Draw(const Camera& camera)
 
 
 	case Mode::DIRECTONLY:
-		DrawShadowMaps();
 		m_uboRing_PerObject->CompleteFrame();
 
 		m_HDRBackbuffer->Bind(true);
@@ -583,6 +586,8 @@ void Renderer::CacheLightingRSM()
 	m_samplerNearest.BindSampler(0);
 	m_samplerNearest.BindSampler(1);
 	m_samplerNearest.BindSampler(2);
+	m_samplerLinearClamp.BindSampler(3);
+	m_voxelization->GetVoxelTexture().Bind(3);
 
 	m_shaderLightCachesRSM->Activate();
 
@@ -597,14 +602,16 @@ void Renderer::CacheLightingRSM()
 		m_uboRing_SpotLight->BindBlockAsUBO(m_uboInfoSpotLight.bufferBinding, lightIndex);
 		GL_CALL(glDispatchComputeIndirect, 0);
 
-		break; // Only first light! Todo
+		break; // Only first light! Todo.
 	}
 }
+
 
 void Renderer::ConeTraceAO()
 {
 	gl::Disable(gl::Cap::DEPTH_TEST);
 	gl::SetDepthWrite(false);
+
 
 	BindGBuffer();
 	m_samplerLinearClamp.BindSampler(3);

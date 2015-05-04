@@ -1,5 +1,7 @@
 #version 450 core
 
+#define INDIRECT_SHADOW
+
 #include "globalubos.glsl"
 #include "utils.glsl"
 #define LIGHTCACHEMODE LIGHTCACHEMODE_LIGHT
@@ -8,6 +10,7 @@
 layout(binding=0) uniform sampler2D RSM_Flux;
 layout(binding=1) uniform sampler2D RSM_Depth;
 layout(binding=2) uniform isampler2D RSM_Normal;
+layout(binding=3) uniform sampler3D VoxelVolume;
 
 struct LightInfo
 {
@@ -23,13 +26,19 @@ void main()
 {
 	vec3 worldPosition = LightCacheEntries[gl_GlobalInvocationID.x].Position;
 
+#ifdef INDIRECT_SHADOW
+	ivec3 volumeSize = textureSize(VoxelVolume, 0);
+	vec3 voxelPos = (worldPosition - VolumeWorldMin) / (VoxelSizeInWorld * volumeSize);
+	float startOffset = sqrt(2.0) * AddressVolumeVoxelSize / VoxelSizeInWorld + 1.0;
+#endif
+
+
 	vec3 SH00 = vec3(0);
 	vec3 SH1neg1 = vec3(0);
 	vec3 SH10 = vec3(0);
 	vec3 SH1pos1 = vec3(0);
 
 	float distThreshholdSq = dot(AddressVolumeVoxelSize, AddressVolumeVoxelSize);
-
 	int localIndex = int(gl_LocalInvocationID.x);
 
 	int totalNumRSMPixels = ShadowMapResolution * ShadowMapResolution;
@@ -64,7 +73,8 @@ void main()
 			//if(dot(toVpl, worldNormal) > 0) // Early out if facing away from the light. 
 			//	continue;
 			float lightDistanceSq = dot(toVal, toVal);
-			toVal *= inversesqrt(lightDistanceSq);
+			float lightDistance = sqrt(lightDistanceSq);
+			toVal /= lightDistance; //*= inversesqrt(lightDistanceSq);
 
 			// Light intensity
 			vec3 valTotalExitantFlux = RSMCache[i].Flux;
@@ -85,11 +95,50 @@ void main()
 			//vec3 scaledIntensity = valTotalExitantFlux * (fluxToIntensity / lightDistanceSq); // VPL instead of VAL
 
 
+#ifdef INDIRECT_SHADOW
+			if(scaledIntensity.x + scaledIntensity.y + scaledIntensity.z > 0.0000001)
+			//if(false)
+			{
+				vec3 dirInVoxel = toVal / volumeSize;
+				vec3 startPositionVoxel = voxelPos + dirInVoxel*startOffset;
+
+				float maxDist = lightDistance / VoxelSizeInWorld;// - startOffset; // Assuming that the light is within the voxel bounds!
+
+				vec3 currentPosVoxel = startPositionVoxel;
+				float occlusion = 0.0;
+				float stepSize = 1.0;
+				float dist = 0.0;
+
+				//float angleBetweenSamples = 1.107148717;
+				const float distToSphereRad = 0.1; //0.525731112; //sin(angleBetweenSamples * 0.5);
+
+				for(int s=0; s<64 && dist < maxDist; ++s)
+				{
+					currentPosVoxel += dirInVoxel * stepSize;
+					//sif(saturate(currentPosVoxel) != currentPosVoxel) break;
+
+					dist += stepSize;
+
+					float currentSphereRadius = dist * distToSphereRad;
+
+					// Lookup in miplevel that has voxels of the size of the current sphere radius.
+					float newOcclusion = textureLod(VoxelVolume, currentPosVoxel, log2(currentSphereRadius)).r; 
+					occlusion += (1.0 - occlusion) * newOcclusion;
+
+
+					stepSize = currentSphereRadius * 2.0;
+				}
+
+				scaledIntensity *= saturate(1.0 - occlusion);
+			}
+#endif
+
 			const float factor0 = sqrt(PI) / 2.0;
 			const float factor1 = sqrt(PI / 3.0);
 
 			// Analytical clamped cosine lobe transformation into SH basis
 			// Derivation: Assume light direction = z-axis, then rotate resulting zonal harmonics
+
 
 			SH00 += factor0 * scaledIntensity;
 			SH1neg1 -= (factor1 * toVal.y) * scaledIntensity;

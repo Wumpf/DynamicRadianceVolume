@@ -81,6 +81,7 @@ void Voxelization::VoxelizeScene(Renderer& renderer)
 	GL_CALL(glColorMask, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 
 	// Viewport in size of voxel volume.
+	gl::FramebufferObject::BindBackBuffer(); // a lower res target might be bound otherwise
 	GL_CALL(glViewport, 0, 0, m_voxelSceneTexture->GetWidth(), m_voxelSceneTexture->GetWidth());
 
 	// Draw

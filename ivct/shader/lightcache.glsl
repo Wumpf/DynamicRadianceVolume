@@ -75,7 +75,7 @@ layout(std430, binding = 2) LIGHTCACHE_HASHMAP_MODIFIER buffer LightCacheHashMap
 // Grid address storage
 #if LIGHTCACHEMODE == LIGHTCACHEMODE_CREATE
 	layout(binding = 0, r32ui) restrict coherent uniform uimage3D VoxelAddressVolume;
-#else
+#elif LIGHTCACHEMODE == LIGHTCACHEMODE_APPLY
 	layout(binding = 3) uniform usampler3D VoxelAddressVolume;
 #endif
 
