@@ -11,10 +11,21 @@
 #include <memory>
 #include <string>
 
+std::unordered_map<GLFWwindow*, std::vector<OutputWindow::ResizeHandlerFunc>> OutputWindow::s_resizeHandlers;
 
 static void ErrorCallbackGLFW(int error, const char* description)
 {
 	LOG_ERROR("GLFW error, code " + std::to_string(error) + " desc: \"" + description + "\"");
+}
+
+void WindowResizeCallback(GLFWwindow* window, int width, int height)
+{
+	ei::IVec2 resolution;
+	glfwGetFramebufferSize(window, &resolution.x, &resolution.y);
+
+	auto& handlers = OutputWindow::s_resizeHandlers[window];
+	for (auto& handler : handlers)
+		handler(resolution.x, resolution.y);
 }
 
 OutputWindow::OutputWindow() :
@@ -50,6 +61,9 @@ OutputWindow::OutputWindow() :
 	}
 
 	glfwMakeContextCurrent(m_window);
+	glfwSetWindowSizeCallback(m_window, WindowResizeCallback);
+	 s_resizeHandlers.insert(std::make_pair(m_window, std::vector<ResizeHandlerFunc>()));
+
 
 	// Init glew now since the GL context is ready.
 	glewExperimental = GL_TRUE;
@@ -124,10 +138,10 @@ void OutputWindow::Present()
 }
 
 
-ei::UVec2 OutputWindow::GetResolution()
+ei::UVec2 OutputWindow::GetFramebufferSize()
 {
 	ei::IVec2 resolution;
-	glfwGetWindowSize(m_window, &resolution.x, &resolution.y);
+	glfwGetFramebufferSize(m_window, &resolution.x, &resolution.y);
 	return ei::UVec2(resolution);
 }
 

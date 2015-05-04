@@ -106,9 +106,10 @@ std::string Application::OpenFileDialog()
 		SetCurrentDirectoryA(oldCurrentPath);
 
 		char relativePath[MAX_PATH];
-		PathRelativePathToA(relativePath, oldCurrentPath, FILE_ATTRIBUTE_DIRECTORY, filename, FILE_ATTRIBUTE_NORMAL);
-
-		return relativePath;
+		if (PathRelativePathToA(relativePath, oldCurrentPath, FILE_ATTRIBUTE_DIRECTORY, filename, FILE_ATTRIBUTE_NORMAL))
+			return relativePath;
+		else
+			return filename;
 	}
 	else
 	{
@@ -140,9 +141,10 @@ std::string Application::SaveFileDialog(const std::string& defaultName, const st
 		SetCurrentDirectoryA(oldCurrentPath);
 
 		char relativePath[MAX_PATH];
-		PathRelativePathToA(relativePath, oldCurrentPath, FILE_ATTRIBUTE_DIRECTORY, filename, FILE_ATTRIBUTE_NORMAL);
-
-		return relativePath;
+		if (PathRelativePathToA(relativePath, oldCurrentPath, FILE_ATTRIBUTE_DIRECTORY, filename, FILE_ATTRIBUTE_NORMAL))
+			return relativePath;
+		else
+			return filename;
 	}
 	else
 	{
