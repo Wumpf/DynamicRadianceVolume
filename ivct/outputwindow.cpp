@@ -20,6 +20,10 @@ static void ErrorCallbackGLFW(int error, const char* description)
 
 void WindowResizeCallback(GLFWwindow* window, int width, int height)
 {
+	// Ignore invalid width/height (might be minimizing).
+	if (width <= 0 || height <= 0)
+		return;
+
 	ei::IVec2 resolution;
 	glfwGetFramebufferSize(window, &resolution.x, &resolution.y);
 
