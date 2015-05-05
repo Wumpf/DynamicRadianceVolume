@@ -35,7 +35,7 @@ public:
 	{
 		RSM_BRUTEFORCE,
 		RSM_CACHE,
-		RSM_CACHE_CONETRACESHADOW,
+		RSM_CACHE_INDSHADOW,
 		GBUFFER_DEBUG,
 		DIRECTONLY,
 		DIRECTONLY_CACHE,
@@ -105,7 +105,7 @@ private:
 	/// Applies direct light to caches (mainly for debug purposes)
 	void CacheLightingDirect();
 	/// Applies indirect light to caches (the way its meant to be used)
-	void CacheLightingRSM();
+	void CacheLightingRSM(bool indirectShadow);
 
 
 	void ConeTraceAO();
@@ -136,6 +136,7 @@ private:
 	ShaderPtr m_shaderLightCachePrepare;
 	ShaderPtr m_shaderLightCachesDirect;
 	ShaderPtr m_shaderLightCachesRSM;
+	ShaderPtr m_shaderLightCachesRSM_shadow;
 	ShaderPtr m_shaderConeTraceAO;
 
 
@@ -170,7 +171,8 @@ private:
 
 		gl::Texture2D* flux;
 		gl::Texture2D* normal;
-		gl::Texture2D* depth;
+		gl::Texture2D* depthLinSq;
+		gl::Texture2D* depthBuffer;
 		gl::FramebufferObject* fbo;
 
 	private:

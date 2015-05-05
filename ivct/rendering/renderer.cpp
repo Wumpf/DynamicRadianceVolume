@@ -31,7 +31,7 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	m_readLightCacheCount(false),
 	m_lastNumLightCaches(0),
 	m_exposure(1.0f),
-	m_mode(Renderer::Mode::RSM_CACHE_CONETRACESHADOW)
+	m_mode(Renderer::Mode::RSM_CACHE_INDSHADOW)
 {
 	glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &m_UBOAlignment);
 	LOG_INFO("Uniform buffer alignment is " << m_UBOAlignment);
@@ -154,6 +154,10 @@ void Renderer::LoadShader()
 	m_shaderLightCachesRSM->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cacheLightingRSM.comp");
 	m_shaderLightCachesRSM->CreateProgram();
 
+	m_shaderLightCachesRSM_shadow = std::make_unique<gl::ShaderObject>("cache lighting rsm with indirect shadow");
+	m_shaderLightCachesRSM_shadow->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cacheLightingRSM.comp", "#define INDIRECT_SHADOW\n");
+	m_shaderLightCachesRSM_shadow->CreateProgram();
+
 	m_shaderLightCachePrepare = std::make_unique<gl::ShaderObject>("cache lighting prepare");
 	m_shaderLightCachePrepare->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cachePrepareLighting.comp");
 	m_shaderLightCachePrepare->CreateProgram();
@@ -265,7 +269,6 @@ void Renderer::Draw(const Camera& camera)
 
 	// Scene dependent renderings.
 	DrawSceneToGBuffer();
-
 	DrawShadowMaps();
 
 	switch (m_mode)
@@ -284,14 +287,16 @@ void Renderer::Draw(const Camera& camera)
 		OutputHDRTextureToBackbuffer();
 		break;
 
-	case Mode::RSM_CACHE_CONETRACESHADOW:
 	case Mode::DIRECTONLY_CACHE:
 	case Mode::RSM_CACHE:
-		m_voxelization->VoxelizeScene(*this);
+	case Mode::RSM_CACHE_INDSHADOW:
+		if (m_mode == Mode::RSM_CACHE_INDSHADOW)
+			m_voxelization->VoxelizeScene(*this);
 
 		m_uboRing_PerObject->CompleteFrame();
 
-		m_voxelization->GenMipMap();
+		if (m_mode == Mode::RSM_CACHE_INDSHADOW)
+			m_voxelization->GenMipMap();
 
 		GL_CALL(glViewport, 0, 0, m_HDRBackbufferTexture->GetWidth(), m_HDRBackbufferTexture->GetHeight());
 		GatherLightCaches();
@@ -304,7 +309,7 @@ void Renderer::Draw(const Camera& camera)
 		else
 		{
 			DrawLights();
-			CacheLightingRSM();
+			CacheLightingRSM(m_mode == Mode::RSM_CACHE_INDSHADOW);
 		}
 
 		m_uboRing_SpotLight->CompleteFrame();
@@ -364,10 +369,6 @@ void Renderer::Draw(const Camera& camera)
 		OutputHDRTextureToBackbuffer();
 		break;
 	}
-
-
-	//CacheLightingDirect();
-
 
 	// Turn SRGB conversions off, since ui will look odd otherwise.
 	gl::Disable(gl::Cap::FRAMEBUFFER_SRGB);
@@ -429,7 +430,7 @@ void Renderer::PrepareLights()
 		uboView["ValAreaFactor"].Set(valAreaFactor);
 
 		// (Re)Init shadow map if necessary.
-		if (!m_shadowMaps[lightIndex].depth || m_shadowMaps[lightIndex].depth->GetWidth() != light.shadowMapResolution)
+		if (!m_shadowMaps[lightIndex].depthBuffer || m_shadowMaps[lightIndex].depthBuffer->GetWidth() != light.shadowMapResolution)
 		{
 			m_shadowMaps[lightIndex].Init(light.shadowMapResolution);
 		}
@@ -491,6 +492,10 @@ void Renderer::DrawShadowMaps()
 		m_shadowMaps[lightIndex].fbo->Bind(true);
 		GL_CALL(glClear, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		DrawScene(true);
+
+
+		// generate RSM mipmaps
+		m_shadowMaps[lightIndex].depthLinSq->GenMipMaps();
 	}
 }
 
@@ -519,7 +524,7 @@ void Renderer::DrawLights()
 
 	for (unsigned int lightIndex = 0; lightIndex < m_scene->GetLights().size(); ++lightIndex)
 	{
-		m_shadowMaps[lightIndex].depth->Bind(3);
+		m_shadowMaps[lightIndex].depthBuffer->Bind(3);
 		
 		m_uboRing_SpotLight->BindBlockAsUBO(m_uboInfoSpotLight.bufferBinding, lightIndex);
 		m_screenTriangle->Draw();
@@ -546,7 +551,7 @@ void Renderer::ApplyRSMsBruteForce()
 	for (unsigned int lightIndex = 0; lightIndex < m_scene->GetLights().size(); ++lightIndex)
 	{
 		m_shadowMaps[lightIndex].flux->Bind(3);
-		m_shadowMaps[lightIndex].depth->Bind(4);
+		m_shadowMaps[lightIndex].depthBuffer->Bind(4);
 		m_shadowMaps[lightIndex].normal->Bind(5);
 
 		m_uboRing_SpotLight->BindBlockAsUBO(m_uboInfoSpotLight.bufferBinding, lightIndex);
@@ -570,33 +575,36 @@ void Renderer::CacheLightingDirect()
 
 	for (unsigned int lightIndex = 0; lightIndex < m_scene->GetLights().size(); ++lightIndex)
 	{
-		m_shadowMaps[lightIndex].depth->Bind(0);
+		m_shadowMaps[lightIndex].depthBuffer->Bind(0);
 
 		m_uboRing_SpotLight->BindBlockAsUBO(m_uboInfoSpotLight.bufferBinding, lightIndex);
 		GL_CALL(glDispatchComputeIndirect, 0);
 	}
 }
 
-void Renderer::CacheLightingRSM()
+void Renderer::CacheLightingRSM(bool indirectShadow)
 {
 	m_lightCacheCounter->BindIndirectDispatchBuffer();
 	m_shaderLightCachesRSM->BindSSBO(*m_lightCacheBuffer, "LightCacheBuffer");
 	m_shaderLightCachesRSM->BindSSBO(*m_lightCacheCounter, "LightCacheCounter");
 
 	m_samplerNearest.BindSampler(0);
-	m_samplerNearest.BindSampler(1);
+	m_samplerLinearClamp.BindSampler(1); // filtering allowed for depthLinSq
 	m_samplerNearest.BindSampler(2);
 	m_samplerLinearClamp.BindSampler(3);
 	m_voxelization->GetVoxelTexture().Bind(3);
 
-	m_shaderLightCachesRSM->Activate();
+	if (indirectShadow)
+		m_shaderLightCachesRSM_shadow->Activate();
+	else
+		m_shaderLightCachesRSM->Activate();
 
 	GL_CALL(glMemoryBarrier, GL_SHADER_STORAGE_BARRIER_BIT | GL_COMMAND_BARRIER_BIT);
 
 	for (unsigned int lightIndex = 0; lightIndex < m_scene->GetLights().size(); ++lightIndex)
 	{
 		m_shadowMaps[lightIndex].flux->Bind(0);
-		m_shadowMaps[lightIndex].depth->Bind(1);
+		m_shadowMaps[lightIndex].depthLinSq->Bind(1);
 		m_shadowMaps[lightIndex].normal->Bind(2);
 
 		m_uboRing_SpotLight->BindBlockAsUBO(m_uboInfoSpotLight.bufferBinding, lightIndex);
@@ -762,18 +770,21 @@ void Renderer::SaveToPFM(const std::string& filename) const
 Renderer::ShadowMap::ShadowMap(ShadowMap& old) :
 	flux(old.flux),
 	normal(old.normal),
-	depth(old.depth),
+	depthLinSq(old.depthLinSq),
+	depthBuffer(old.depthBuffer),
 	fbo(old.fbo)
 {
 	old.flux = nullptr;
 	old.normal = nullptr;
-	old.depth = nullptr;
+	old.depthLinSq = nullptr;
+	old.depthBuffer = nullptr;
 	old.fbo = nullptr;
 }
 Renderer::ShadowMap::ShadowMap() :
 	flux(nullptr),
 	normal(nullptr),
-	depth(nullptr),
+	depthLinSq(nullptr),
+	depthBuffer(nullptr),
 	fbo(nullptr)
 {}
 
@@ -781,7 +792,8 @@ void Renderer::ShadowMap::DeInit()
 {
 	delete flux;
 	delete normal;
-	delete depth;
+	delete depthLinSq;
+	delete depthBuffer;
 	delete fbo;
 }
 
@@ -791,6 +803,7 @@ void Renderer::ShadowMap::Init(unsigned int resolution)
 
 	flux = new gl::Texture2D(resolution, resolution, gl::TextureFormat::R11F_G11F_B10F, 1, 0); // Format hopefully sufficient!
 	normal = new gl::Texture2D(resolution, resolution, gl::TextureFormat::RG16I, 1, 0);
-	depth = new gl::Texture2D(resolution, resolution, gl::TextureFormat::DEPTH_COMPONENT32F, 1, 0);
-	fbo = new gl::FramebufferObject({ gl::FramebufferObject::Attachment(flux), gl::FramebufferObject::Attachment(normal) }, gl::FramebufferObject::Attachment(depth));
+	depthLinSq = new gl::Texture2D(resolution, resolution, gl::TextureFormat::RG16F, 0, 0); // has mipmap chain!
+	depthBuffer = new gl::Texture2D(resolution, resolution, gl::TextureFormat::DEPTH_COMPONENT32F, 1, 0);
+	fbo = new gl::FramebufferObject({ gl::FramebufferObject::Attachment(flux), gl::FramebufferObject::Attachment(normal), gl::FramebufferObject::Attachment(depthLinSq) }, gl::FramebufferObject::Attachment(depthBuffer));
 }

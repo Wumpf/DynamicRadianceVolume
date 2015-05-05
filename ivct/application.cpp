@@ -280,7 +280,7 @@ void Application::SetupTweakBarBinding()
 	{
 		TwEnumVal{ (int)Renderer::Mode::RSM_BRUTEFORCE, "RSM Bruteforce" },
 		TwEnumVal{ (int)Renderer::Mode::RSM_CACHE, "RSM Cache" },
-		TwEnumVal{ (int)Renderer::Mode::RSM_CACHE_CONETRACESHADOW, "RSM Cache, VCT shadow" },
+		TwEnumVal{ (int)Renderer::Mode::RSM_CACHE_INDSHADOW, "RSM Cache, VCT shadow" },
 		TwEnumVal{ (int)Renderer::Mode::GBUFFER_DEBUG, "GBuffer Debug" },
 		TwEnumVal{ (int)Renderer::Mode::DIRECTONLY, "DirectLight only" },
 		TwEnumVal{ (int)Renderer::Mode::DIRECTONLY_CACHE, "DirectLight only - via Cache" },
