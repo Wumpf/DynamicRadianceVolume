@@ -254,7 +254,7 @@ void Application::ChangeLightCount(unsigned int lightCount)
 			[=](const ei::Vec3& v){ m_scene->GetLights()[i].direction = v; }, groupSetting + " label=Direction");
 
 		m_tweakBar->AddReadWrite<float>(namePrefix + "SpotAngle", [=](){ return m_scene->GetLights()[i].halfAngle / (ei::PI / 180.0f); },
-			[=](const float& f){ m_scene->GetLights()[i].halfAngle = f  * (ei::PI / 180.0f); }, groupSetting + " label=\"Spot Angle\" min=1.0 max=179 step=1.0");
+			[=](const float& f){ m_scene->GetLights()[i].halfAngle = f  * (ei::PI / 180.0f); }, groupSetting + " label=\"Half Spot Angle\" min=1.0 max=89 step=1.0");
 
 		m_tweakBar->AddSeperator(namePrefix + "shadowseparator", groupSetting);
 
@@ -271,7 +271,7 @@ void Application::ChangeLightCount(unsigned int lightCount)
 			[=](const int& j){ m_scene->GetLights()[i].indirectShadowComputationLod = j; }, groupSetting + " label=\"Ind. Shadow Lod\" min=0 max=4 step=1");
 
 		m_tweakBar->AddReadWrite<float>(namePrefix + "IndirectShadowMinConeAngle", [=](){ return m_scene->GetLights()[i].indirectShadowMinHalfConeAngle / (ei::PI / 180.0f); },
-			[=](const float& f){ m_scene->GetLights()[i].indirectShadowMinHalfConeAngle = f  * (ei::PI / 180.0f); }, groupSetting + " label=\"Ind. Shadow Min. Cone Angle\" min=0 max=30 step=0.1");
+			[=](const float& f){ m_scene->GetLights()[i].indirectShadowMinHalfConeAngle = f  * (ei::PI / 180.0f); }, groupSetting + " label=\"Ind. Shadow Min. Half Angle\" min=0 max=30 step=0.1");
 
 		m_tweakBar->SetGroupProperties(lightGroup, "Lights", lightGroup, false);
 	}
