@@ -175,7 +175,7 @@ void Renderer::LoadShader()
 
 	// Register all shader for auto reload on change.
 	m_allShaders = { m_shaderDebugGBuffer.get(), m_shaderFillGBuffer.get(), m_shaderDeferredDirectLighting_Spot.get(), 
-					m_shaderTonemap.get(), m_shaderCacheGather.get(), m_shaderCacheApply.get(), m_shaderLightCachesDirect.get(), m_shaderLightCachesRSM.get(),
+		m_shaderTonemap.get(), m_shaderCacheGather.get(), m_shaderCacheApply.get(), m_shaderLightCachesDirect.get(), m_shaderLightCachesRSM.get(), m_shaderLightCachesRSM_shadow.get(),
 					m_shaderFillRSM.get(), m_shaderIndirectLightingBruteForceRSM.get(), m_shaderLightCachePrepare.get(), m_shaderConeTraceAO.get() };
 	for (auto it : m_allShaders)
 		ShaderFileWatcher::Instance().RegisterShaderForReloadOnChange(it);
@@ -428,6 +428,19 @@ void Renderer::PrepareLights()
 		float valAreaFactor = clipPlaneWidth * clipPlaneWidth / (light.nearPlane * light.nearPlane * light.shadowMapResolution * light.shadowMapResolution);
 		//float valAreaFactor = powf(sinf(light.halfAngle) * 2.0f / light.shadowMapResolution, 2.0);
 		uboView["ValAreaFactor"].Set(valAreaFactor);
+
+		// Indirect shadowing
+		uboView["IndirectShadowComputationLod"].Set(static_cast<float>(light.indirectShadowComputationLod));
+		float indirectShadowComputationBlockSize = static_cast<float>(1 << light.indirectShadowComputationLod);
+		uboView["IndirectShadowComputationBlockSize"].Set(indirectShadowComputationBlockSize);
+		std::int32_t indirectShadowComputationSampleInterval = static_cast<int>(indirectShadowComputationBlockSize * indirectShadowComputationBlockSize);
+		uboView["IndirectShadowComputationSampleInterval"].Set(indirectShadowComputationSampleInterval);
+		static const unsigned cacheLightingThreadsPerGroup = 512; // See lightcache.glsl
+		Assert(cacheLightingThreadsPerGroup % indirectShadowComputationSampleInterval == 0, "cacheLightingThreadsPerGroup needs to be a multiple of indirectShadowComputationSampleInterval!"); // See cacheLightingRSM.comp shadow computation.
+		uboView["IndirectShadowComputationSuperValWidth"].Set(sqrtf(valAreaFactor) * indirectShadowComputationBlockSize);
+		uboView["IndirectShadowSamplingOffset"].Set(0.5f + sqrtf(2.0f) * indirectShadowComputationBlockSize / 2.0f);
+		uboView["IndirectShadowSamplingMinDistToSphereFactor"].Set(sinf(light.indirectShadowMinHalfConeAngle));
+
 
 		// (Re)Init shadow map if necessary.
 		if (!m_shadowMaps[lightIndex].depthBuffer || m_shadowMaps[lightIndex].depthBuffer->GetWidth() != light.shadowMapResolution)

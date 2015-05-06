@@ -51,7 +51,7 @@ void main()
 #ifdef INDIRECT_SHADOW
 	ivec3 volumeSize = textureSize(VoxelVolume, 0);
 	vec3 voxelPos = (worldPosition - VolumeWorldMin) / (VoxelSizeInWorld * volumeSize);
-	float startOffset = sqrt(2.0) * AddressVolumeVoxelSize / VoxelSizeInWorld + 1.0;
+	float startOffset = sqrt(2.0) * AddressVolumeVoxelSize / VoxelSizeInWorld + 0.5;
 #endif
 
 
@@ -93,29 +93,19 @@ void main()
  		RSMCache[gl_LocalInvocationID.x] = cacheEntry;
 		barrier(); // Make sure all other threads have written their lights.
 
-
-		#define SHADOW_COMPUTATION_LOD 2
-		#define SHADOW_COMPUTATION_INTERVAL_BLOCK (1<<SHADOW_COMPUTATION_LOD)
-		#define SHADOW_COMPUTATION_INTERVAL (SHADOW_COMPUTATION_INTERVAL_BLOCK * SHADOW_COMPUTATION_INTERVAL_BLOCK)
-		const vec2 shadowRSMSamplingOffset = vec2(0.5 + sqrt(2.0) * SHADOW_COMPUTATION_INTERVAL_BLOCK / 2.0);
-
-		#if LIGHTING_THREADS_PER_GROUP % SHADOW_COMPUTATION_INTERVAL != 0
-			#error "LIGHTING_THREADS_PER_GROUP needs to be a multiple of SHADOW_COMPUTATION_INTERVAL!"
-		#endif
-
 		// Shadow value changes only every SHADOW_COMPUTATION_INTERVAL_BLOCK samples.
 		float shadowing = 1.0;
 
 		for(int i=0; i<LIGHTING_THREADS_PER_GROUP; ++i)
 		{
 		#ifdef INDIRECT_SHADOW
-			if(i % SHADOW_COMPUTATION_INTERVAL == 0)
+			if(i % IndirectShadowComputationSampleInterval == 0)
 			{
 				uint localRsmPixelPos = uint(rsmPixelIndex + i);
 				uvec2 upperLeftSampleTexel = Morton_2D_Decode_16bit(localRsmPixelPos);
-				vec2 rsmMidTexcoord = (upperLeftSampleTexel + shadowRSMSamplingOffset) / ShadowMapResolution;
+				vec2 rsmMidTexcoord = (upperLeftSampleTexel + IndirectShadowSamplingOffset) / ShadowMapResolution;
 
-				vec2 d_dsq = textureLod(RSM_DepthLinSq, rsmMidTexcoord, SHADOW_COMPUTATION_LOD).xy;
+				vec2 d_dsq = textureLod(RSM_DepthLinSq, rsmMidTexcoord, IndirectShadowComputationLod).xy;
 				vec4 rsmClipSpace = vec4(rsmMidTexcoord * 2.0 - vec2(1.0), 0.0, 1.0) * InverseLightViewProjection;
 				vec3 averageValPos = LightPosition + normalize(rsmClipSpace.xyz / rsmClipSpace.w - LightPosition) * d_dsq.x;
 
@@ -123,15 +113,18 @@ void main()
 				// For this we estimate the sphere containing most samples:
 				float averageDepthSq = d_dsq.x * d_dsq.x;
 				float depthVariance = d_dsq.y - d_dsq.x * d_dsq.x;
-				float sampleSphereRadius = max(d_dsq.x * sqrt(ValAreaFactor / PI) * SHADOW_COMPUTATION_INTERVAL_BLOCK, // Estimate super-val width
-												sqrt(depthVariance) * 2.0); // Assuming normation distribuation of samples in depth -  Depth deviation * 2.0 -> 95% of all samples
-
+				
 				// halfConeAngle = asin(sampleSphereRadius / d_dsq.x)
 				// For cone tracing we need a conversion of dist to sphere: radius = dist * sin(halfConeAngle)
 				// -> distToSphereRad = sin(halfConeAngle) = sampleSphereRadius / d_dsq.x
 
-				float distToSphereRad = sampleSphereRadius / d_dsq.x;
-				distToSphereRad = max(distToSphereRad, 0.05); // Clamp to small values.
+				//float sampleSphereRadius = max(d_dsq.x * IndirectShadowComputationSuperValWidth, // Estimate super-val width
+				//								sqrt(depthVariance) * 2.0); // Assuming normation distribuation of samples in depth -  Depth deviation * 2.0 -> 95% of all samples
+
+				//float distToSphereRad = sampleSphereRadius / d_dsq.x;
+				// Simplification yields:
+				float distToSphereRad = max(IndirectShadowComputationSuperValWidth, sqrt(depthVariance) * 2.0 / d_dsq.x);
+				distToSphereRad = max(distToSphereRad, IndirectShadowSamplingMinDistToSphereFactor); // Clamp to small values.
 
 
 				vec3 toAverageVal = averageValPos - worldPosition;

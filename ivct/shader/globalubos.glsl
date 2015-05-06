@@ -49,4 +49,12 @@ layout(binding = 3, shared) uniform SpotLight
 
 	int ShadowMapResolution;
 	float ValAreaFactor; // NearClipWidth * NearClipHeight / (NearClipPlaneDepth² * RSMResolution * RSMResolution)
+
+	float IndirectShadowComputationLod; 			// SHADOW_COMPUTATION_LOD 2
+	float IndirectShadowComputationBlockSize;		// 1<<IndirectShadowComputationBlockSize
+	
+	int IndirectShadowComputationSampleInterval;  	// IndirectShadowComputationBlockSize * IndirectShadowComputationBlockSize
+	float IndirectShadowComputationSuperValWidth;	// sqrt(ValAreaFactor) * SHADOW_COMPUTATION_INTERVAL_BLOCK -- The scaling factor of the "superval" used for cone tracing (scales with distance!)
+	float IndirectShadowSamplingOffset; 			// = vec2(0.5 + sqrt(2.0) * IndirectShadowComputationBlockSize / 2.0);
+	float IndirectShadowSamplingMinDistToSphereFactor; // = sin(minimalShadowConeAngle * 0.5)
 };
