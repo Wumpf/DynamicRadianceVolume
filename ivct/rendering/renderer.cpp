@@ -422,7 +422,10 @@ void Renderer::PrepareLights()
 		uboView["LightViewProjection"].Set(viewProjection);
 		uboView["InverseLightViewProjection"].Set(inverseViewProjection);
 
-		uboView["ShadowMapResolution"].Set(static_cast<int>(light.shadowMapResolution));
+		unsigned int shadowMapResolution_nextPow2 = 1 << static_cast<unsigned int>(ceil(log2(light.shadowMapResolution)));
+		if (shadowMapResolution_nextPow2 != light.shadowMapResolution)
+			LOG_WARNING("RSM resolution needs to be a power of 2! Using " << shadowMapResolution_nextPow2);
+		uboView["ShadowMapResolution"].Set(static_cast<int>(shadowMapResolution_nextPow2));
 
 		float clipPlaneWidth = sinf(light.halfAngle) * light.nearPlane * 2.0f;
 		float valAreaFactor = clipPlaneWidth * clipPlaneWidth / (light.nearPlane * light.nearPlane * light.shadowMapResolution * light.shadowMapResolution);

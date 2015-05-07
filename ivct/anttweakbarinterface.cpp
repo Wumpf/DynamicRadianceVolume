@@ -150,15 +150,36 @@ void AntTweakBarInterface::AddReadOnly(const std::string& name, const std::funct
 	CheckTwError();
 }
 
-void AntTweakBarInterface::AddEnum(const std::string& name, const std::vector<TwEnumVal>& values, const std::function<std::int32_t()> &getValue,
+void AntTweakBarInterface::AddEnumType(const std::string& typeName, const std::vector<TwEnumVal>& values)
+{
+	if (m_enumTypes.find(typeName) == m_enumTypes.end())
+	{
+		TwType enumType = TwDefineEnum(typeName.c_str(), values.data(), static_cast<unsigned int>(values.size()));
+		m_enumTypes.insert(std::make_pair(typeName, enumType));
+	}
+	else
+	{
+		LOG_ERROR("Enum type " << typeName << " already exists!");
+	}
+}
+
+void AntTweakBarInterface::AddEnum(const std::string& name, const std::string& typeName, const std::function<std::int32_t()> &getValue,
 			const std::function<void(std::int32_t)>& setValue, const std::string& additionalTwDefines)
 {
 	typedef EntryReadWriteCB<std::int32_t> EntryType;
+
+	auto type = m_enumTypes.find(typeName);
+	if (type == m_enumTypes.end())
+	{
+		LOG_ERROR("Enum type " << typeName << " does not exist!");
+		return;
+	}
 
 	EntryType* entry = new EntryType();
 	entry->name = name;
 	entry->getValue = getValue;
 	entry->setValue = setValue;
+	entry->type = type->second;
 
 	TwGetVarCallback getFkt = GetGetterFunc<std::int32_t>();
 
@@ -166,7 +187,6 @@ void AntTweakBarInterface::AddEnum(const std::string& name, const std::vector<Tw
 		static_cast<EntryType*>(clientData)->setValue(*static_cast<const std::int32_t*>(value));
 	};
 
-	entry->type = TwDefineEnum((name + "_type").c_str(), values.data(), static_cast<unsigned int>(values.size()));
 	m_entries.push_back(entry);
 
 	if (!TwAddVarCB(m_tweakBar, name.c_str(), entry->type, setFkt, getFkt, m_entries.back(), additionalTwDefines.c_str()))

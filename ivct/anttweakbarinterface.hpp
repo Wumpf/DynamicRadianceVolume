@@ -44,7 +44,9 @@ public:
 	void AddReadWrite(const std::string& name, const std::function<T()> &getValue, const std::function<void(const T&)>& setValue, 
 						const std::string& additionalTwDefines = "", TypeHint typeHint = TypeHint::AUTO);
 
-	void AddEnum(const std::string& name, const std::vector<TwEnumVal>& values, const std::function<std::int32_t()> &getValue,
+	void AddEnumType(const std::string& typeName, const std::vector<TwEnumVal>& values);
+
+	void AddEnum(const std::string& name, const std::string& enumTypeName, const std::function<std::int32_t()> &getValue,
 						const std::function<void(std::int32_t)>& setValue, const std::string& additionalTwDefines = "");
 
 	/// Read/Write value from variable.
@@ -139,6 +141,8 @@ private:
 	std::vector<EntryBase*> m_entries;
 	TwType m_hdrColorRGBStructType;
 	TwType m_positionStructType;
+
+	std::unordered_map<std::string, TwType> m_enumTypes;
 };
 
 template<typename T>

@@ -24,7 +24,7 @@ public:
 
 	float halfAngle;
 
-	unsigned int shadowMapResolution;
+	unsigned int shadowMapResolution; // Only Pow2 resolutions are allowed
 	float normalOffsetShadowBias;
 	float shadowBias;
 

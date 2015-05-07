@@ -207,14 +207,6 @@ void Application::ChangeEntityCount(unsigned int entityCount)
 
 void Application::ChangeLightCount(unsigned int lightCount)
 {
-	// Define light type
-	const static TwEnumVal lightTypes[] = // array used to describe the Scene::AnimMode enum values
-	{
-		{ static_cast<int>(Light::Type::SPOT), "Spot" }
-	};
-	static TwType lightEnumType = TW_TYPE_UNDEF;
-	if (lightEnumType == TW_TYPE_UNDEF)
-		lightEnumType = TwDefineEnum("LightType", lightTypes, ArraySize(lightTypes));
 
 	size_t oldLightCount = m_scene->GetLights().size();
 	m_scene->GetLights().resize(lightCount);
@@ -229,7 +221,7 @@ void Application::ChangeLightCount(unsigned int lightCount)
 		m_tweakBar->Remove(namePrefix + "Direction");
 		m_tweakBar->Remove(namePrefix + "SpotAngle");	
 		m_tweakBar->Remove(namePrefix + "shadowseparator");
-		m_tweakBar->Remove(namePrefix + "ShadowMapResolution");
+		m_tweakBar->Remove(namePrefix + "ShadowMapRes");
 		m_tweakBar->Remove(namePrefix + "NormalBias");
 		m_tweakBar->Remove(namePrefix + "Bias");
 		m_tweakBar->Remove(namePrefix + "IndirectShadowLod");
@@ -241,8 +233,8 @@ void Application::ChangeLightCount(unsigned int lightCount)
 		std::string namePrefix = "Light" + std::to_string(i) + "_";
 		std::string lightGroup = "Light" + std::to_string(i);
 		std::string groupSetting = " group=" + lightGroup + " ";
-		m_tweakBar->AddReadWrite<int>(namePrefix + "Type", [=](){ return static_cast<int>(m_scene->GetLights()[i].type); },
-			[=](const int& i){ m_scene->GetLights()[i].type = static_cast<Light::Type>(i); }, groupSetting + "label=Type", static_cast<AntTweakBarInterface::TypeHint>(lightEnumType));
+		m_tweakBar->AddEnum(namePrefix + "Type", "LightType", [=](){ return static_cast<int>(m_scene->GetLights()[i].type); },
+			[=](const int& i){ m_scene->GetLights()[i].type = static_cast<Light::Type>(i); }, groupSetting + "label=Type");
 
 		m_tweakBar->AddReadWrite<ei::Vec3>(namePrefix + "Intensity", [=](){ return m_scene->GetLights()[i].intensity; },
 			[=](const ei::Vec3& v){ m_scene->GetLights()[i].intensity = v; }, groupSetting + " label=Intensity", AntTweakBarInterface::TypeHint::HDRCOLOR);
@@ -258,8 +250,8 @@ void Application::ChangeLightCount(unsigned int lightCount)
 
 		m_tweakBar->AddSeperator(namePrefix + "shadowseparator", groupSetting);
 
-		m_tweakBar->AddReadWrite<int>(namePrefix + "ShadowMapResolution", [=](){ return m_scene->GetLights()[i].shadowMapResolution; },
-			[=](const int& res){ m_scene->GetLights()[i].shadowMapResolution = res; }, groupSetting + " label=\"Shadow Map Resolution\" min=16 max=2048 step=16");
+		m_tweakBar->AddEnum(namePrefix + "ShadowMapRes", "RSMResolution", [=](){ return m_scene->GetLights()[i].shadowMapResolution; },
+			[=](const int& res){ m_scene->GetLights()[i].shadowMapResolution = res; }, groupSetting + " label=\"Shadow Map Resolution\"");
 
 		m_tweakBar->AddReadWrite<float>(namePrefix + "NormalBias", [=](){ return m_scene->GetLights()[i].normalOffsetShadowBias; },
 			[=](const float& f){ m_scene->GetLights()[i].normalOffsetShadowBias = f; }, groupSetting + " label=\"NormalOffset Shadow Bias\" min=0.00 max=100.0 step=0.001");
@@ -299,7 +291,8 @@ void Application::SetupTweakBarBinding()
 		TwEnumVal{ (int)Renderer::Mode::VOXELVIS, "Voxelization Display" },
 		TwEnumVal{ (int)Renderer::Mode::AMBIENTOCCLUSION, "VCT AO" },
 	};
-	m_tweakBar->AddEnum("RenderMode", renderModeVals, [&](){ return (int)m_renderer->GetMode(); }, [&](int mode){ return m_renderer->SetMode(static_cast<Renderer::Mode>(mode)); });
+	m_tweakBar->AddEnumType("RenderModeType", renderModeVals);
+	m_tweakBar->AddEnum("RenderMode", "RenderModeType", [&](){ return (int)m_renderer->GetMode(); }, [&](int mode){ return m_renderer->SetMode(static_cast<Renderer::Mode>(mode)); });
 
 	// Camera
 	m_tweakBar->AddReadWrite<float>("Camera Speed", [&](){ return m_camera->GetMoveSpeed(); }, [&](float f){ return m_camera->SetMoveSpeed(f); }, " min=0.01 max=100 step=0.01 label=Speed group=Camera");
@@ -325,6 +318,16 @@ void Application::SetupTweakBarBinding()
 	m_tweakBar->AddReadWrite<int>("Entity Count", [&](){ return static_cast<int>(m_scene->GetEntities().size()); }, changeEntityCount, " min=1 max=16 step=1 group=Entities");
 
 	// Light settings
+		// Define light type
+	std::vector<TwEnumVal> lightTypeVals =
+	{
+		{ static_cast<int>(Light::Type::SPOT), "Spot" }
+	};
+	m_tweakBar->AddEnumType("LightType", lightTypeVals);
+		// Define RSM resolution
+	std::vector<TwEnumVal> rsmResVals = { { 16, "16x16" }, { 32, "32x32" }, { 64, "64x64" }, { 128, "128x128" }, { 256, "256x256" }, { 512, "512x512" } };
+	m_tweakBar->AddEnumType("RSMResolution", rsmResVals);
+
 	std::function<void(const int&)> changeLightCount = std::bind(&Application::ChangeLightCount, this, std::placeholders::_1);
 	m_tweakBar->AddReadWrite<int>("Light Count", [&](){ return static_cast<int>(m_scene->GetLights().size()); }, changeLightCount, " min=1 max=16 step=1 group=Lights");
 }
