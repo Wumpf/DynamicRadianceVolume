@@ -89,6 +89,10 @@ void main()
 		irradiance[i] += LightCacheEntries[cacheAddress].SH2pos1 * (sqrt(15.0 / (8.0 * PI))* worldNormal.x * worldNormal.z);
 		irradiance[i] += LightCacheEntries[cacheAddress].SH2pos2 * (sqrt(15.0 / (32.0 * PI)) * (worldNormal.x * worldNormal.x - worldNormal.y * worldNormal.y));	
 		*/
+
+
+		// Negative irradiance values are not meaningful (may happen due to SH overshooting)
+		irradiance[i] = max(irradiance[i], vec3(0.0));
 	}
 
 	// trilinear interpolation
@@ -99,7 +103,7 @@ void main()
 			mix(mix(irradiance[4], irradiance[5], interp.x),
 				mix(irradiance[6], irradiance[7], interp.x), interp.y), interp.z);
 
-	OutputColor = max(interpolatedIrradiance, vec3(0.0)) * diffuse;
+	OutputColor = interpolatedIrradiance * diffuse;
 	//OutputColor = mod(addressCoord00, vec3(16)) / 256.0;
 	//OutputColor = worldNormal * 0.5 + vec3(0.5);
 } 
