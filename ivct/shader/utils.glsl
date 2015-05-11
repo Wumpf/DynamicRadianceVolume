@@ -51,8 +51,8 @@ vec3 UnpackNormal(vec2 packedNormal)
 vec3 UnpackNormal16I(vec2 packedNormal)
 {
 	// Unpack from 16bit signed int.
-	packedNormal.x *= PI / 32767.0;
-	packedNormal.y *= 1.0 / 32767.0;
+	packedNormal.x *= PI / 32768.0;
+	packedNormal.y *= 1.0 / 32768.0;
 
 	return UnpackNormal(packedNormal);
 }
@@ -85,7 +85,7 @@ ivec2 PackNormal16I(vec3 normal)
 	vec2 packedNormal = PackNormal(normal);
 
 	// Pack to 16bit signed int.
-	return ivec2(packedNormal.x * (32767.0 / PI), packedNormal.y * 32767.0);
+	return ivec2(packedNormal.x * (32768.0 / PI), packedNormal.y * 32768.0);
 }
 
 bool IsOnScreen(vec4 clipspaceCoordinate)
