@@ -6,13 +6,17 @@
 
 in vec3 Position;
 in vec3 Normal;
+in vec3 Tangent;
+in float BitangentHandedness;
 in vec2 Texcoord;
 
 layout(location = 0) out vec3 OutFlux;
 layout(location = 1) out ivec2 OutPackedNormal;
 layout(location = 2) out vec2 OutDepthLinSq;
 
-uniform sampler2D DiffuseTexture;
+layout(binding = 0) uniform sampler2D DiffuseTexture;
+layout(binding = 1) uniform sampler2D Normalmap;
+layout(binding = 2) uniform sampler2D RoughnessMetalic;
 
 void main()
 {
@@ -32,6 +36,17 @@ void main()
 	// -> total outgoing flux = Incoming Flux * "reflectivity"
 
 	OutFlux = texture(DiffuseTexture, Texcoord).rgb * LightIntensity * (spotFalloff * pixelSteradian);
-	OutPackedNormal = PackNormal16I(normalize(Normal));
 	OutDepthLinSq = vec2(distToLight, distToLight * distToLight);
+
+
+	// Normal with normalmapping.
+	vec3 normalMapNormal = texture(Normalmap, Texcoord).xyz;
+	normalMapNormal.xy = normalMapNormal.xy * 2.0 - 1.0;
+
+	vec3 vnormal = normalize(Normal);
+	vec3 vtangent = normalize(Tangent.xyz);
+	vec3 vbitangent = cross(vnormal, vtangent) * BitangentHandedness;
+	vec3 finalNormal = mat3(vtangent, vbitangent, vnormal) * normalMapNormal;
+
+	OutPackedNormal = PackNormal16I(normalize(finalNormal));
 }

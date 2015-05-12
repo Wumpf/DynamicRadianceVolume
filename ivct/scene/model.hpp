@@ -33,14 +33,18 @@ public:
 		
 		unsigned int startIndex;
 		unsigned int numIndices;
-		std::shared_ptr<gl::Texture2D> diffuseTexture;
-		// metalic+roughness
+
+		// All textures are always present. If only a single value is available, a 1x1 texture is generated at loading time.
+		std::shared_ptr<gl::Texture2D> diffuse;
+		std::shared_ptr<gl::Texture2D> normalmap;	// Tangent space normals RGB -> XZY*2.0 - 1.0
+		std::shared_ptr<gl::Texture2D> roughnessMetalic; // Combined texture of roughness (R) and metallic values (G)
 	};
 
 	struct Vertex
 	{
 		ei::Vec3 position;
 		ei::Vec3 normal;
+		ei::Vec4 tangent; // The 4th component determines the handedness of the bitangent
 		ei::Vec2 texcoord;
 	};
 

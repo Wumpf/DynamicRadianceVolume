@@ -227,14 +227,14 @@ void Renderer::UpdatePerFrameUBO(const Camera& camera)
 void Renderer::OnScreenResize(const ei::UVec2& newResolution)
 {
 	m_GBuffer_diffuse = std::make_unique<gl::Texture2D>(newResolution.x, newResolution.y, gl::TextureFormat::SRGB8, 1, 0);
-	m_GBuffer_specular = std::make_unique<gl::Texture2D>(newResolution.x, newResolution.y, gl::TextureFormat::SRGB8_ALPHA8, 1, 0);
+	m_GBuffer_roughnessMetallic = std::make_unique<gl::Texture2D>(newResolution.x, newResolution.y, gl::TextureFormat::RG8, 1, 0);
 	m_GBuffer_normal = std::make_unique<gl::Texture2D>(newResolution.x, newResolution.y, gl::TextureFormat::RG16I, 1, 0);
 	m_GBuffer_depth = std::make_unique<gl::Texture2D>(newResolution.x, newResolution.y, gl::TextureFormat::DEPTH_COMPONENT32F, 1, 0);
 
 	// Render to snorm integer makes problems.
 	// Others seem to have this problem too http://www.gamedev.net/topic/657167-opengl-44-render-to-snorm/
 
-	m_GBuffer.reset(new gl::FramebufferObject({ gl::FramebufferObject::Attachment(m_GBuffer_diffuse.get()), gl::FramebufferObject::Attachment(m_GBuffer_normal.get()) },
+	m_GBuffer.reset(new gl::FramebufferObject({ gl::FramebufferObject::Attachment(m_GBuffer_diffuse.get()), gl::FramebufferObject::Attachment(m_GBuffer_normal.get()), gl::FramebufferObject::Attachment(m_GBuffer_roughnessMetallic.get()) },
 									gl::FramebufferObject::Attachment(m_GBuffer_depth.get())));
 
 
@@ -457,7 +457,7 @@ void Renderer::PrepareLights()
 void Renderer::BindGBuffer()
 {
 	m_GBuffer_diffuse->Bind(0);
-	m_GBuffer_specular->Bind(1);
+	m_GBuffer_roughnessMetallic->Bind(1);
 	m_GBuffer_normal->Bind(2);
 	m_GBuffer_depth->Bind(3);
 
@@ -721,6 +721,13 @@ void Renderer::DrawScene(bool setTextures)
 
 	gl::Enable(gl::Cap::CULL_FACE); // TODO: Double sided materials.
 
+	if (setTextures)
+	{
+		m_samplerLinearRepeat.BindSampler(0);
+		m_samplerLinearRepeat.BindSampler(1);
+		m_samplerLinearRepeat.BindSampler(2);
+	}
+
 	for (unsigned int entityIndex =0; entityIndex < m_scene->GetEntities().size(); ++entityIndex)
 	{
 		const SceneEntity& entity = m_scene->GetEntities()[entityIndex];
@@ -733,10 +740,12 @@ void Renderer::DrawScene(bool setTextures)
 		{
 			if (setTextures)
 			{
-				if (mesh.diffuseTexture)
-					mesh.diffuseTexture->Bind(0);
-				else
-					gl::Texture2D::ResetBinding(0);
+				Assert(mesh.diffuse, "Mesh has no diffuse texture. This is not supported by the renderer.");
+				Assert(mesh.normalmap, "Mesh has no normal map. This is not supported by the renderer.");
+				Assert(mesh.roughnessMetalic, "Mesh has no roughnessMetallic map. This is not supported by the renderer.");
+				mesh.diffuse->Bind(0);
+				mesh.normalmap->Bind(1);
+				mesh.roughnessMetalic->Bind(2);
 			}
 			GL_CALL(glDrawElements, GL_TRIANGLES, mesh.numIndices, GL_UNSIGNED_INT, reinterpret_cast<const void*>(sizeof(std::uint32_t) * mesh.startIndex));
 		}

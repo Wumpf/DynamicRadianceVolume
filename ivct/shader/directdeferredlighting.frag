@@ -43,10 +43,10 @@ void main()
 	vec3 toCamera = normalize(vec3(CameraPosition - worldPosition));
 
 	// BRDF parameters from GBuffer.
-	vec3 diffuseColor = textureLod(GBuffer_Diffuse, Texcoord, 0).rgb;
+	vec3 baseColor = textureLod(GBuffer_Diffuse, Texcoord, 0).rgb;
+	vec2 roughnessMetalic = textureLod(GBuffer_RoughnessMetalic, Texcoord, 0).rg;
 	
 	// Evaluate direct light.
 	vec3 irradiance = LightIntensity * (shadowing * ComputeSpotFalloff(toLight) * cosTheta / lightDistanceSq);
-	OutputColor = BRDF(toLight, toCamera, worldNormal, diffuseColor, vec3(0.0), 8000.0) * irradiance;
-
+	OutputColor = BRDF(toLight, toCamera, worldNormal, baseColor, roughnessMetalic) * irradiance;
 }

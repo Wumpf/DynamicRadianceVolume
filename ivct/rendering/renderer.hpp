@@ -154,7 +154,7 @@ private:
 
 
 	Texture2DPtr m_GBuffer_diffuse;
-	Texture2DPtr m_GBuffer_specular;
+	Texture2DPtr m_GBuffer_roughnessMetallic;
 	Texture2DPtr m_GBuffer_normal;
 	Texture2DPtr m_GBuffer_depth;
 	std::unique_ptr<gl::FramebufferObject> m_GBuffer;
