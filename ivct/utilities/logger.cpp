@@ -65,16 +65,13 @@ namespace Logger {
 		if( !fileShort ) fileShort = _file;
         else ++fileShort;
 
-		message << _severity << " < ";
+		message << _severity << " <";
 		// Write millisecond since start at the beginning
 		message.fill('0');
-		message.width(8);
-		message << clock() << " ms > [";
+		message.width(7);
+		message << clock() << "ms> [";
 		message << _function << " @ " << fileShort <<  " : ";
-//		message.setf( std::ios::left );
-//		message.fill(' ');
-//		message.width(4);
-		message << _codeLine << "]      ";
+		message << _codeLine << "]  ";
 		message << _message << '\n';//*/
 		if( m_policy ) m_policy->Write( message.str() );
 	}
