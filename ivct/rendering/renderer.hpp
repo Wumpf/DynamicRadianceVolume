@@ -100,7 +100,7 @@ private:
 	void OutputHDRTextureToBackbuffer();
 
 	void GatherLightCaches();
-	void ApplyLightCaches();
+	void ApplyLightCaches(bool contactShadowHack);
 
 	/// Applies direct light to caches (mainly for debug purposes)
 	void CacheLightingDirect();
@@ -154,6 +154,7 @@ private:
 
 
 	Texture2DPtr m_GBuffer_diffuse;
+	Texture2DPtr m_GBuffer_specular;
 	Texture2DPtr m_GBuffer_normal;
 	Texture2DPtr m_GBuffer_depth;
 	std::unique_ptr<gl::FramebufferObject> m_GBuffer;

@@ -34,6 +34,7 @@ public:
 		unsigned int startIndex;
 		unsigned int numIndices;
 		std::shared_ptr<gl::Texture2D> diffuseTexture;
+		// metalic+roughness
 	};
 
 	struct Vertex

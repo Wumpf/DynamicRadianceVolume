@@ -5,7 +5,7 @@
 #include "globalubos.glsl"
 #include "lightingfunctions.glsl"
 
-layout(binding=3) uniform sampler2DShadow ShadowMap;
+layout(binding=4) uniform sampler2DShadow ShadowMap;
 
 in vec2 Texcoord;
 out vec3 OutputColor;
@@ -47,5 +47,6 @@ void main()
 	
 	// Evaluate direct light.
 	vec3 irradiance = LightIntensity * (shadowing * ComputeSpotFalloff(toLight) * cosTheta / lightDistanceSq);
-	OutputColor = BRDF(toLight, toCamera, diffuseColor) * irradiance;
+	OutputColor = BRDF(toLight, toCamera, worldNormal, diffuseColor, vec3(0.0), 8000.0) * irradiance;
+
 }

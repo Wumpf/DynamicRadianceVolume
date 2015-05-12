@@ -1,11 +1,19 @@
 #version 450 core
 
+#define CONTACT_SHADOW_FIX
+
 #include "gbuffer.glsl"
 #include "utils.glsl"
 #include "globalubos.glsl"
 
 #define LIGHTCACHEMODE LIGHTCACHEMODE_APPLY
 #include "lightcache.glsl"
+
+layout(binding=4) uniform usampler3D VoxelAddressVolume;
+
+#ifdef CONTACT_SHADOW_FIX
+layout(binding=5) uniform sampler3D VoxelVolume;
+#endif
 
 in vec2 Texcoord;
 
@@ -103,7 +111,7 @@ void main()
 			mix(mix(irradiance[4], irradiance[5], interp.x),
 				mix(irradiance[6], irradiance[7], interp.x), interp.y), interp.z);
 
-	OutputColor = interpolatedIrradiance * diffuse;
+	OutputColor = interpolatedIrradiance * diffuse / PI;
 	//OutputColor = mod(addressCoord00, vec3(16)) / 256.0;
 	//OutputColor = worldNormal * 0.5 + vec3(0.5);
 } 

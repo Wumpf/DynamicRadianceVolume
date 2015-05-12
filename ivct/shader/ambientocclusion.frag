@@ -2,15 +2,15 @@
 
 // See https://research.nvidia.com/sites/default/files/publications/GIVoxels-pg2011-authors.pdf
 
-layout(binding=3) uniform sampler3D VoxelVolume;
+#include "gbuffer.glsl"
+#include "utils.glsl"
+#include "globalubos.glsl"
+
+layout(binding=4) uniform sampler3D VoxelVolume;
 
 in vec2 Texcoord;
 
 out vec3 OutputColor;
-
-#include "gbuffer.glsl"
-#include "utils.glsl"
-#include "globalubos.glsl"
 
 // Create ONB from normalized vector
 void CreateONB(in vec3 n, out vec3 U, out vec3 V)

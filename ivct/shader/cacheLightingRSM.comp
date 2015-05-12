@@ -10,7 +10,8 @@
 layout(binding=0) uniform sampler2D RSM_Flux;
 layout(binding=1) uniform sampler2D RSM_DepthLinSq;
 layout(binding=2) uniform isampler2D RSM_Normal;
-layout(binding=3) uniform sampler3D VoxelVolume;
+
+layout(binding=4) uniform sampler3D VoxelVolume;
 
 struct LightInfo
 {
@@ -139,7 +140,7 @@ void main()
 				float dist = 0.0;
 				float goalDist = lightDist / VoxelSizeInWorld - startOffset;// Assuming that the light is within the voxel bounds!
 
-				for(int s=0; s<32; ++s)
+				for(int s=0; s<64; ++s)
 				{
 					currentPosVoxel += dirInVoxel * stepSize;
 					//if(saturate(currentPosVoxel) != currentPosVoxel) break; // seems not to be necessary

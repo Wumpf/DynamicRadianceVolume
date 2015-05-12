@@ -5,9 +5,9 @@
 #include "globalubos.glsl"
 #include "lightingfunctions.glsl"
 
-layout(binding=3) uniform sampler2D RSM_Flux;
-layout(binding=4) uniform sampler2D RSM_Depth;
-layout(binding=5) uniform isampler2D RSM_Normal;
+layout(binding=4) uniform sampler2D RSM_Flux;
+layout(binding=5) uniform sampler2D RSM_Depth;
+layout(binding=6) uniform isampler2D RSM_Normal;
 
 in vec2 Texcoord;
 out vec3 OutputColor;
@@ -22,11 +22,7 @@ void main()
 	// BRDF parameters from GBuffer.
 	vec3 diffuseColor = textureLod(GBuffer_Diffuse, Texcoord, 0).rgb;
 
-	OutputColor = vec3(0.0);
-
-	// Debug rsm
-	//OutputColor = texture(RSM_Flux, Texcoord * 2 ).rgb;
-	//OutputColor = abs(UnpackNormal16I(texture(RSM_Normal, Texcoord * 2).xy));
+	vec3 totalIrradiance = vec3(0.0);
 
 	// Compute direct lighting from all reflective shadow map pixels as virtual point lights.
 	// (no area lights yet!)
@@ -66,7 +62,14 @@ void main()
 			//float fluxToIrradiance = fluxToIntensity * cosTheta / (lightDistanceSq); // VPL instead of VAL
 
 			vec3 irradiance = valTotalExitantFlux * fluxToIrradiance;
-			OutputColor += BRDF(toVal, toCamera, diffuseColor) * irradiance;
+			totalIrradiance += irradiance;
 		}	
 	}
+
+	OutputColor = diffuseColor / PI * totalIrradiance; // only diffuse lighting.
+
+
+	// Debug rsm
+	//OutputColor = texture(RSM_Flux, Texcoord * 2 ).rgb;
+	//OutputColor = abs(UnpackNormal16I(texture(RSM_Normal, Texcoord * 2).xy));
 }

@@ -24,6 +24,8 @@ void WindowResizeCallback(GLFWwindow* window, int width, int height)
 	if (width <= 0 || height <= 0)
 		return;
 
+	LOG_INFO("Resizing framebuffer to " << width << "x" << height);
+
 	ei::IVec2 resolution;
 	glfwGetFramebufferSize(window, &resolution.x, &resolution.y);
 

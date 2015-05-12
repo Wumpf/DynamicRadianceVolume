@@ -226,7 +226,8 @@ void Renderer::UpdatePerFrameUBO(const Camera& camera)
 
 void Renderer::OnScreenResize(const ei::UVec2& newResolution)
 {
-	m_GBuffer_diffuse = std::make_unique<gl::Texture2D>(newResolution.x, newResolution.y, gl::TextureFormat::SRGB8_ALPHA8, 1, 0);
+	m_GBuffer_diffuse = std::make_unique<gl::Texture2D>(newResolution.x, newResolution.y, gl::TextureFormat::SRGB8, 1, 0);
+	m_GBuffer_specular = std::make_unique<gl::Texture2D>(newResolution.x, newResolution.y, gl::TextureFormat::SRGB8_ALPHA8, 1, 0);
 	m_GBuffer_normal = std::make_unique<gl::Texture2D>(newResolution.x, newResolution.y, gl::TextureFormat::RG16I, 1, 0);
 	m_GBuffer_depth = std::make_unique<gl::Texture2D>(newResolution.x, newResolution.y, gl::TextureFormat::DEPTH_COMPONENT32F, 1, 0);
 
@@ -314,7 +315,7 @@ void Renderer::Draw(const Camera& camera)
 
 		m_uboRing_SpotLight->CompleteFrame();
 
-		ApplyLightCaches();
+		ApplyLightCaches(m_mode == Mode::RSM_CACHE_INDSHADOW);
 
 		OutputHDRTextureToBackbuffer();
 		break;
@@ -456,11 +457,14 @@ void Renderer::PrepareLights()
 void Renderer::BindGBuffer()
 {
 	m_GBuffer_diffuse->Bind(0);
-	m_GBuffer_normal->Bind(1);
-	m_GBuffer_depth->Bind(2);
+	m_GBuffer_specular->Bind(1);
+	m_GBuffer_normal->Bind(2);
+	m_GBuffer_depth->Bind(3);
+
 	m_samplerNearest.BindSampler(0);
 	m_samplerNearest.BindSampler(1);
 	m_samplerNearest.BindSampler(2);
+	m_samplerNearest.BindSampler(3);
 }
 
 void Renderer::BindObjectUBO(unsigned int _objectIndex)
@@ -536,11 +540,11 @@ void Renderer::DrawLights()
 	m_shaderDeferredDirectLighting_Spot->Activate();
 
 	BindGBuffer();
-	m_samplerShadow.BindSampler(3);
+	m_samplerShadow.BindSampler(4);
 
 	for (unsigned int lightIndex = 0; lightIndex < m_scene->GetLights().size(); ++lightIndex)
 	{
-		m_shadowMaps[lightIndex].depthBuffer->Bind(3);
+		m_shadowMaps[lightIndex].depthBuffer->Bind(4);
 		
 		m_uboRing_SpotLight->BindBlockAsUBO(m_uboInfoSpotLight.bufferBinding, lightIndex);
 		m_screenTriangle->Draw();
@@ -557,18 +561,15 @@ void Renderer::ApplyRSMsBruteForce()
 	m_shaderIndirectLightingBruteForceRSM->Activate();
 
 	BindGBuffer();
-	m_samplerNearest.BindSampler(3);
 	m_samplerNearest.BindSampler(4);
 	m_samplerNearest.BindSampler(5);
-	m_samplerLinearClamp.BindSampler(6);
-
-	m_voxelization->GetVoxelTexture().Bind(6);
+	m_samplerNearest.BindSampler(6);
 
 	for (unsigned int lightIndex = 0; lightIndex < m_scene->GetLights().size(); ++lightIndex)
 	{
-		m_shadowMaps[lightIndex].flux->Bind(3);
-		m_shadowMaps[lightIndex].depthBuffer->Bind(4);
-		m_shadowMaps[lightIndex].normal->Bind(5);
+		m_shadowMaps[lightIndex].flux->Bind(4);
+		m_shadowMaps[lightIndex].depthBuffer->Bind(5);
+		m_shadowMaps[lightIndex].normal->Bind(6);
 
 		m_uboRing_SpotLight->BindBlockAsUBO(m_uboInfoSpotLight.bufferBinding, lightIndex);
 		m_screenTriangle->Draw();
@@ -607,11 +608,13 @@ void Renderer::CacheLightingRSM(bool indirectShadow)
 	m_samplerNearest.BindSampler(0);
 	m_samplerLinearClamp.BindSampler(1); // filtering allowed for depthLinSq
 	m_samplerNearest.BindSampler(2);
-	m_samplerLinearClamp.BindSampler(3);
-	m_voxelization->GetVoxelTexture().Bind(3);
 
 	if (indirectShadow)
+	{
+		m_samplerLinearClamp.BindSampler(4);
+		m_voxelization->GetVoxelTexture().Bind(4);
 		m_shaderLightCachesRSM_shadow->Activate();
+	}
 	else
 		m_shaderLightCachesRSM->Activate();
 
@@ -638,8 +641,8 @@ void Renderer::ConeTraceAO()
 
 
 	BindGBuffer();
-	m_samplerLinearClamp.BindSampler(3);
-	m_voxelization->GetVoxelTexture().Bind(3);
+	m_samplerLinearClamp.BindSampler(4);
+	m_voxelization->GetVoxelTexture().Bind(4);
 
 	m_shaderConeTraceAO->Activate();
 	m_screenTriangle->Draw();
@@ -685,7 +688,7 @@ void Renderer::GatherLightCaches()
 	GL_CALL(glDispatchCompute, 1, 1, 1);
 }
 
-void Renderer::ApplyLightCaches()
+void Renderer::ApplyLightCaches(bool contactShadowFix)
 {
 	gl::Disable(gl::Cap::DEPTH_TEST);
 	gl::Enable(gl::Cap::BLEND);
@@ -695,8 +698,14 @@ void Renderer::ApplyLightCaches()
 	//m_shaderCacheApply->BindSSBO(*m_lightCacheHashMap);
 	m_shaderCacheApply->BindSSBO(*m_lightCacheBuffer, "LightCacheBuffer");
 
-	m_lightCacheAddressVolume->Bind(3);
-	m_samplerNearest.BindSampler(3);
+	m_lightCacheAddressVolume->Bind(4);
+	m_samplerNearest.BindSampler(4);
+
+	if (contactShadowFix)
+	{
+		m_voxelization->GetVoxelTexture().Bind(5);
+		m_samplerLinearClamp.BindSampler(5);
+	}
 
 	m_shaderCacheApply->Activate();
 
@@ -709,6 +718,8 @@ void Renderer::ApplyLightCaches()
 void Renderer::DrawScene(bool setTextures)
 {
 	Model::BindVAO();
+
+	gl::Enable(gl::Cap::CULL_FACE); // TODO: Double sided materials.
 
 	for (unsigned int entityIndex =0; entityIndex < m_scene->GetEntities().size(); ++entityIndex)
 	{
