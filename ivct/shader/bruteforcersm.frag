@@ -19,14 +19,18 @@ void main()
 	vec3 worldPosition = worldPosition4D.xyz / worldPosition4D.w;
 	vec3 worldNormal = UnpackNormal16I(texture(GBuffer_Normal, Texcoord).rg);
 
-	// BRDF parameters from GBuffer.
-	vec3 diffuseColor = textureLod(GBuffer_Diffuse, Texcoord, 0).rgb;
+	// Direction to camera.
+	vec3 toCamera = normalize(vec3(CameraPosition - worldPosition));
 
-	vec3 totalIrradiance = vec3(0.0);
+	// BRDF parameters from GBuffer.
+	vec3 baseColor = textureLod(GBuffer_Diffuse, Texcoord, 0).rgb;
+	vec2 roughnessMetallic = textureLod(GBuffer_RoughnessMetalic, Texcoord, 0).rg;
 
 	// Compute direct lighting from all reflective shadow map pixels as virtual point lights.
 	// (no area lights yet!)
 	// Note that this there is no shadowing!
+
+	OutputColor = vec3(0.0);
 
 	ivec2 rsmSamplePos = ivec2(0);
 	for(; rsmSamplePos.x<ShadowMapResolution; ++rsmSamplePos.x)
@@ -50,8 +54,7 @@ void main()
 			vec3 valTotalExitantFlux = texelFetch(RSM_Flux, rsmSamplePos, 0).rgb;
 			vec3 valNormal = UnpackNormal16I(texelFetch(RSM_Normal, rsmSamplePos, 0).xy);
 
-			// Direction to camera.
-			vec3 toCamera = normalize(vec3(CameraPosition - worldPosition));
+
 			
 			// Handle light as disc with area. This can be computed analytically for the diffuse term.
 			vec3 valToLight = valPosition.xyz - LightPosition;
@@ -62,11 +65,10 @@ void main()
 			//float fluxToIrradiance = fluxToIntensity * cosTheta / (lightDistanceSq); // VPL instead of VAL
 
 			vec3 irradiance = valTotalExitantFlux * fluxToIrradiance;
-			totalIrradiance += irradiance;
+
+			OutputColor += BRDF(toVal, toCamera, worldNormal, baseColor, roughnessMetallic) * irradiance;
 		}	
 	}
-
-	OutputColor = diffuseColor / PI * totalIrradiance; // only diffuse lighting.
 
 
 	// Debug rsm
