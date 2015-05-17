@@ -5,6 +5,7 @@
 #include "gbuffer.glsl"
 #include "utils.glsl"
 #include "globalubos.glsl"
+#include "lightingfunctions.glsl"
 
 #define LIGHTCACHEMODE LIGHTCACHEMODE_APPLY
 #include "lightcache.glsl"
@@ -36,9 +37,14 @@ void main()
 	vec4 worldPosition4D = vec4(Texcoord * 2.0 - vec2(1.0), depthBufferDepth, 1.0) * InverseViewProjection;
 	vec3 worldPosition = worldPosition4D.xyz / worldPosition4D.w;
 
-	// Get normal and material color
+	// Get normal and material colors
 	vec3 worldNormal = UnpackNormal16I(textureLod(GBuffer_Normal, Texcoord, 0.0).rg);
-	vec3 diffuse = texture(GBuffer_Diffuse, Texcoord).rgb;
+	vec3 baseColor = texture(GBuffer_Diffuse, Texcoord).rgb;
+	vec2 roughnessMetalic = texture(GBuffer_RoughnessMetalic, Texcoord).rg;
+	float blinnExponent = RoughnessToBlinnExponent(roughnessMetalic.x);
+	vec3 diffuseColor, specularColor;
+	ComputeMaterialColors(baseColor, roughnessMetalic.y, diffuseColor, specularColor);
+
 
 	//vec3 addressCoord = (worldPosition - VolumeWorldMin) / AddressVolumeVoxelSize;
 	vec3 addressCoord = clamp((worldPosition - VolumeWorldMin) / AddressVolumeVoxelSize, vec3(0), vec3(AddressVolumeResolution-0.999));
@@ -57,61 +63,166 @@ void main()
 		ivec3(1,1,1)
 	};
 
-	vec3 irradiance[8];
 
-	for(int i=0; i<8; ++i)
 	{
-		ivec3 cacheSamplePos = addressCoord00 + offsets[i];
-		uint cacheAddress = texelFetch(VoxelAddressVolume, cacheSamplePos, 0).r;
+		vec3 irradiance[8];
 
-		// Check if address is valid. (debug code!)
-		/*if(cacheAddress == 0 || cacheAddress == 0xFFFFFFFF)
+		#if defined(INDDIFFUSE_VIA_SH1) || defined(INDDIFFUSE_VIA_SH2)
+			const float shEvaFactor0 = 1.0 / (2.0 * sqrt(PI));
+			const float shEvaFactor1 = sqrt(3.0) / (2.0 * sqrt(PI));
+
+			const float shEvaFactor2n2 = sqrt(15.0 / (4.0 * PI));
+			const float shEvaFactor2n1 = -sqrt(15.0 / (4.0 * PI));
+			const float shEvaFactor20 = sqrt(5.0 / (16.0 * PI));
+			const float shEvaFactor2p1 =  -sqrt(15.0 / (4.0 * PI));
+			const float shEvaFactor2p2 =  sqrt(15.0 / (16.0 * PI));
+
+		#elif defined(INDDIFFUSE_VIA_H)
+			const float factor0 = 1.0 / (2.0 * PI);
+			const float factor1 = sqrt(3.0) / sqrt(2.0 * PI);
+			const float factor2 = sqrt(15.0) / sqrt(2.0 * PI);
+		#endif
+
+
+
+		for(int i=0; i<8; ++i)
 		{
-			OutputColor = vec3(1,0,1);
-			return;
-		}*/
-		cacheAddress -= 1;
+			ivec3 cacheSamplePos = addressCoord00 + offsets[i];
+			uint cacheAddress = texelFetch(VoxelAddressVolume, cacheSamplePos, 0).r;
 
-		// -----------------------------------------------
-		// IRRADIANCE VIA SH (test)
+			// Check if address is valid. (debug code!)
+			/*if(cacheAddress == 0 || cacheAddress == 0xFFFFFFFF)
+			{
+				OutputColor = vec3(1,0,1);
+				return;
+			}*/
+			cacheAddress -= 1;
 
-		const float factor0 = 1.0 / (2.0 * sqrt(PI));
-		const float factor1 = sqrt(3.0) / (2.0 * sqrt(PI));
+		#if defined(INDDIFFUSE_VIA_SH1) || defined(INDDIFFUSE_VIA_SH2)
+			// -----------------------------------------------
+			// IRRADIANCE VIA SH
+			// Band 0
+			irradiance[i] = vec3(LightCacheEntries[cacheAddress].SH00_r,
+									LightCacheEntries[cacheAddress].SH00_g,
+									LightCacheEntries[cacheAddress].SH00_b) * shEvaFactor0;
 
-		// Band 0
-		irradiance[i] = vec3(LightCacheEntries[cacheAddress].SH00_r,
-								LightCacheEntries[cacheAddress].SH00_g,
-								LightCacheEntries[cacheAddress].SH00_b) * factor0;
+			// Band 1
+			irradiance[i] -= LightCacheEntries[cacheAddress].SH1neg1 * (shEvaFactor1 * worldNormal.y);
+			irradiance[i] += LightCacheEntries[cacheAddress].SH10 * (shEvaFactor1 * worldNormal.z);
+			irradiance[i] -= LightCacheEntries[cacheAddress].SH1pos1 * (shEvaFactor1 * worldNormal.x);
 
-		// Band 1
-		irradiance[i] -= LightCacheEntries[cacheAddress].SH1neg1 * (factor1 * worldNormal.y);
-		irradiance[i] += LightCacheEntries[cacheAddress].SH10 * (factor1 * worldNormal.z);
-		irradiance[i] -= LightCacheEntries[cacheAddress].SH1pos1 * (factor1 * worldNormal.x);
+			// Band 2
+			#ifdef INDDIFFUSE_VIA_SH2
+			irradiance[i] += LightCacheEntries[cacheAddress].SH2neg2 * (shEvaFactor2n2 * worldNormal.x * worldNormal.y);
+			irradiance[i] += LightCacheEntries[cacheAddress].SH2neg1 * (shEvaFactor2n1 * worldNormal.y * worldNormal.z);
+			irradiance[i] += vec3(LightCacheEntries[cacheAddress].SH20_r,
+									LightCacheEntries[cacheAddress].SH20_g,
+									LightCacheEntries[cacheAddress].SH20_b) * (shEvaFactor20 * (worldNormal.z * worldNormal.z * 3.0 - 1.0));
+			irradiance[i] += LightCacheEntries[cacheAddress].SH2pos1 * (shEvaFactor2p1 * worldNormal.x * worldNormal.z);
+			irradiance[i] += LightCacheEntries[cacheAddress].SH2pos2 * (shEvaFactor2p2 * (worldNormal.x * worldNormal.x - worldNormal.y * worldNormal.y));	
 
-		// Band 2
-	/*	irradiance[i] += LightCacheEntries[cacheAddress].SH2neg2 * (sqrt(15.0 / (4.0 * PI)) * worldNormal.x * worldNormal.y);
-		irradiance[i] += LightCacheEntries[cacheAddress].SH2neg1 * (sqrt(15.0 / (4.0 * PI)) * worldNormal.y * worldNormal.z);
-		irradiance[i] += vec3(LightCacheEntries[cacheAddress].SH20_r,
-								LightCacheEntries[cacheAddress].SH20_g,
-								LightCacheEntries[cacheAddress].SH20_b) * (sqrt(5.0 / (16.0 * PI)) * (worldNormal.z * worldNormal.z * 3.0 - 1.0));
-		irradiance[i] += LightCacheEntries[cacheAddress].SH2pos1 * (sqrt(15.0 / (8.0 * PI))* worldNormal.x * worldNormal.z);
-		irradiance[i] += LightCacheEntries[cacheAddress].SH2pos2 * (sqrt(15.0 / (32.0 * PI)) * (worldNormal.x * worldNormal.x - worldNormal.y * worldNormal.y));	
-		*/
+			#endif
 
 
-		// Negative irradiance values are not meaningful (may happen due to SH overshooting)
-		irradiance[i] = max(irradiance[i], vec3(0.0));
+		#elif defined(INDDIFFUSE_VIA_H)
+			// -----------------------------------------------
+			// IRRADIANCE VIA H-Basis (test)
+			vec3 cacheWorldPosition = cacheSamplePos * AddressVolumeVoxelSize + VolumeWorldMin;
+			vec3 cacheViewNormal = worldNormal * ComputeLocalViewSpace(cacheWorldPosition);
+
+			irradiance[i]  = LightCacheEntries[cacheAddress].irradianceH1 * factor0;
+			irradiance[i] -= LightCacheEntries[cacheAddress].irradianceH2 * factor1 * cacheViewNormal.y;
+			irradiance[i] += LightCacheEntries[cacheAddress].irradianceH3 * factor1 * (2.0 * cacheViewNormal.z - 1.0);
+			irradiance[i] -= vec3(LightCacheEntries[cacheAddress].irradianceH4r,
+									LightCacheEntries[cacheAddress].irradianceH4g,
+									LightCacheEntries[cacheAddress].irradianceH4b) * (factor1 * cacheViewNormal.x);
+			#if INDDIFFUSE_VIA_H > 4
+			irradiance[i] += LightCacheEntries[cacheAddress].irradianceH5 * (factor2 * cacheViewNormal.x * cacheViewNormal.y);
+			irradiance[i] += LightCacheEntries[cacheAddress].irradianceH6 * (factor2 * (cacheViewNormal.x * cacheViewNormal.x - cacheViewNormal.y * cacheViewNormal.y) * 0.5);
+			#endif
+		#endif
+
+
+			// Negative irradiance values are not meaningful (may happen due to SH overshooting)
+			irradiance[i] = max(irradiance[i], vec3(0.0));
+		}
+
+		// trilinear interpolation
+		vec3 interp = Interp(addressCoord - addressCoord00);
+		vec3 interpolatedIrradiance = 
+			mix(mix(mix(irradiance[0], irradiance[1], interp.x),
+					mix(irradiance[2], irradiance[3], interp.x), interp.y),
+				mix(mix(irradiance[4], irradiance[5], interp.x),
+					mix(irradiance[6], irradiance[7], interp.x), interp.y), interp.z);
+
+		OutputColor = interpolatedIrradiance * diffuseColor / PI;
 	}
 
-	// trilinear interpolation
-	vec3 interp = Interp(addressCoord - addressCoord00);
-	vec3 interpolatedIrradiance = 
-		mix(mix(mix(irradiance[0], irradiance[1], interp.x),
-				mix(irradiance[2], irradiance[3], interp.x), interp.y),
-			mix(mix(irradiance[4], irradiance[5], interp.x),
-				mix(irradiance[6], irradiance[7], interp.x), interp.y), interp.z);
 
-	OutputColor = interpolatedIrradiance * diffuse / PI;
-	//OutputColor = mod(addressCoord00, vec3(16)) / 256.0;
-	//OutputColor = worldNormal * 0.5 + vec3(0.5);
+
+	// Test code for "Cache Local View Space"
+/*{
+		vec3 cacheWorldPosition = addressCoord00 * AddressVolumeVoxelSize + VolumeWorldMin;
+		vec3 cacheViewNormal = worldNormal * ComputeLocalViewSpace(cacheWorldPosition);
+		OutputColor = vec3(cacheViewNormal.z < 0 ? 1.0 : -1.0); // Check for negative normals
+		OutputColor = cacheViewNormal * 0.5 + 0.5; // Display
+	}*/
+
+
+	// Specular
+	/*if(false)
+	{
+		vec3 specularLighting[8];
+
+		float specfactor0 = factor0 / (blinnExponent + 1.0);
+		float specfactor1 = factor1 / (blinnExponent + 2.0);
+		float specfactor2 = 3.0 / (blinnExponent + 3.0) - 1.0 / (blinnExponent + 1.0);
+		const float shband3_0 = sqrt(15.0 / (4.0 * PI));
+		const float shband3_1 = sqrt(5.0 / (16.0 * PI));
+		const float shband3_2 = sqrt(15.0 / (8.0 * PI));
+		const float shband3_3 =  sqrt(15.0 / (32.0 * PI));
+
+		for(int i=0; i<8; ++i)
+		{
+			ivec3 cacheSamplePos = addressCoord00 + offsets[i];
+			uint cacheAddress = texelFetch(VoxelAddressVolume, cacheSamplePos, 0).r;
+			cacheAddress -= 1;
+
+			// Band 0
+			specularLighting[i] = vec3(LightCacheEntries[cacheAddress].spec_SH00_r,
+									LightCacheEntries[cacheAddress].spec_SH00_g,
+									LightCacheEntries[cacheAddress].spec_SH00_b) * specfactor0;
+
+			// Band 1
+			specularLighting[i] -= LightCacheEntries[cacheAddress].spec_SH1neg1 * (specfactor1 * worldNormal.y);
+			specularLighting[i] += LightCacheEntries[cacheAddress].spec_SH10 * (specfactor1 * worldNormal.z);
+			specularLighting[i] -= LightCacheEntries[cacheAddress].spec_SH1pos1 * (specfactor1 * worldNormal.x);
+
+			// Band 2
+			vec3 band2;
+			band2 = LightCacheEntries[cacheAddress].spec_SH2neg2 * shband3_0 * worldNormal.x * worldNormal.y;
+			band2 += LightCacheEntries[cacheAddress].spec_SH2neg1 * shband3_0 * worldNormal.y * worldNormal.z;
+			band2 += vec3(LightCacheEntries[cacheAddress].spec_SH20_r,
+									LightCacheEntries[cacheAddress].spec_SH20_g,
+									LightCacheEntries[cacheAddress].spec_SH20_b) * (shband3_1 * (worldNormal.z * worldNormal.z * 3.0 - 1.0));
+			band2 += LightCacheEntries[cacheAddress].spec_SH2pos1 * (shband3_2 * worldNormal.x * worldNormal.z);
+			band2 += LightCacheEntries[cacheAddress].spec_SH2pos2 * (shband3_3 * (worldNormal.x * worldNormal.x - worldNormal.y * worldNormal.y));	
+			band2 *= specfactor2;
+			specularLighting[i] += band2;
+
+
+			// Negative irradiance values are not meaningful (may happen due to SH overshooting)
+			specularLighting[i] = max(specularLighting[i], vec3(0.0));
+		}
+
+		// trilinear interpolation
+		vec3 interp = Interp(addressCoord - addressCoord00);
+		vec3 interpolatedSpecularLighting = 
+			mix(mix(mix(specularLighting[0], specularLighting[1], interp.x),
+					mix(specularLighting[2], specularLighting[3], interp.x), interp.y),
+				mix(mix(specularLighting[4], specularLighting[5], interp.x),
+					mix(specularLighting[6], specularLighting[7], interp.x), interp.y), interp.z);
+
+		OutputColor += BlinnNormalization(blinnExponent) * interpolatedSpecularLighting * specularColor / PI;
+	}*/
 } 

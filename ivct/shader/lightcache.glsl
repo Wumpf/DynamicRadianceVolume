@@ -19,6 +19,9 @@
 #endif
 
 
+#define INDDIFFUSE_VIA_SH1
+//#define INDDIFFUSE_VIA_SH2
+//#define INDDIFFUSE_VIA_H 4 // 6
 
 struct LightCacheEntry
 {
@@ -26,6 +29,7 @@ struct LightCacheEntry
 	float _padding0;
 
 
+#if defined(INDDIFFUSE_VIA_SH1) || defined(INDDIFFUSE_VIA_SH2)
 	// Irradiance via SH (band, coefficient)
 	// Consider packing!
 	vec3 SH1neg1;
@@ -35,13 +39,48 @@ struct LightCacheEntry
 	vec3 SH1pos1;
 	float SH00_b;
 
-/*	vec3 SH2neg2;
+	#ifdef INDDIFFUSE_VIA_SH2
+	vec3 SH2neg2;
 	float SH20_r;
 	vec3 SH2neg1;
 	float SH20_g;
 	vec3 SH2pos1;
 	float SH20_b;
 	vec3 SH2pos2;
+	float _padding1;
+	#endif
+
+#elif defined(INDDIFFUSE_VIA_H)
+	// Irradiance via H basis - in "Cache Local View Space"
+	vec3 irradianceH1;
+	float irradianceH4r;
+	vec3 irradianceH2;
+	float irradianceH4g;
+	vec3 irradianceH3;
+	float irradianceH4b;
+	#if INDDIFFUSE_VIA_H > 4
+	vec3 irradianceH5;
+	float _padding1;
+	vec3 irradianceH6;
+	float _padding2;
+	#endif
+#endif
+
+	// Specular via SH
+	/*vec3 spec_SH1neg1;
+	float spec_SH00_r;
+	vec3 spec_SH10;
+	float spec_SH00_g;
+	vec3 spec_SH1pos1;
+	float spec_SH00_b;
+
+	vec3 spec_SH2neg2;
+	float spec_SH20_r;
+	vec3 spec_SH2neg1;
+	float spec_SH20_g;
+	vec3 spec_SH2pos1;
+	float spec_SH20_b;
+	vec3 spec_SH2pos2;
 	float _padding1;*/
 };
 
@@ -59,6 +98,16 @@ layout(std430, binding = 1) LIGHTCACHE_COUNTER_MODIFIER buffer LightCacheCounter
     int TotalLightCacheCount;
 };
 
+mat3 ComputeLocalViewSpace(vec3 worldPosition)
+{
+	mat3 localViewSpace;
+	localViewSpace[2] = normalize(CameraPosition - worldPosition); // Z
+	localViewSpace[0] = normalize(vec3(localViewSpace[2].z, 0.0, -localViewSpace[2].x)); // X
+	localViewSpace[1] = cross(localViewSpace[2], localViewSpace[0]); // Y
+
+
+	return localViewSpace;
+}
 
 // Alternative adress storing
 /*struct LightCacheHashEntry

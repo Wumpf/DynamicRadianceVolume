@@ -210,6 +210,7 @@ void Renderer::UpdatePerFrameUBO(const Camera& camera)
 
 	gl::MappedUBOView mappedMemory(m_allShaders[0]->GetUniformBufferInfo()["PerFrame"], m_uboPerFrame->Map(gl::Buffer::MapType::WRITE, gl::Buffer::MapWriteFlag::INVALIDATE_BUFFER));
 	mappedMemory["Projection"].Set(projection);
+	//mappedMemory["View"].Set(view);
 	mappedMemory["ViewProjection"].Set(viewProjection);
 	mappedMemory["InverseView"].Set(ei::invert(view));
 	mappedMemory["InverseViewProjection"].Set(ei::invert(viewProjection));

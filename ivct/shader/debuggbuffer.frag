@@ -9,9 +9,9 @@ out vec3 OutputColor;
 #include "globalubos.glsl"
 
 //#define OUTPUT_POS
-//#define OUTPUT_NORMAL
+#define OUTPUT_NORMAL
 //#define OUTPUT_DIFFUSE
-#define OUTPUT_SPECPROPS
+//#define OUTPUT_SPECPROPS
 
 void main()
 {
@@ -26,7 +26,9 @@ void main()
 #endif
 
 #ifdef OUTPUT_NORMAL
-	OutputColor = UnpackNormal16I(texture(GBuffer_Normal, Texcoord).rg) * 0.5 + 0.5;
+	vec3 normal = UnpackNormal16I(texture(GBuffer_Normal, Texcoord).rg);
+	OutputColor = normal * 0.5 + 0.5;
+	//OutputColor = vec3((vec4(normal,0) * View).z);
 #endif
 
 #ifdef OUTPUT_SPECPROPS

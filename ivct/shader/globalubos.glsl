@@ -11,6 +11,7 @@ layout(binding = 0, shared) uniform Constant
 layout(binding = 1, shared) uniform PerFrame
 {
 	mat4 Projection;
+	//mat4 View;
 	mat4 ViewProjection;
 	mat4 InverseView;
 	mat4 InverseViewProjection;

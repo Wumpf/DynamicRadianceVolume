@@ -34,29 +34,35 @@ void main()
 	// Evaluate direct light.
 	vec3 scaledIntensity = LightIntensity * (shadowing * ComputeSpotFalloff(toLight) / lightDistanceSq);
 
-	// -----------------------------------------------
-	// IRRADIANCE VIA SH (test)
 
-	// Analytical clamped cosine lobe transformation into SH basis
-	// Derivation: Assume light direction = z-axis, then rotate resulting zonal harmonics
-
-	const float factor0 = sqrt(PI) / 2.0;
+	// Diffuse
+/*	const float factor0 = sqrt(PI) / 2.0;
 	const float factor1 = sqrt(PI / 3.0);
-
 	vec3 SH00 = factor0 * scaledIntensity;
 	vec3 SH1neg1 = -(factor1 * toLight.y) * scaledIntensity;
 	vec3 SH10 = (factor1 * toLight.z) * scaledIntensity;
 	vec3 SH1pos1 = -(factor1 * toLight.x) * scaledIntensity;
 
-	// TODO: Don't know the rotation of the second zonal harmonic
-	// cosine lobe second band zonal is sqrt(5*PI)/8 according to https://d3cw3dd2w32x2b.cloudfront.net/wp-content/uploads/2011/06/10-14.pdf
-	/*vec3 SH2neg2 = 
-	vec3 SH2neg1 = 
-	vec3 SH20 = 
-	vec3 SH2pos1 = 
-	vec3 SH2pos2 =*/
-	
-	
+
+	// Specular
+	vec3 halfVector = normalize(toCamera + toLight);
+
+	const float specFactor0 = sqrt(PI);
+	const float specFactor1 = sqrt(3*PI);
+	vec3 spec_SH00 = specFactor0 * scaledIntensity;
+	vec3 spec_SH1neg1 = -(specFactor1 * halfVector.y) * scaledIntensity;
+	vec3 spec_SH10 = (specFactor1 * halfVector.z) * scaledIntensity;
+	vec3 spec_SH1pos1 = -(specFactor1 * halfVector.x) * scaledIntensity;
+
+
+	const float specFactor2 = sqrt(15.0 * PI) / 2.0;
+	const float specFactor3 = sqrt(5.0 * PI) / 4.0;
+	vec3 spec_SH2neg2 = (specFactor2 * halfVector.x * halfVector.y) * scaledIntensity;
+	vec3 spec_SH2neg1 = -(specFactor2 * halfVector.y * halfVector.z) * scaledIntensity;
+	vec3 spec_SH20 = (specFactor3 * (halfVector.z * halfVector.z * 3.0 - 1.0)) * scaledIntensity;
+	vec3 spec_SH2pos1 = -(specFactor2 * halfVector.x * halfVector.z) * scaledIntensity;
+	vec3 spec_SH2pos2 = (specFactor2 * (halfVector.x * halfVector.x - halfVector.y * halfVector.y)) * scaledIntensity; 
+
 
 	// Save to buffer.
 	LightCacheEntries[gl_GlobalInvocationID.x].SH1neg1 = SH1neg1;
@@ -65,4 +71,19 @@ void main()
 	LightCacheEntries[gl_GlobalInvocationID.x].SH00_g = SH00.g;
 	LightCacheEntries[gl_GlobalInvocationID.x].SH1pos1 = SH1pos1;
 	LightCacheEntries[gl_GlobalInvocationID.x].SH00_b = SH00.b;
-}
+
+	LightCacheEntries[gl_GlobalInvocationID.x].spec_SH1neg1 = spec_SH1neg1;
+	LightCacheEntries[gl_GlobalInvocationID.x].spec_SH00_r = spec_SH00.r;
+	LightCacheEntries[gl_GlobalInvocationID.x].spec_SH10 = spec_SH10;
+	LightCacheEntries[gl_GlobalInvocationID.x].spec_SH00_g = spec_SH00.g;
+	LightCacheEntries[gl_GlobalInvocationID.x].spec_SH1pos1 = spec_SH1pos1;
+	LightCacheEntries[gl_GlobalInvocationID.x].spec_SH00_b = spec_SH00.b;
+
+	LightCacheEntries[gl_GlobalInvocationID.x].spec_SH2neg2 = spec_SH2neg2;
+	LightCacheEntries[gl_GlobalInvocationID.x].spec_SH20_r = spec_SH20.r;
+	LightCacheEntries[gl_GlobalInvocationID.x].spec_SH2neg1 = spec_SH2neg1;
+	LightCacheEntries[gl_GlobalInvocationID.x].spec_SH20_g = spec_SH20.g;
+	LightCacheEntries[gl_GlobalInvocationID.x].spec_SH2pos1 = spec_SH2pos1;
+	LightCacheEntries[gl_GlobalInvocationID.x].spec_SH20_b = spec_SH20.b;
+	LightCacheEntries[gl_GlobalInvocationID.x].spec_SH2pos2 = spec_SH2pos2; */
+};
