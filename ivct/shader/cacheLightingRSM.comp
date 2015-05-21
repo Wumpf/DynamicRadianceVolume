@@ -49,7 +49,6 @@ void main()
 {
 	vec3 worldPosition = LightCacheEntries[gl_GlobalInvocationID.x].Position;
 	vec3 toCamera = normalize(CameraPosition - worldPosition);
-	mat3 cacheLocalViewSpace = ComputeLocalViewSpace(worldPosition);
 
 #ifdef INDIRECT_SHADOW
 	ivec3 volumeSize = textureSize(VoxelVolume, 0);
@@ -83,18 +82,9 @@ void main()
 	#endif
 #endif
 
-	/*vec3 spec_SH00 = vec3(0);
-	vec3 spec_SH1neg1 = vec3(0);
-	vec3 spec_SH10 = vec3(0);
-	vec3 spec_SH1pos1 = vec3(0);
+#if defined(INDDIFFUSE_VIA_H)
+	mat3 cacheLocalViewSpace = ComputeLocalViewSpace(worldPosition);
 
-	vec3 spec_SH2neg2 = vec3(0);
-	vec3 spec_SH2neg1 = vec3(0);
-	vec3 spec_SH20 = vec3(0);
-	vec3 spec_SH2pos1 = vec3(0);
-	vec3 spec_SH2pos2  = vec3(0);*/
-
-#ifdef INDDIFFUSE_VIA_H
 	vec3 irradianceHBasis[INDDIFFUSE_VIA_H];
 	for(int i=0; i<INDDIFFUSE_VIA_H; ++i)
 		irradianceHBasis[i] = vec3(0);
@@ -229,7 +219,6 @@ void main()
 				vec3 scaledIntensity = valTotalExitantFlux * (fluxToIntensity / (lightDistanceSq + RSMCache[i].DiscArea));
 				//vec3 scaledIntensity = valTotalExitantFlux * (fluxToIntensity / lightDistanceSq); // VPL instead of VAL
 
-
 			#if defined(INDDIFFUSE_VIA_SH1) || defined(INDDIFFUSE_VIA_SH2)
 				// SH Irradiance
 				SH00 += shCosLobeFactor00 * scaledIntensity;
@@ -246,20 +235,21 @@ void main()
 				#endif
 			#endif
 
+			#if defined(INDDIFFUSE_VIA_H) ||defined(INDSPECULAR_VIA_H)
+				vec3 toValCacheLocal = toVal * cacheLocalViewSpace;
+			#endif
 
 			#ifdef INDDIFFUSE_VIA_H
 				// H-Basis Irradiance
-				toVal = toVal * cacheLocalViewSpace;
-
 				float SH00 = shCosLobeFactor00;
-				float SH1neg1 = shCosLobeFactor1n1  * toVal.y;
-				float SH10 = shCosLobeFactor10  * toVal.z;
-				float SH1pos1 = shCosLobeFactor1p1 * toVal.x;
-				float SH2neg2 = shCosLobeFactor2n2 * toVal.x * toVal.y;
-				float SH2neg1 = shCosLobeFactor2n1 * toVal.y * toVal.z;
-				float SH20 = shCosLobeFactor20 * (toVal.z * toVal.z * 3.0 - 1.0);
-				float SH2pos1 = shCosLobeFactor2p1  * toVal.x * toVal.z;
-				float SH2pos2 = shCosLobeFactor2p2  * (toVal.x*toVal.x - toVal.y*toVal.y);
+				float SH1neg1 = shCosLobeFactor1n1  * toValCacheLocal.y;
+				float SH10 = shCosLobeFactor10  * toValCacheLocal.z;
+				float SH1pos1 = shCosLobeFactor1p1 * toValCacheLocal.x;
+				float SH2neg2 = shCosLobeFactor2n2 * toValCacheLocal.x * toValCacheLocal.y;
+				float SH2neg1 = shCosLobeFactor2n1 * toValCacheLocal.y * toValCacheLocal.z;
+				float SH20 = shCosLobeFactor20 * (toValCacheLocal.z * toValCacheLocal.z * 3.0 - 1.0);
+				float SH2pos1 = shCosLobeFactor2p1  * toValCacheLocal.x * toValCacheLocal.z;
+				float SH2pos2 = shCosLobeFactor2p2  * (toValCacheLocal.x*toValCacheLocal.x - toValCacheLocal.y*toValCacheLocal.y);
 
 				irradianceHBasis[0] += (1.0 / sqrt(2) * SH00 		+ 0.5 * sqrt(3.0/2.0) * SH10) * scaledIntensity; 
 				irradianceHBasis[1] += (1.0 / sqrt(2) * SH1neg1 	+ 3.0 / 8.0 * sqrt(5.0/2.0) * SH2neg1) * scaledIntensity; 
@@ -270,24 +260,6 @@ void main()
 				irradianceHBasis[5] += (1.0 / sqrt(2) * SH2pos2) * scaledIntensity; 
 				#endif
 			#endif
-
-				// Specular
-				/*vec3 halfVector = normalize(toCamera + toVal);
-
-				const float specFactor0 = sqrt(PI);
-				const float specFactor1 = sqrt(3*PI);
-				spec_SH00 += specFactor0 * scaledIntensity;
-				spec_SH1neg1 -= (specFactor1 * halfVector.y) * scaledIntensity;
-				spec_SH10 += (specFactor1 * halfVector.z) * scaledIntensity;
-				spec_SH1pos1 -= (specFactor1 * halfVector.x) * scaledIntensity;
-
-				const float specFactor2 = sqrt(15.0 * PI) / 2.0;
-				const float specFactor3 = sqrt(5.0 * PI) / 4.0;
-				spec_SH2neg2 += (specFactor2 * halfVector.x * halfVector.y) * scaledIntensity;
-				spec_SH2neg1 -= (specFactor2 * halfVector.y * halfVector.z) * scaledIntensity;
-				spec_SH20 += (specFactor3 * (halfVector.z * halfVector.z * 3.0 - 1.0)) * scaledIntensity;
-				spec_SH2pos1 -= (specFactor2 * halfVector.x * halfVector.z) * scaledIntensity;
-				spec_SH2pos2 += (specFactor2 * (halfVector.x * halfVector.x - halfVector.y * halfVector.y)) * scaledIntensity;*/
 			}
 		}
 	}
@@ -327,20 +299,5 @@ void main()
 		LightCacheEntries[gl_GlobalInvocationID.x].SH2pos2 = SH2pos2;
 		#endif
 	#endif
-
-		/*LightCacheEntries[gl_GlobalInvocationID.x].spec_SH1neg1 = spec_SH1neg1;
-		LightCacheEntries[gl_GlobalInvocationID.x].spec_SH00_r = spec_SH00.r;
-		LightCacheEntries[gl_GlobalInvocationID.x].spec_SH10 = spec_SH10;
-		LightCacheEntries[gl_GlobalInvocationID.x].spec_SH00_g = spec_SH00.g;
-		LightCacheEntries[gl_GlobalInvocationID.x].spec_SH1pos1 = spec_SH1pos1;
-		LightCacheEntries[gl_GlobalInvocationID.x].spec_SH00_b = spec_SH00.b;
-
-		LightCacheEntries[gl_GlobalInvocationID.x].spec_SH2neg2 = spec_SH2neg2;
-		LightCacheEntries[gl_GlobalInvocationID.x].spec_SH20_r = spec_SH20.r;
-		LightCacheEntries[gl_GlobalInvocationID.x].spec_SH2neg1 = spec_SH2neg1;
-		LightCacheEntries[gl_GlobalInvocationID.x].spec_SH20_g = spec_SH20.g;
-		LightCacheEntries[gl_GlobalInvocationID.x].spec_SH2pos1 = spec_SH2pos1;
-		LightCacheEntries[gl_GlobalInvocationID.x].spec_SH20_b = spec_SH20.b;
-		LightCacheEntries[gl_GlobalInvocationID.x].spec_SH2pos2 = spec_SH2pos2;*/
 	}
 }

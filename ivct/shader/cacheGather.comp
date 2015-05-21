@@ -43,8 +43,8 @@ void main()
 		vec4 worldPosition4D = vec4(screenCor, depthBufferDepth, 1.0) * InverseViewProjection;
 		vec3 worldPosition = worldPosition4D.xyz / worldPosition4D.w;
 
-		// Get normal
-		//vec3 worldNormal = UnpackNormal16I(texelFetch(GBuffer_Normal, pixelPosition, 0).rg);
+		// Get normal.
+		//vec3 worldNormal = UnpackNormal16I(texture(GBuffer_Normal, pixelPosition / BackbufferResolution, 0).rg);
 
 		// Cache only "main pixel address".
 		// This still leads to a lot of redundant writes in the address volume, but is clearly faster than performing the lookup for all addressCoord
@@ -90,6 +90,7 @@ void main()
 			uint lightCacheIndex = atomicAdd(TotalLightCacheCount, 1);
 
 			LightCacheEntries[lightCacheIndex].Position = unpackedAddressCoord * AddressVolumeVoxelSize + VolumeWorldMin;
+
 
 			// No need for atomic now since we keep it locked up
 			imageStore(VoxelAddressVolume, unpackedAddressCoord, uvec4(lightCacheIndex + 1)); // +1 since zero means "cleared"

@@ -66,22 +66,6 @@ struct LightCacheEntry
 	#endif
 #endif
 
-	// Specular via SH
-	/*vec3 spec_SH1neg1;
-	float spec_SH00_r;
-	vec3 spec_SH10;
-	float spec_SH00_g;
-	vec3 spec_SH1pos1;
-	float spec_SH00_b;
-
-	vec3 spec_SH2neg2;
-	float spec_SH20_r;
-	vec3 spec_SH2neg1;
-	float spec_SH20_g;
-	vec3 spec_SH2pos1;
-	float spec_SH20_b;
-	vec3 spec_SH2pos2;
-	float _padding1;*/
 };
 
 layout(std430, binding = 0) LIGHTCACHE_BUFFER_MODIFIER buffer LightCacheBuffer
