@@ -27,7 +27,7 @@ void main()
 //	normalMapNormal = vec3(0.0, 0.0, 1.0); // Offswitch
 	vec3 vnormal = normalize(Normal);
 	vec3 vtangent = normalize(Tangent.xyz);
-	vec3 vbitangent = cross(vnormal, vtangent) * BitangentHandedness;
+	vec3 vbitangent = cross(vtangent, vnormal) * BitangentHandedness;
 	vec3 finalNormal = mat3(vtangent, vbitangent, vnormal) * normalMapNormal;
 	OutPackedNormal = PackNormal16I(normalize(finalNormal));
 
