@@ -11,7 +11,16 @@ layout(binding=0) uniform sampler2D RSM_Flux;
 layout(binding=1) uniform sampler2D RSM_DepthLinSq;
 layout(binding=2) uniform isampler2D RSM_Normal;
 
+#ifdef INDIRECT_SHADOW
 layout(binding=4) uniform sampler3D VoxelVolume;
+#endif
+
+#ifdef INDIRECT_SPECULAR
+layout(binding = 0, r11f_g11f_b10f) restrict uniform image2D CacheSpecularEnvmap;
+
+#define DIRECT_SPECULAR_MAP_WRITE
+
+#endif
 
 struct LightInfo
 {
@@ -50,6 +59,13 @@ void main()
 	vec3 worldPosition = LightCacheEntries[gl_GlobalInvocationID.x].Position;
 	vec3 toCamera = normalize(CameraPosition - worldPosition);
 
+
+#ifdef INDIRECT_SPECULAR
+	ivec2 cacheSpecularEnvmapOffset = ivec2(gl_GlobalInvocationID.x % SpecularEnvmapNumCachesPerDimension, 
+										gl_GlobalInvocationID.x / SpecularEnvmapNumCachesPerDimension) * SpecularEnvmapPerCacheSize_Texel;
+#endif
+
+
 #ifdef INDIRECT_SHADOW
 	ivec3 volumeSize = textureSize(VoxelVolume, 0);
 	vec3 voxelPos = (worldPosition - VolumeWorldMin) / (VoxelSizeInWorld * volumeSize);
@@ -82,12 +98,8 @@ void main()
 	#endif
 #endif
 
-#if defined(INDDIFFUSE_VIA_H)
+#if defined(INDIRECT_SPECULAR) || defined(INDDIFFUSE_VIA_H)
 	mat3 cacheLocalViewSpace = ComputeLocalViewSpace(worldPosition);
-
-	vec3 irradianceHBasis[INDDIFFUSE_VIA_H];
-	for(int i=0; i<INDDIFFUSE_VIA_H; ++i)
-		irradianceHBasis[i] = vec3(0);
 #endif
 
 
@@ -216,26 +228,27 @@ void main()
 				//if(lightDistanceSq < distThreshholdSq)
 				//	fluxToIntensity = 0; // continue; // Continue, even is placed as early as possible, is slower.
 
-				vec3 scaledIntensity = valTotalExitantFlux * (fluxToIntensity / (lightDistanceSq + RSMCache[i].DiscArea));
-				//vec3 scaledIntensity = valTotalExitantFlux * (fluxToIntensity / lightDistanceSq); // VPL instead of VAL
+				// Note that this is not yet irradiance - multiplicatoin with dot(N,L) is missing.
+				vec3 radiance = valTotalExitantFlux * (fluxToIntensity / (lightDistanceSq + RSMCache[i].DiscArea));
+				//vec3 radiance = valTotalExitantFlux * (fluxToIntensity / lightDistanceSq); // VPL instead of VAL
 
 			#if defined(INDDIFFUSE_VIA_SH1) || defined(INDDIFFUSE_VIA_SH2)
 				// SH Irradiance
-				SH00 += shCosLobeFactor00 * scaledIntensity;
-				SH1neg1 += (shCosLobeFactor1n1 * toVal.y) * scaledIntensity;
-				SH10 += (shCosLobeFactor10 * toVal.z) * scaledIntensity;
-				SH1pos1 += (shCosLobeFactor1p1 * toVal.x) * scaledIntensity;
+				SH00 += shCosLobeFactor00 * radiance;
+				SH1neg1 += (shCosLobeFactor1n1 * toVal.y) * radiance;
+				SH10 += (shCosLobeFactor10 * toVal.z) * radiance;
+				SH1pos1 += (shCosLobeFactor1p1 * toVal.x) * radiance;
 
 				#ifdef INDDIFFUSE_VIA_SH2
-					SH2neg2 += (shCosLobeFactor2n2 * toVal.x * toVal.y) * scaledIntensity;
-					SH2neg1 += (shCosLobeFactor2n1 * toVal.y * toVal.z) * scaledIntensity;
-					SH20 += (shCosLobeFactor20 * (toVal.z * toVal.z * 3.0 - 1.0)) * scaledIntensity;
-					SH2pos1 += (shCosLobeFactor2p1 * toVal.x * toVal.z) * scaledIntensity;
-					SH2pos2 += (shCosLobeFactor2p2 * (toVal.x * toVal.x - toVal.y * toVal.y)) * scaledIntensity;
+					SH2neg2 += (shCosLobeFactor2n2 * toVal.x * toVal.y) * radiance;
+					SH2neg1 += (shCosLobeFactor2n1 * toVal.y * toVal.z) * radiance;
+					SH20 += (shCosLobeFactor20 * (toVal.z * toVal.z * 3.0 - 1.0)) * radiance;
+					SH2pos1 += (shCosLobeFactor2p1 * toVal.x * toVal.z) * radiance;
+					SH2pos2 += (shCosLobeFactor2p2 * (toVal.x * toVal.x - toVal.y * toVal.y)) * radiance;
 				#endif
 			#endif
 
-			#if defined(INDDIFFUSE_VIA_H) ||defined(INDSPECULAR_VIA_H)
+			#if defined(INDIRECT_SPECULAR) || defined(INDDIFFUSE_VIA_H)
 				vec3 toValCacheLocal = toVal * cacheLocalViewSpace;
 			#endif
 
@@ -251,15 +264,29 @@ void main()
 				float SH2pos1 = shCosLobeFactor2p1  * toValCacheLocal.x * toValCacheLocal.z;
 				float SH2pos2 = shCosLobeFactor2p2  * (toValCacheLocal.x*toValCacheLocal.x - toValCacheLocal.y*toValCacheLocal.y);
 
-				irradianceHBasis[0] += (1.0 / sqrt(2) * SH00 		+ 0.5 * sqrt(3.0/2.0) * SH10) * scaledIntensity; 
-				irradianceHBasis[1] += (1.0 / sqrt(2) * SH1neg1 	+ 3.0 / 8.0 * sqrt(5.0/2.0) * SH2neg1) * scaledIntensity; 
-				irradianceHBasis[2] += (1.0 / (2.0*sqrt(2)) * SH10 	+ 1.0 / 4.0 * sqrt(15.0/2.0) * SH20) * scaledIntensity; 
-				irradianceHBasis[3] += (1.0 / sqrt(2) * SH1pos1 	+ 3.0 / 8.0 * sqrt(5.0/2.0) * SH2pos1) * scaledIntensity;
+				irradianceHBasis[0] += (1.0 / sqrt(2) * SH00 		+ 0.5 * sqrt(3.0/2.0) * SH10) * radiance; 
+				irradianceHBasis[1] += (1.0 / sqrt(2) * SH1neg1 	+ 3.0 / 8.0 * sqrt(5.0/2.0) * SH2neg1) * radiance; 
+				irradianceHBasis[2] += (1.0 / (2.0*sqrt(2)) * SH10 	+ 1.0 / 4.0 * sqrt(15.0/2.0) * SH20) * radiance; 
+				irradianceHBasis[3] += (1.0 / sqrt(2) * SH1pos1 	+ 3.0 / 8.0 * sqrt(5.0/2.0) * SH2pos1) * radiance;
 				#if INDDIFFUSE_VIA_H > 4
-				irradianceHBasis[4] += (1.0 / sqrt(2) * SH2neg2) * scaledIntensity; 
-				irradianceHBasis[5] += (1.0 / sqrt(2) * SH2pos2) * scaledIntensity; 
+				irradianceHBasis[4] += (1.0 / sqrt(2) * SH2neg2) * radiance; 
+				irradianceHBasis[5] += (1.0 / sqrt(2) * SH2pos2) * radiance; 
 				#endif
 			#endif
+
+
+				#ifdef INDIRECT_SPECULAR
+					// Cache local half vector - in cache local 0,0,1 is the direction to the camera!
+					// Result is definitively z positive now.
+					vec3 halfVecCacheLocal = normalize(toValCacheLocal + vec3(0,0,1));
+					ivec2 cacheSpecEnvmapTexelCoord = ivec2(HemisphericalProjection(halfVecCacheLocal) * SpecularEnvmapPerCacheSize_Texel + 0.5) + cacheSpecularEnvmapOffset;	
+
+					#ifdef DIRECT_SPECULAR_MAP_WRITE
+					memoryBarrierImage();
+					vec3 oldRadiance = imageLoad(CacheSpecularEnvmap, cacheSpecEnvmapTexelCoord).rgb;
+					imageStore(CacheSpecularEnvmap, cacheSpecEnvmapTexelCoord, vec4(oldRadiance + radiance, 0.0));
+					#endif
+				#endif
 			}
 		}
 	}

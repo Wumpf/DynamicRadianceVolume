@@ -93,3 +93,11 @@ bool IsOnScreen(vec4 clipspaceCoordinate)
 	return all(lessThanEqual(clipspaceCoordinate.xyz, clipspaceCoordinate.www)) && 
 			all(lessThanEqual(vec3(-clipspaceCoordinate.ww, 0.0), clipspaceCoordinate.xyz));
 }
+
+// Projects a direction in the z+ hemisphere to the 0-1 square
+// Equal area projection of half vector (http://en.wikipedia.org/wiki/User:Mgnbar/Hemispherical_projection)
+vec2 HemisphericalProjection(vec3 hemisphereDirection)
+{
+	vec2 projectedHalfVec = sqrt((1.0 - hemisphereDirection.z) / dot(hemisphereDirection.xy, hemisphereDirection.xy)) * hemisphereDirection.xy;
+	return saturate(projectedHalfVec * 0.5 + 0.5);
+}

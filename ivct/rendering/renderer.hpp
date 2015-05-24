@@ -133,6 +133,9 @@ private:
 	BufferPtr m_lightCacheBuffer;
 	BufferPtr m_lightCacheCounter;
 
+	Texture2DPtr m_specularCacheEnvmap;
+	unsigned int m_specularEnvmapPerCacheSize; ///< Resolution of specular map per cache
+
 	ShaderPtr m_shaderLightCachePrepare;
 	ShaderPtr m_shaderLightCachesDirect;
 	ShaderPtr m_shaderLightCachesRSM;

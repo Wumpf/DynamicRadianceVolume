@@ -16,6 +16,8 @@ layout(binding=4) uniform usampler3D VoxelAddressVolume;
 layout(binding=5) uniform sampler3D VoxelVolume;
 #endif
 
+layout(binding=6) uniform sampler2D CacheSpecularEnvmap;
+
 in vec2 Texcoord;
 
 out vec3 OutputColor;
@@ -27,7 +29,10 @@ vec3 Interp(vec3 x)
 }
 
 void main()
-{
+{	
+//	OutputColor = texture(CacheSpecularEnvmap, Texcoord * BackbufferResolution / vec2(2048)).rgb *10; // TODO
+//	return;
+
 	// Get pixel world position.
 	float depthBufferDepth = textureLod(GBuffer_Depth, Texcoord, 0.0).r;
 	if(depthBufferDepth < 0.00001)
@@ -37,14 +42,15 @@ void main()
 	vec4 worldPosition4D = vec4(Texcoord * 2.0 - vec2(1.0), depthBufferDepth, 1.0) * InverseViewProjection;
 	vec3 worldPosition = worldPosition4D.xyz / worldPosition4D.w;
 
-	// Get normal and material colors
+	// Get normal.
 	vec3 worldNormal = UnpackNormal16I(textureLod(GBuffer_Normal, Texcoord, 0.0).rg);
+
+	// Sample material data
 	vec3 baseColor = texture(GBuffer_Diffuse, Texcoord).rgb;
 	vec2 roughnessMetalic = texture(GBuffer_RoughnessMetalic, Texcoord).rg;
 	float blinnExponent = RoughnessToBlinnExponent(roughnessMetalic.x);
 	vec3 diffuseColor, specularColor;
 	ComputeMaterialColors(baseColor, roughnessMetalic.y, diffuseColor, specularColor);
-
 
 	//vec3 addressCoord = (worldPosition - VolumeWorldMin) / AddressVolumeVoxelSize;
 	vec3 addressCoord = clamp((worldPosition - VolumeWorldMin) / AddressVolumeVoxelSize, vec3(0), vec3(AddressVolumeResolution-0.999));
@@ -66,6 +72,7 @@ void main()
 
 	{
 		vec3 irradiance[8];
+		vec3 specular[8];
 
 		#if defined(INDDIFFUSE_VIA_SH1) || defined(INDDIFFUSE_VIA_SH2)
 			const float shEvaFactor0 = 1.0 / (2.0 * sqrt(PI));
@@ -83,7 +90,7 @@ void main()
 			const float factor2 = sqrt(15.0) / sqrt(2.0 * PI);
 		#endif
 
-
+		vec3 cacheViewNormal = worldNormal * ComputeLocalViewSpace(worldPosition);
 
 		for(int i=0; i<8; ++i)
 		{
@@ -98,10 +105,23 @@ void main()
 			}*/
 			cacheAddress -= 1;
 
-			#if defined(INDDIFFUSE_VIA_H)
+			/*
+			#if defined(INDDIFFUSE_VIA_H) || defined(INDIRECT_SPECULAR)
 				vec3 cacheWorldPosition = cacheSamplePos * AddressVolumeVoxelSize + VolumeWorldMin;
 				vec3 cacheViewNormal = worldNormal * ComputeLocalViewSpace(cacheWorldPosition);
+
+				//cacheViewNormal.z = saturate(cacheViewNormal.z);
+				//cacheViewNormal = normalize(cacheViewNormal);
 			#endif
+			*/
+
+
+		#ifdef INDIRECT_SPECULAR
+			vec2 cacheSpecularEnvmapOffset = vec2(cacheAddress % SpecularEnvmapNumCachesPerDimension, 
+										  	   cacheAddress / SpecularEnvmapNumCachesPerDimension);
+			vec2 cacheSpecularEnvmapTex = (HemisphericalProjection(cacheViewNormal) + cacheSpecularEnvmapOffset) * SpecularEnvmapPerCacheSize_Texcoord;
+			specular[i] = texture(CacheSpecularEnvmap, cacheSpecularEnvmapTex).rgb;
+		#endif
 
 			// -----------------------------------------------
 			// IRRADIANCE VIA SH
@@ -149,6 +169,7 @@ void main()
 		}
 
 		// trilinear interpolation
+		// TODO: Interpolate earlier to lower register pressure!
 		vec3 interp = Interp(addressCoord - addressCoord00);
 		vec3 interpolatedIrradiance = 
 			mix(mix(mix(irradiance[0], irradiance[1], interp.x),
@@ -156,7 +177,18 @@ void main()
 				mix(mix(irradiance[4], irradiance[5], interp.x),
 					mix(irradiance[6], irradiance[7], interp.x), interp.y), interp.z);
 
-		OutputColor = interpolatedIrradiance * diffuseColor / PI;
+	#ifndef INDIRECT_SPECULAR
+		OutputColor =  interpolatedIrradiance * diffuseColor / PI;
+	#else
+		vec3 interpolatedSpecular = 
+			mix(mix(mix(specular[0], specular[1], interp.x),
+					mix(specular[2], specular[3], interp.x), interp.y),
+				mix(mix(specular[4], specular[5], interp.x),
+					mix(specular[6], specular[7], interp.x), interp.y), interp.z);
+
+
+		OutputColor = interpolatedIrradiance * diffuseColor / PI + interpolatedSpecular * specularColor;
+	#endif
 	}
 
 	// Test code for "Cache Local View Space"

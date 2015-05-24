@@ -23,6 +23,8 @@
 //#define INDDIFFUSE_VIA_SH2
 //#define INDDIFFUSE_VIA_H 4 // 6
 
+#define INDIRECT_SPECULAR
+
 struct LightCacheEntry
 {
 	vec3 Position; // Consider storing packed identifier!

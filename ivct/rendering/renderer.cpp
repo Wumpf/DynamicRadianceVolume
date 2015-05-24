@@ -31,7 +31,8 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	m_readLightCacheCount(false),
 	m_lastNumLightCaches(0),
 	m_exposure(1.0f),
-	m_mode(Renderer::Mode::RSM_CACHE_INDSHADOW)
+	m_mode(Renderer::Mode::RSM_CACHE_INDSHADOW),
+	m_specularEnvmapPerCacheSize(16)
 {
 	glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &m_UBOAlignment);
 	LOG_INFO("Uniform buffer alignment is " << m_UBOAlignment);
@@ -63,10 +64,13 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	m_voxelization = std::make_unique<Voxelization>(128);
 
 	// Allocate light cache buffer
-	m_maxNumLightCaches = 131072;
-	const unsigned int lightCacheSizeInBytes = sizeof(float) * 4 * 6;
+	m_maxNumLightCaches = 32768;
+	const unsigned int lightCacheSizeInBytes = sizeof(float) * 4 * 8; // TODO correct
 	m_lightCacheBuffer = std::make_unique<gl::Buffer>(m_maxNumLightCaches * lightCacheSizeInBytes, gl::Buffer::IMMUTABLE, nullptr);
 	SetReadLightCacheCount(false); // (Re)creates the lightcache buffer
+
+	m_specularCacheEnvmap = std::make_unique<gl::Texture2D>(4096, 4096, gl::TextureFormat::R11F_G11F_B10F, 1);
+
 	// Allocate light cache hash map
 	/*m_lightCacheHashMapSize = m_maxNumLightCaches * 3;
 	const unsigned int lightCacheHashMapEntrySize = sizeof(unsigned int) * 2;
@@ -190,6 +194,13 @@ void Renderer::UpdateConstantUBO()
 	mappedMemory["VoxelResolution"].Set(m_voxelization->GetVoxelTexture().GetWidth());
 	mappedMemory["AddressVolumeResolution"].Set(m_lightCacheAddressVolume->GetWidth());
 	mappedMemory["MaxNumLightCaches"].Set(m_maxNumLightCaches);
+
+	
+	mappedMemory["SpecularEnvmapTotalSize"].Set(m_specularCacheEnvmap->GetWidth());
+	mappedMemory["SpecularEnvmapPerCacheSize_Texel"].Set(static_cast<int>(m_specularEnvmapPerCacheSize));
+	mappedMemory["SpecularEnvmapPerCacheSize_Texcoord"].Set(static_cast<float>(m_specularEnvmapPerCacheSize) / m_specularCacheEnvmap->GetWidth());
+	mappedMemory["SpecularEnvmapNumCachesPerDimension"].Set(static_cast<int>(m_specularCacheEnvmap->GetWidth() / m_specularEnvmapPerCacheSize));
+
 	m_uboConstant->Unmap();
 }
 
@@ -602,6 +613,9 @@ void Renderer::CacheLightingDirect()
 
 void Renderer::CacheLightingRSM(bool indirectShadow)
 {
+	m_specularCacheEnvmap->ClearToZero();
+	m_specularCacheEnvmap->BindImage(0, gl::Texture::ImageAccess::READ_WRITE);
+
 	m_lightCacheCounter->BindIndirectDispatchBuffer();
 	m_shaderLightCachesRSM->BindSSBO(*m_lightCacheBuffer, "LightCacheBuffer");
 	m_shaderLightCachesRSM->BindSSBO(*m_lightCacheCounter, "LightCacheCounter");
@@ -696,6 +710,7 @@ void Renderer::ApplyLightCaches(bool contactShadowFix)
 
 	BindGBuffer();
 
+
 	//m_shaderCacheApply->BindSSBO(*m_lightCacheHashMap);
 	m_shaderCacheApply->BindSSBO(*m_lightCacheBuffer, "LightCacheBuffer");
 
@@ -707,6 +722,9 @@ void Renderer::ApplyLightCaches(bool contactShadowFix)
 		m_voxelization->GetVoxelTexture().Bind(5);
 		m_samplerLinearClamp.BindSampler(5);
 	}
+
+	m_samplerLinearClamp.BindSampler(6);
+	m_specularCacheEnvmap->Bind(6);
 
 	m_shaderCacheApply->Activate();
 

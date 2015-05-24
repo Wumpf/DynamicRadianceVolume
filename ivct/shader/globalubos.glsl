@@ -5,6 +5,12 @@ layout(binding = 0, shared) uniform Constant
 	int VoxelResolution;
 	int AddressVolumeResolution;
 	uint MaxNumLightCaches;
+
+	// Specular envmap is quadratic. Sizes denominate width/height.
+	int SpecularEnvmapTotalSize; // Total size of the specular envmap texture in texel.
+	int SpecularEnvmapPerCacheSize_Texel; // Size of per cache specular envmap in texel.
+	float SpecularEnvmapPerCacheSize_Texcoord; // SpecularEnvmapPerCacheSize_Texel / SpecularEnvmapTotalSize
+	int SpecularEnvmapNumCachesPerDimension; // SpecularEnvmapTotalSize / SpecularEnvmapPerCacheSize_Texel
 };
 
 // UBO for values that change once every frame.
