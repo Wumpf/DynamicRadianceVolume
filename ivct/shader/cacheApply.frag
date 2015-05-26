@@ -30,8 +30,8 @@ vec3 Interp(vec3 x)
 
 void main()
 {	
-//	OutputColor = texture(CacheSpecularEnvmap, Texcoord * BackbufferResolution / vec2(2048)).rgb *10; // TODO
-//	return;
+	//OutputColor = texelFetch(CacheSpecularEnvmap, ivec2(Texcoord * BackbufferResolution/8), 0).rgb; // TODO
+	//return;
 
 	// Get pixel world position.
 	float depthBufferDepth = textureLod(GBuffer_Depth, Texcoord, 0.0).r;
@@ -48,9 +48,16 @@ void main()
 	// Sample material data
 	vec3 baseColor = texture(GBuffer_Diffuse, Texcoord).rgb;
 	vec2 roughnessMetalic = texture(GBuffer_RoughnessMetalic, Texcoord).rg;
-	float blinnExponent = RoughnessToBlinnExponent(roughnessMetalic.x);
 	vec3 diffuseColor, specularColor;
 	ComputeMaterialColors(baseColor, roughnessMetalic.y, diffuseColor, specularColor);
+
+#ifdef INDIRECT_SPECULAR
+	float blinnExponent = RoughnessToBlinnExponent(roughnessMetalic.x);
+	float specularEnvmapLod = GetHemisphereLodForBlinnPhongExponent(blinnExponent, SpecularEnvmapPerCacheSize_Texel);
+	float maxHalfSpecularEnvmapPixelSize = 0.5 / (pow(2.0, -ceil(specularEnvmapLod)) * SpecularEnvmapPerCacheSize_Texel);
+	//OutputColor = vec3(specularEnvmapLod) * 0.25;
+	//return;
+#endif
 
 	//vec3 addressCoord = (worldPosition - VolumeWorldMin) / AddressVolumeVoxelSize;
 	vec3 addressCoord = clamp((worldPosition - VolumeWorldMin) / AddressVolumeVoxelSize, vec3(0), vec3(AddressVolumeResolution-0.999));
@@ -115,12 +122,12 @@ void main()
 			#endif
 			*/
 
-
 		#ifdef INDIRECT_SPECULAR
-			vec2 cacheSpecularEnvmapOffset = vec2(cacheAddress % SpecularEnvmapNumCachesPerDimension, 
-										  	   cacheAddress / SpecularEnvmapNumCachesPerDimension);
-			vec2 cacheSpecularEnvmapTex = (HemisphericalProjection(cacheViewNormal) + cacheSpecularEnvmapOffset) * SpecularEnvmapPerCacheSize_Texcoord;
-			specular[i] = texture(CacheSpecularEnvmap, cacheSpecularEnvmapTex).rgb;
+			vec2 cacheSpecularEnvmapOffset = vec2(cacheAddress % SpecularEnvmapNumCachesPerDimension, cacheAddress / SpecularEnvmapNumCachesPerDimension);
+			vec2 hemiProjection = HemisphericalProjection(cacheViewNormal);
+			hemiProjection = clamp(hemiProjection, vec2(maxHalfSpecularEnvmapPixelSize), vec2(1.0 - maxHalfSpecularEnvmapPixelSize)); // Make sure not to filter pixels from neighboring caches.
+			vec2 cacheSpecularEnvmapTex = (hemiProjection + cacheSpecularEnvmapOffset) * SpecularEnvmapPerCacheSize_Texcoord;
+			specular[i] = textureLod(CacheSpecularEnvmap, cacheSpecularEnvmapTex, specularEnvmapLod).rgb;
 		#endif
 
 			// -----------------------------------------------

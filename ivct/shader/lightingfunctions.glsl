@@ -25,11 +25,12 @@ float ComputeSpotFalloff(vec3 toLight)
 
 float RoughnessToBlinnExponent(float roughness)
 {
-	return 1.0 / (roughness * roughness + 0.0005); // Completely made up
+	float rsq = roughness * roughness;
+	return 2 / (rsq * rsq + 0.0005); // similar to http://graphicrants.blogspot.de/2013/08/specular-brdf-reference.html
 }
 float BlinnNormalization(float blinnExponent)
 {
-	return (blinnExponent + 8.0) / 8.0;
+	return (blinnExponent + 8.0) / (8.0 * PI);
 }
 void ComputeMaterialColors(vec3 baseColor, float metallic, out vec3 diffuseColor, out vec3 specularColor)
 {
@@ -50,5 +51,5 @@ vec3 BRDF(vec3 toLight, vec3 toCamera, vec3 normal, vec3 baseColor, vec2 roughne
 	vec3 halfVector = normalize(toCamera + toLight);
 	float blinnPhong = normalization * pow(saturate(dot(normal, halfVector)), blinnExponent);
 
-	return (diffuseColor + blinnPhong * specularColor) / PI;
+	return diffuseColor / PI + blinnPhong * specularColor;
 }

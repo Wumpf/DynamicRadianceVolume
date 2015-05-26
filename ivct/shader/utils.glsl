@@ -94,10 +94,70 @@ bool IsOnScreen(vec4 clipspaceCoordinate)
 			all(lessThanEqual(vec3(-clipspaceCoordinate.ww, 0.0), clipspaceCoordinate.xyz));
 }
 
+
+// Possible hemispherical projections.
+//#define HEMIPROJECTION_LAMBERT
+#define HEMIPROJECTION_LAMBERT_CONCENTRICQUAD
+
 // Projects a direction in the z+ hemisphere to the 0-1 square
-// Equal area projection of half vector (http://en.wikipedia.org/wiki/User:Mgnbar/Hemispherical_projection)
 vec2 HemisphericalProjection(vec3 hemisphereDirection)
 {
+	// Equal area hemisphere map, ranging from -1 to 1 - http://en.wikipedia.org/wiki/User:Mgnbar/Hemispherical_projection
 	vec2 projectedHalfVec = sqrt((1.0 - hemisphereDirection.z) / dot(hemisphereDirection.xy, hemisphereDirection.xy)) * hemisphereDirection.xy;
+#ifdef HEMIPROJECTION_LAMBERT
 	return saturate(projectedHalfVec * 0.5 + 0.5);
+#else
+	// Original implementation of concentric disc map - https://mediatech.aalto.fi/~jaakko/T111-5310/K2013/JGT-97.pdf
+	float r = length(projectedHalfVec);
+	float phi = atan(projectedHalfVec.y, projectedHalfVec.x);
+
+	if(phi < -PI/4) phi += PI_2;
+
+	float a,b;
+	if(phi < PI/4)
+	{
+		a = r;
+		b = phi * a / (PI/4);
+	}
+	else if(phi < 3 * PI/4)
+	{
+		b = r;
+		a = -(phi - PI/2) * b / (PI/4);
+	}
+	else if(phi < 5* PI/4)
+	{
+		a = -r;
+		b = (phi - PI) * a / (PI/4);
+	}
+	else
+	{
+		b = -r;
+		a = -(phi - 3*PI/2) * b / (PI/4);
+	}
+
+	return vec2(a*0.5 + 0.5, b*0.5 + 0.5);
+#endif
+}
+float GetBlinnPhongExponentForHemispherePixel(float hemisphereResolution)
+{
+	// BlinnPhong cap size: 2pi / (exponent + 1)
+
+#ifdef HEMIPROJECTION_LAMBERT
+	// Hemisphere Pixel size: 2pi / (res²/4 * pi)
+	return hemisphereResolution * hemisphereResolution *0.25 * PI - 1.0;
+#else
+	// Hemisphere Pixel size: 2pi / res²
+	return hemisphereResolution * hemisphereResolution - 1.0;
+#endif
+
+
+}
+float GetHemisphereLodForBlinnPhongExponent(float blinnPhongExponent, float baseLevelResolution)
+{
+	// See GetBlinnPhongExponentForHemispherePixel but resolved to mip level
+#ifdef HEMIPROJECTION_LAMBERT
+	return log2(PI * baseLevelResolution * baseLevelResolution / (4.0 + 4.0 * blinnPhongExponent))  * 0.5;
+#else
+	return log2(baseLevelResolution * baseLevelResolution / (1.0 + blinnPhongExponent)) * 0.5;
+#endif
 }

@@ -24,6 +24,7 @@ class Voxelization;
 typedef std::unique_ptr<gl::Texture2D> Texture2DPtr;
 typedef std::unique_ptr<gl::ShaderObject> ShaderPtr;
 typedef std::unique_ptr<gl::Buffer> BufferPtr;
+typedef std::unique_ptr<gl::FramebufferObject> FramebufferObjectPtr;
 
 class Renderer
 {
@@ -81,6 +82,8 @@ private:
 	void UpdatePerObjectUBORingBuffer();
 	void PrepareLights();
 
+	void PrepareSpecularCacheEnvmaps();
+
 	/// Binds gbuffer with nearest sampler with bindings according to 
 	void BindGBuffer();
 
@@ -134,12 +137,16 @@ private:
 	BufferPtr m_lightCacheCounter;
 
 	Texture2DPtr m_specularCacheEnvmap;
+	std::vector<std::shared_ptr<gl::FramebufferObject>> m_specularCacheEnvmapFBOs;
 	unsigned int m_specularEnvmapPerCacheSize; ///< Resolution of specular map per cache
+	unsigned int m_specularEnvmapMaxFillHolesLevel; ///< Zero means no push pull
 
 	ShaderPtr m_shaderLightCachePrepare;
 	ShaderPtr m_shaderLightCachesDirect;
 	ShaderPtr m_shaderLightCachesRSM;
 	ShaderPtr m_shaderLightCachesRSM_shadow;
+	ShaderPtr m_shaderSpecularEnvmapMipMap;
+	ShaderPtr m_shaderSpecularEnvmapFillHoles;
 	ShaderPtr m_shaderConeTraceAO;
 
 
@@ -160,7 +167,7 @@ private:
 	Texture2DPtr m_GBuffer_roughnessMetallic;
 	Texture2DPtr m_GBuffer_normal;
 	Texture2DPtr m_GBuffer_depth;
-	std::unique_ptr<gl::FramebufferObject> m_GBuffer;
+	FramebufferObjectPtr m_GBuffer;
 	float m_exposure;
 
 	struct ShadowMap
@@ -185,7 +192,7 @@ private:
 	std::vector<ShadowMap> m_shadowMaps; ///< A shadowmap for every light.
 
 	Texture2DPtr m_HDRBackbufferTexture;
-	std::unique_ptr<gl::FramebufferObject> m_HDRBackbuffer;
+	FramebufferObjectPtr m_HDRBackbuffer;
 	ShaderPtr m_shaderTonemap;
 
 	ShaderPtr m_shaderIndirectLightingBruteForceRSM;

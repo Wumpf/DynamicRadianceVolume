@@ -152,5 +152,7 @@ std::shared_ptr<gl::Texture2D> TextureManager::GetRoughnessMetallic(const std::s
 	auto texture = std::make_shared<gl::Texture2D>(roughnessTexSizeX, roughnessTexSizeY, gl::TextureFormat::RG8, textureData.get(), gl::TextureSetDataFormat::RG, gl::TextureSetDataType::UNSIGNED_BYTE);
 	m_roughnessMetallicTextures.insert(std::make_pair(identifier, texture));
 
+	LOG_INFO("Loaded roughness/metallic maps \"" << roughnessTexture << "\" - \"" << metallicTexture << "\"");
+
 	return texture;
 }

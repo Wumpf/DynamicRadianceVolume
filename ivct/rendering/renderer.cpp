@@ -32,7 +32,9 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	m_lastNumLightCaches(0),
 	m_exposure(1.0f),
 	m_mode(Renderer::Mode::RSM_CACHE_INDSHADOW),
-	m_specularEnvmapPerCacheSize(16)
+
+	m_specularEnvmapPerCacheSize(16),
+	m_specularEnvmapMaxFillHolesLevel(2)
 {
 	glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &m_UBOAlignment);
 	LOG_INFO("Uniform buffer alignment is " << m_UBOAlignment);
@@ -69,13 +71,11 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	m_lightCacheBuffer = std::make_unique<gl::Buffer>(m_maxNumLightCaches * lightCacheSizeInBytes, gl::Buffer::IMMUTABLE, nullptr);
 	SetReadLightCacheCount(false); // (Re)creates the lightcache buffer
 
-	m_specularCacheEnvmap = std::make_unique<gl::Texture2D>(4096, 4096, gl::TextureFormat::R11F_G11F_B10F, 1);
+	m_specularCacheEnvmapFBOs.clear();
+	m_specularCacheEnvmap = std::make_unique<gl::Texture2D>(4096, 4096, gl::TextureFormat::R11F_G11F_B10F, static_cast<int>(log2(m_specularEnvmapPerCacheSize) + 1));
+	for (int i = 0; i < m_specularCacheEnvmap->GetNumMipLevels(); ++i)
+		m_specularCacheEnvmapFBOs.push_back(std::make_shared<gl::FramebufferObject>(gl::FramebufferObject::Attachment(m_specularCacheEnvmap.get(), i)));
 
-	// Allocate light cache hash map
-	/*m_lightCacheHashMapSize = m_maxNumLightCaches * 3;
-	const unsigned int lightCacheHashMapEntrySize = sizeof(unsigned int) * 2;
-	m_lightCacheHashMap = std::make_unique<gl::ShaderStorageBufferView>(std::make_shared<gl::Buffer>(m_lightCacheHashMapSize * lightCacheSizeInBytes, gl::Buffer::IMMUTABLE, nullptr), "LightCacheHashMap");
-	*/
 
 	SetCacheAdressVolumeSize(64);
 
@@ -92,7 +92,7 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 
 	// A quick note on depth:
 	// http://www.gamedev.net/topic/568014-linear-or-non-linear-shadow-maps/#entry4633140
-	// - Outputing depth manually (separate target or gl_FragDepth) can hurt performance in several ways
+	// - Outputting depth manually (separate target or gl_FragDepth) can hurt performance in several ways
 	// -> need to use real depthbuffer
 	// --> precision issues
 	// --> better precision with flipped depth test + R32F depthbuffers
@@ -154,12 +154,13 @@ void Renderer::LoadShader()
 	m_shaderLightCachesDirect->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cacheLightingDirect.comp");
 	m_shaderLightCachesDirect->CreateProgram();
 
+	std::string define_specularEnvmapPerCacheSize_Texel = "#define SPECULARENVMAP_PERCACHESIZE " + std::to_string(m_specularEnvmapPerCacheSize) + "\n";
 	m_shaderLightCachesRSM = std::make_unique<gl::ShaderObject>("cache lighting rsm");
-	m_shaderLightCachesRSM->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cacheLightingRSM.comp");
+	m_shaderLightCachesRSM->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cacheLightingRSM.comp", define_specularEnvmapPerCacheSize_Texel);
 	m_shaderLightCachesRSM->CreateProgram();
 
 	m_shaderLightCachesRSM_shadow = std::make_unique<gl::ShaderObject>("cache lighting rsm with indirect shadow");
-	m_shaderLightCachesRSM_shadow->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cacheLightingRSM.comp", "#define INDIRECT_SHADOW\n");
+	m_shaderLightCachesRSM_shadow->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cacheLightingRSM.comp", "#define INDIRECT_SHADOW\n" + define_specularEnvmapPerCacheSize_Texel);
 	m_shaderLightCachesRSM_shadow->CreateProgram();
 
 	m_shaderLightCachePrepare = std::make_unique<gl::ShaderObject>("cache lighting prepare");
@@ -177,10 +178,23 @@ void Renderer::LoadShader()
 	m_shaderConeTraceAO->CreateProgram();
 	
 
+
+	m_shaderSpecularEnvmapMipMap = std::make_unique<gl::ShaderObject>("specular envmap mipmap");
+	m_shaderSpecularEnvmapMipMap->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/specularenvmap.vert");
+	m_shaderSpecularEnvmapMipMap->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/specularenvmap_mipmap.frag");
+	m_shaderSpecularEnvmapMipMap->CreateProgram();
+
+	m_shaderSpecularEnvmapFillHoles = std::make_unique<gl::ShaderObject>("specular fill holes");
+	m_shaderSpecularEnvmapFillHoles->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/specularenvmap.vert");
+	m_shaderSpecularEnvmapFillHoles->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/specularenvmap_fillholes.frag");
+	m_shaderSpecularEnvmapFillHoles->CreateProgram();
+
+
 	// Register all shader for auto reload on change.
 	m_allShaders = { m_shaderDebugGBuffer.get(), m_shaderFillGBuffer.get(), m_shaderDeferredDirectLighting_Spot.get(), 
 		m_shaderTonemap.get(), m_shaderCacheGather.get(), m_shaderCacheApply.get(), m_shaderLightCachesDirect.get(), m_shaderLightCachesRSM.get(), m_shaderLightCachesRSM_shadow.get(),
-					m_shaderFillRSM.get(), m_shaderIndirectLightingBruteForceRSM.get(), m_shaderLightCachePrepare.get(), m_shaderConeTraceAO.get() };
+		m_shaderFillRSM.get(), m_shaderIndirectLightingBruteForceRSM.get(), m_shaderLightCachePrepare.get(), m_shaderConeTraceAO.get(), 
+		m_shaderSpecularEnvmapFillHoles.get(), m_shaderSpecularEnvmapMipMap.get() };
 	for (auto it : m_allShaders)
 		ShaderFileWatcher::Instance().RegisterShaderForReloadOnChange(it);
 }
@@ -194,7 +208,6 @@ void Renderer::UpdateConstantUBO()
 	mappedMemory["VoxelResolution"].Set(m_voxelization->GetVoxelTexture().GetWidth());
 	mappedMemory["AddressVolumeResolution"].Set(m_lightCacheAddressVolume->GetWidth());
 	mappedMemory["MaxNumLightCaches"].Set(m_maxNumLightCaches);
-
 	
 	mappedMemory["SpecularEnvmapTotalSize"].Set(m_specularCacheEnvmap->GetWidth());
 	mappedMemory["SpecularEnvmapPerCacheSize_Texel"].Set(static_cast<int>(m_specularEnvmapPerCacheSize));
@@ -311,19 +324,21 @@ void Renderer::Draw(const Camera& camera)
 		if (m_mode == Mode::RSM_CACHE_INDSHADOW)
 			m_voxelization->GenMipMap();
 
-		GL_CALL(glViewport, 0, 0, m_HDRBackbufferTexture->GetWidth(), m_HDRBackbufferTexture->GetHeight());
 		GatherLightCaches();
 
-		m_HDRBackbuffer->Bind(true);
-		GL_CALL(glClear, GL_COLOR_BUFFER_BIT);
-		
 		if (m_mode == Mode::DIRECTONLY_CACHE)
 			CacheLightingDirect();
 		else
 		{
-			DrawLights();
 			CacheLightingRSM(m_mode == Mode::RSM_CACHE_INDSHADOW);
+			PrepareSpecularCacheEnvmaps();
 		}
+
+		m_HDRBackbuffer->Bind(true);
+		GL_CALL(glClear, GL_COLOR_BUFFER_BIT);
+
+		if (m_mode != Mode::DIRECTONLY_CACHE)
+			DrawLights();
 
 		m_uboRing_SpotLight->CompleteFrame();
 
@@ -614,7 +629,7 @@ void Renderer::CacheLightingDirect()
 void Renderer::CacheLightingRSM(bool indirectShadow)
 {
 	m_specularCacheEnvmap->ClearToZero();
-	m_specularCacheEnvmap->BindImage(0, gl::Texture::ImageAccess::READ_WRITE);
+	m_specularCacheEnvmap->BindImage(0, gl::Texture::ImageAccess::WRITE);
 
 	m_lightCacheCounter->BindIndirectDispatchBuffer();
 	m_shaderLightCachesRSM->BindSSBO(*m_lightCacheBuffer, "LightCacheBuffer");
@@ -651,6 +666,7 @@ void Renderer::CacheLightingRSM(bool indirectShadow)
 
 void Renderer::ConeTraceAO()
 {
+	gl::Disable(gl::Cap::CULL_FACE);
 	gl::Disable(gl::Cap::DEPTH_TEST);
 	gl::SetDepthWrite(false);
 
@@ -665,6 +681,7 @@ void Renderer::ConeTraceAO()
 
 void Renderer::GatherLightCaches()
 {
+	gl::Disable(gl::Cap::CULL_FACE);
 	gl::Disable(gl::Cap::DEPTH_TEST);
 	gl::SetDepthWrite(false);
 
@@ -703,8 +720,59 @@ void Renderer::GatherLightCaches()
 	GL_CALL(glDispatchCompute, 1, 1, 1);
 }
 
+void Renderer::PrepareSpecularCacheEnvmaps()
+{
+	gl::Disable(gl::Cap::CULL_FACE);
+	gl::Disable(gl::Cap::DEPTH_TEST);
+	gl::SetDepthWrite(false);
+
+	// Need to access previous results via texture fetch.
+	GL_CALL(glMemoryBarrier, GL_TEXTURE_FETCH_BARRIER_BIT);
+
+	// Sufficient for all shaders in this function.
+	m_shaderSpecularEnvmapMipMap->BindSSBO(*m_lightCacheCounter, "LightCacheCounter");
+
+
+	// MipMap remaining levels.
+	m_specularCacheEnvmap->Bind(0);
+	m_shaderSpecularEnvmapMipMap->Activate();
+	for (int i = 1; i < m_specularCacheEnvmapFBOs.size(); ++i)
+	{
+		GL_CALL(glTextureParameteri, m_specularCacheEnvmap->GetInternHandle(), GL_TEXTURE_BASE_LEVEL, i - 1);
+		m_specularCacheEnvmapFBOs[i]->Bind(true);
+		m_screenTriangle->Draw();
+	}
+
+	GL_CALL(glTextureParameteri, m_specularCacheEnvmap->GetInternHandle(), GL_TEXTURE_BASE_LEVEL, 0);
+
+
+	// Push down for each pulled layer.
+	// This pass uses the vertex/fragment shader only for simple thread spawning. A compute shader might work as well!
+
+	// Need to bind a target that is large enough, otherwise Nvidia driver clamps the viewport down!
+	// On the other hand it apparently does not mind writing to the same texture as currently bound as target.
+	m_specularCacheEnvmapFBOs[0]->Bind(false); 
+	GL_CALL(glColorMask, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+
+	m_shaderSpecularEnvmapFillHoles->Activate();
+	for (int i = m_specularEnvmapMaxFillHolesLevel; i > 0; --i)
+	{
+		GL_CALL(glMemoryBarrier, GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Need to access previous results via imageLoad.
+
+		m_specularCacheEnvmap->BindImage(0, gl::Texture::ImageAccess::READ, i);
+		m_specularCacheEnvmap->BindImage(1, gl::Texture::ImageAccess::READ_WRITE, i - 1);
+		
+		unsigned int readTextureSize = static_cast<unsigned int>(m_specularCacheEnvmap->GetWidth() * pow(2, -i));
+		GL_CALL(glViewport, 0, 0, readTextureSize, readTextureSize);
+		m_screenTriangle->Draw();
+	}
+
+	GL_CALL(glColorMask, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+}
+
 void Renderer::ApplyLightCaches(bool contactShadowFix)
 {
+	gl::Disable(gl::Cap::CULL_FACE);
 	gl::Disable(gl::Cap::DEPTH_TEST);
 	gl::Enable(gl::Cap::BLEND);
 
