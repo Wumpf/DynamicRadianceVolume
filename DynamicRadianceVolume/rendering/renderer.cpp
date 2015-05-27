@@ -68,16 +68,7 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	m_voxelization = std::make_unique<Voxelization>(128);
 
 	// Allocate light cache buffer
-	m_maxNumLightCaches = 32768;
-	const unsigned int lightCacheSizeInBytes = sizeof(float) * 4 * 8; // TODO correct
-	m_lightCacheBuffer = std::make_unique<gl::Buffer>(m_maxNumLightCaches * lightCacheSizeInBytes, gl::Buffer::IMMUTABLE, nullptr);
-	SetReadLightCacheCount(false); // (Re)creates the lightcache buffer
-
-	m_specularCacheEnvmapFBOs.clear();
-	m_specularCacheEnvmap = std::make_unique<gl::Texture2D>(4096, 4096, gl::TextureFormat::R11F_G11F_B10F, static_cast<int>(log2(m_specularEnvmapPerCacheSize) + 1));
-	for (int i = 0; i < m_specularCacheEnvmap->GetNumMipLevels(); ++i)
-		m_specularCacheEnvmapFBOs.push_back(std::make_shared<gl::FramebufferObject>(gl::FramebufferObject::Attachment(m_specularCacheEnvmap.get(), i)));
-
+	SetMaxCacheCount(32768);
 
 	SetCacheAdressVolumeSize(64);
 
@@ -195,6 +186,48 @@ void Renderer::ReloadSettingDependentCacheShader()
 	m_shaderCacheApply->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
 	m_shaderCacheApply->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/cacheApply.frag", indirectSpecularSetting);
 	m_shaderCacheApply->CreateProgram();
+}
+
+void Renderer::ReallocateCacheData()
+{
+	int maxTextureSize;
+	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTextureSize);
+
+	int demandedSpecularEnvMapSize = static_cast<int>(pow(2, ceil(log2( ceil(sqrt(m_maxNumLightCaches)) * m_specularEnvmapPerCacheSize ))));
+
+	// Specularenvmap to large?
+	if (demandedSpecularEnvMapSize > maxTextureSize)
+	{
+		unsigned int adjustedCacheCount = static_cast<unsigned int>(pow(maxTextureSize / m_specularEnvmapPerCacheSize, 2));
+		LOG_WARNING(m_maxNumLightCaches << " caches at a specular envmap size of " << m_specularEnvmapPerCacheSize << " per cache would lead to a texture size of at least " <<
+					demandedSpecularEnvMapSize << ". Maximum texture size is " << maxTextureSize << ". Falling back to lower maximum cache count: " << adjustedCacheCount);
+		adjustedCacheCount = m_maxNumLightCaches;
+		demandedSpecularEnvMapSize = maxTextureSize;
+	}
+
+	// Maximum size per cache
+	const unsigned int lightCacheSizeInBytes = sizeof(float) * 4 * 8;
+
+	// Allocate cache buffer.
+	unsigned int cacheBufferSizeInBytes = m_maxNumLightCaches * lightCacheSizeInBytes;
+	if (!m_lightCacheBuffer || m_lightCacheBuffer->GetSize() != cacheBufferSizeInBytes)
+	{
+		m_lightCacheBuffer = std::make_unique<gl::Buffer>(cacheBufferSizeInBytes, gl::Buffer::IMMUTABLE, nullptr);
+		SetReadLightCacheCount(false); // (Re)creates the lightcache buffer
+
+		LOG_INFO("Allocated " << cacheBufferSizeInBytes/1024 << " kb cache buffer.");
+	}
+
+	// Allocate specular cache envmap
+	if (!m_specularCacheEnvmap || m_specularCacheEnvmapFBOs.empty() || m_specularCacheEnvmap->GetWidth() != demandedSpecularEnvMapSize)
+	{
+		m_specularCacheEnvmapFBOs.clear();
+		m_specularCacheEnvmap = std::make_unique<gl::Texture2D>(demandedSpecularEnvMapSize, demandedSpecularEnvMapSize, gl::TextureFormat::R11F_G11F_B10F, static_cast<int>(log2(m_specularEnvmapPerCacheSize) + 1));
+		for (int i = 0; i < m_specularCacheEnvmap->GetNumMipLevels(); ++i)
+			m_specularCacheEnvmapFBOs.push_back(std::make_shared<gl::FramebufferObject>(gl::FramebufferObject::Attachment(m_specularCacheEnvmap.get(), i)));
+
+		LOG_INFO("Allocated specular envmap with total size " << demandedSpecularEnvMapSize << "x" << demandedSpecularEnvMapSize << " (" << (demandedSpecularEnvMapSize * demandedSpecularEnvMapSize * 4) / 1024 << " kb)");
+	}
 }
 
 void Renderer::UpdateConstantUBO()

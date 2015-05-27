@@ -294,6 +294,20 @@ void Application::SetupTweakBarBinding()
 	m_tweakBar->AddEnum("RenderMode", "RenderModeType", [&](){ return (int)m_renderer->GetMode(); }, [&](int mode){ return m_renderer->SetMode(static_cast<Renderer::Mode>(mode)); });
 	m_tweakBar->AddReadWrite<bool>("IndirectShadow", [&](){ return m_renderer->GetIndirectShadow(); }, [&](bool b){ return m_renderer->SetIndirectShadow(b); }, " label=\"Indirect Shadow\"");
 	m_tweakBar->AddReadWrite<bool>("IndirectSpecular", [&](){ return m_renderer->GetIndirectSpecular(); }, [&](bool b){ return m_renderer->SetIndirectSpecular(b); }, " label=\"Indirect Specular\"");
+		
+		// Cache Settings
+	m_tweakBar->AddReadWrite<int>("Address Volume Size", [&](){ return m_renderer->GetCacheAddressVolumeSize(); },
+		[&](int i){ return m_renderer->SetCacheAdressVolumeSize(i); }, " min=16 max=256 step=16");
+	m_tweakBar->AddReadWrite<int>("Max Total Cache Count", [&](){ return m_renderer->GetMaxCacheCount(); },
+		[&](int i){ return m_renderer->SetMaxCacheCount(i); }, " min=2048 max=1048576 step=2048");
+	m_tweakBar->AddSeperator("Render Settings");
+
+		// Statistics
+	m_tweakBar->AddReadWrite<bool>("Track Light Cache Count", [&](){ return m_renderer->GetReadLightCacheCount(); },
+		[&](bool b){ return m_renderer->SetReadLightCacheCount(b); }, " group=Statistics");
+	m_tweakBar->AddReadOnly("#Active Caches", [&](){ return std::to_string(m_renderer->GetLightCacheActiveCount()); }, " group=Statistics");
+
+	m_tweakBar->AddSeperator("Rendering settings");
 
 	// Camera
 	m_tweakBar->AddReadWrite<float>("Camera Speed", [&](){ return m_camera->GetMoveSpeed(); }, [&](float f){ return m_camera->SetMoveSpeed(f); }, " min=0.01 max=100 step=0.01 label=Speed group=Camera");
@@ -302,14 +316,6 @@ void Application::SetupTweakBarBinding()
 
 	// Tonemap
 	m_tweakBar->AddReadWrite<float>("Exposure", [&](){ return m_renderer->GetExposure(); }, [&](float f){ return m_renderer->SetExposure(f); }, " min=0.1 max=100 step=0.05 ");
-
-	/// Light cache settings
-	m_tweakBar->AddSeperator("Light Cache settings");
-	m_tweakBar->AddReadWrite<bool>("Track Light Cache Count", [&](){ return m_renderer->GetReadLightCacheCount(); }, 
-																[&](bool b){ return m_renderer->SetReadLightCacheCount(b); });
-	m_tweakBar->AddReadOnly("#Active Caches", [&](){ return std::to_string(m_renderer->GetLightCacheActiveCount()); });
-	m_tweakBar->AddReadWrite<int>("Address Volume Size", [&](){ return m_renderer->GetCacheAddressVolumeSize(); },
-															[&](int i){ return m_renderer->SetCacheAdressVolumeSize(i); }, " min=16 max=256 step=16");
 
 
 	m_tweakBar->AddSeperator("Scene Settings");

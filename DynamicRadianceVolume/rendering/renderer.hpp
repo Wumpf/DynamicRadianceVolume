@@ -49,15 +49,21 @@ public:
 	void SetMode(Mode mode) { m_mode = mode; }
 	Mode GetMode() const { return m_mode; }
 
-	// Settings only for dynamic radiance volume.
+
 	/// Activate/deactivates casting of indirect shadows.
 	void SetIndirectShadow(bool active)		{ m_indirectShadow = active; ReloadSettingDependentCacheShader(); }
-	bool GetIndirectShadow()				{ return m_indirectShadow; }
+	bool GetIndirectShadow() const			{ return m_indirectShadow; }
 	/// Activates/deactivates glossy indirect lighting.
 	void SetIndirectSpecular(bool active)	{ m_indirectSpecular = active; ReloadSettingDependentCacheShader(); }
-	bool GetIndirectSpecular()				{ return m_indirectSpecular; }
+	bool GetIndirectSpecular() const		{ return m_indirectSpecular; }
 
 
+	/// Sets maximum cache count. Will print warning to log if given value can not be achieved.
+	void SetMaxCacheCount(unsigned int maxCacheCount) { m_maxNumLightCaches = maxCacheCount; ReallocateCacheData(); }
+	unsigned int GetMaxCacheCount() const				{ return m_maxNumLightCaches; }
+
+
+	/// Should be called on screen resize.
 	void OnScreenResize(const ei::UVec2& newResolution);
 
 	void SetScene(const std::shared_ptr<const Scene>& scene);
@@ -88,6 +94,11 @@ private:
 	void LoadAllShaders();
 	/// Reloads several cache related shaders that have macros depending on the current configuration.
 	void ReloadSettingDependentCacheShader();
+
+	/// Reallocates cache buffer and cache specular envmap according to the current configuration.
+	///
+	/// If cache specular envmap would exceed maximum size, number of caches will be reduced.
+	void ReallocateCacheData();
 
 	unsigned int RoundSizeToUBOAlignment(unsigned int size) { return size + (m_UBOAlignment - size % m_UBOAlignment) % m_UBOAlignment; }
 
