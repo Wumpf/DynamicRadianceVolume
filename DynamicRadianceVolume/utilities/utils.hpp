@@ -22,3 +22,9 @@ T Clamp(T v, T min, T max)
 
 template<class T, unsigned int N>
 unsigned int ArraySize(T(&)[N]) { return N; }
+
+
+inline bool IsPowerOfTwo(unsigned int x)
+{
+	return (x != 0) && ((x & (x - 1)) == 0);
+}

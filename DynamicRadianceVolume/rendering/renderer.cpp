@@ -2,6 +2,8 @@
 #include "voxelization.hpp"
 #include "hdrimage.hpp"
 
+#include "../utilities/utils.hpp"
+
 #include "../scene/model.hpp"
 #include "../scene/sceneentity.hpp"
 #include "../scene/scene.hpp"
@@ -278,6 +280,18 @@ void Renderer::UpdatePerFrameUBO(const Camera& camera)
 	mappedMemory["AddressVolumeVoxelSize"].Set((VolumeWorldMax.x - VolumeWorldMin.x) / m_lightCacheAddressVolume->GetWidth());
 
 	m_uboPerFrame->Unmap();
+}
+
+void Renderer::SetPerCacheSpecularEnvMapSize(unsigned int specularEnvmapPerCacheSize)
+{
+	Assert(IsPowerOfTwo(specularEnvmapPerCacheSize), "Per cache specular envmap size needs to be a power of two!");
+
+	m_specularEnvmapPerCacheSize = specularEnvmapPerCacheSize;
+	m_specularEnvmapMaxFillHolesLevel = std::min(m_specularEnvmapMaxFillHolesLevel, static_cast<unsigned int>(log2(m_specularEnvmapPerCacheSize)));
+
+	ReallocateCacheData();
+	ReloadSettingDependentCacheShader();
+	UpdateConstantUBO();
 }
 
 void Renderer::OnScreenResize(const ei::UVec2& newResolution)

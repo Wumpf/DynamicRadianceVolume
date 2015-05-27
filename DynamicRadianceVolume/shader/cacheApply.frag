@@ -30,7 +30,7 @@ vec3 Interp(vec3 x)
 
 void main()
 {	
-	//OutputColor = texelFetch(CacheSpecularEnvmap, ivec2(Texcoord * BackbufferResolution/8), 0).rgb; // TODO
+	//OutputColor = texelFetch(CacheSpecularEnvmap, ivec2(Texcoord * BackbufferResolution/4), 0).rgb; // TODO
 	//return;
 
 	// Get pixel world position.

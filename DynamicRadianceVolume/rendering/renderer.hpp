@@ -7,6 +7,7 @@
 #include "../shaderreload/autoreloadshaderptr.hpp"
 
 #include <glhelper/shaderdatametainfo.hpp>
+#include <algorithm>
 
 
 namespace gl
@@ -57,9 +58,23 @@ public:
 	void SetIndirectSpecular(bool active)	{ m_indirectSpecular = active; ReloadSettingDependentCacheShader(); }
 	bool GetIndirectSpecular() const		{ return m_indirectSpecular; }
 
+	/// Sets size of the per cache specular env map in pixel.
+	///
+	/// \attention Needs to be a power of two!
+	/// This can lead to a resize of the SpecularEnvMap texture atlas, depending on the MaxCacheCount setting.
+	/// Usually you should use very small values ranging from 8-32.
+	void SetPerCacheSpecularEnvMapSize(unsigned int specularEnvmapPerCacheSize);
+	unsigned int GetPerCacheSpecularEnvMapSize() const { return m_specularEnvmapPerCacheSize; }
+
+	/// Sets maximum number of hole fill level passes.
+	///
+	/// Number determines max level from which info is retrieved. Can't be higher than log2(GetPerCacheSpecularEnvMapSize()).
+	/// 0 Means no hole fill. Recomend is log2(GetPerCacheSpecularEnvMapSize())/2
+	void SetSpecularEnvMapHoleFillLevel(unsigned int holeFillLevel) { m_specularEnvmapMaxFillHolesLevel = std::min(holeFillLevel, static_cast<unsigned int>(log2(m_specularEnvmapPerCacheSize))); }
+	unsigned int GetSpecularEnvMapHoleFillLevel() const { return m_specularEnvmapMaxFillHolesLevel; }
 
 	/// Sets maximum cache count. Will print warning to log if given value can not be achieved.
-	void SetMaxCacheCount(unsigned int maxCacheCount) { m_maxNumLightCaches = maxCacheCount; ReallocateCacheData(); }
+	void SetMaxCacheCount(unsigned int maxCacheCount)	{ m_maxNumLightCaches = maxCacheCount; ReallocateCacheData(); UpdateConstantUBO(); }
 	unsigned int GetMaxCacheCount() const				{ return m_maxNumLightCaches; }
 
 
@@ -98,6 +113,7 @@ private:
 	/// Reallocates cache buffer and cache specular envmap according to the current configuration.
 	///
 	/// If cache specular envmap would exceed maximum size, number of caches will be reduced.
+	/// \attention You might also want to call UpdateConstantUBO()
 	void ReallocateCacheData();
 
 	unsigned int RoundSizeToUBOAlignment(unsigned int size) { return size + (m_UBOAlignment - size % m_UBOAlignment) % m_UBOAlignment; }

@@ -273,70 +273,85 @@ void Application::SetupTweakBarBinding()
 {
 	m_tweakBar = std::make_unique<AntTweakBarInterface>(m_window->GetGLFWWindow());
 
-	m_tweakBar->AddReadOnly("Frametime (ms)", [&](){ return std::to_string(m_timeSinceLastUpdate.GetMilliseconds()); });
-	m_tweakBar->AddButton("Save Settings", [&](){ m_tweakBar->SaveReadWriteValuesToJSON(SaveFileDialog("settings.json", ".json")); });
-	m_tweakBar->AddButton("Load Settings", [&](){ m_tweakBar->LoadReadWriteValuesToJSON(OpenFileDialog()); });
-	m_tweakBar->AddButton("Save HDR Image", [&](){ std::string filename = SaveFileDialog("image.pfm", ".pfm"); if(!filename.empty()) m_renderer->SaveToPFM(filename); });
-	m_tweakBar->AddSeperator("main");
+	{
+		m_tweakBar->AddReadOnly("Frametime (ms)", [&](){ return std::to_string(m_timeSinceLastUpdate.GetMilliseconds()); });
+		m_tweakBar->AddButton("Save Settings", [&](){ m_tweakBar->SaveReadWriteValuesToJSON(SaveFileDialog("settings.json", ".json")); });
+		m_tweakBar->AddButton("Load Settings", [&](){ m_tweakBar->LoadReadWriteValuesToJSON(OpenFileDialog()); });
+		m_tweakBar->AddButton("Save HDR Image", [&](){ std::string filename = SaveFileDialog("image.pfm", ".pfm"); if (!filename.empty()) m_renderer->SaveToPFM(filename); });
+		m_tweakBar->AddSeperator("main");
+	}
 
 	// Render mode settings
-	std::vector<TwEnumVal> renderModeVals =
 	{
-		TwEnumVal{ (int)Renderer::Mode::RSM_BRUTEFORCE, "RSM Bruteforce" },
-		TwEnumVal{ (int)Renderer::Mode::DYN_RADIANCE_VOLUME, "Dyn. Cache Volume" },
-		TwEnumVal{ (int)Renderer::Mode::GBUFFER_DEBUG, "GBuffer Debug" },
-		TwEnumVal{ (int)Renderer::Mode::DIRECTONLY, "DirectLight only" },
-		TwEnumVal{ (int)Renderer::Mode::DIRECTONLY_CACHE, "DirectLight only - via Cache" },
-		TwEnumVal{ (int)Renderer::Mode::VOXELVIS, "Voxelization Display" },
-		TwEnumVal{ (int)Renderer::Mode::AMBIENTOCCLUSION, "VCT AO" },
-	};
-	m_tweakBar->AddEnumType("RenderModeType", renderModeVals);
-	m_tweakBar->AddEnum("RenderMode", "RenderModeType", [&](){ return (int)m_renderer->GetMode(); }, [&](int mode){ return m_renderer->SetMode(static_cast<Renderer::Mode>(mode)); });
-	m_tweakBar->AddReadWrite<bool>("IndirectShadow", [&](){ return m_renderer->GetIndirectShadow(); }, [&](bool b){ return m_renderer->SetIndirectShadow(b); }, " label=\"Indirect Shadow\"");
-	m_tweakBar->AddReadWrite<bool>("IndirectSpecular", [&](){ return m_renderer->GetIndirectSpecular(); }, [&](bool b){ return m_renderer->SetIndirectSpecular(b); }, " label=\"Indirect Specular\"");
-		
-		// Cache Settings
-	m_tweakBar->AddReadWrite<int>("Address Volume Size", [&](){ return m_renderer->GetCacheAddressVolumeSize(); },
-		[&](int i){ return m_renderer->SetCacheAdressVolumeSize(i); }, " min=16 max=256 step=16");
-	m_tweakBar->AddReadWrite<int>("Max Total Cache Count", [&](){ return m_renderer->GetMaxCacheCount(); },
-		[&](int i){ return m_renderer->SetMaxCacheCount(i); }, " min=2048 max=1048576 step=2048");
-	m_tweakBar->AddSeperator("Render Settings");
+		std::vector<TwEnumVal> renderModeVals =
+		{
+			TwEnumVal{ (int)Renderer::Mode::RSM_BRUTEFORCE, "RSM Bruteforce" },
+			TwEnumVal{ (int)Renderer::Mode::DYN_RADIANCE_VOLUME, "Dyn. Cache Volume" },
+			TwEnumVal{ (int)Renderer::Mode::GBUFFER_DEBUG, "GBuffer Debug" },
+			TwEnumVal{ (int)Renderer::Mode::DIRECTONLY, "DirectLight only" },
+			TwEnumVal{ (int)Renderer::Mode::DIRECTONLY_CACHE, "DirectLight only - via Cache" },
+			TwEnumVal{ (int)Renderer::Mode::VOXELVIS, "Voxelization Display" },
+			TwEnumVal{ (int)Renderer::Mode::AMBIENTOCCLUSION, "VCT AO" },
+		};
+		m_tweakBar->AddEnumType("RenderModeType", renderModeVals);
+		m_tweakBar->AddEnum("RenderMode", "RenderModeType", [&](){ return (int)m_renderer->GetMode(); }, [&](int mode){ return m_renderer->SetMode(static_cast<Renderer::Mode>(mode)); });
+		m_tweakBar->AddReadWrite<bool>("IndirectShadow", [&](){ return m_renderer->GetIndirectShadow(); }, [&](bool b){ return m_renderer->SetIndirectShadow(b); }, " label=\"Indirect Shadow\"");
+		m_tweakBar->AddReadWrite<bool>("IndirectSpecular", [&](){ return m_renderer->GetIndirectSpecular(); }, [&](bool b){ return m_renderer->SetIndirectSpecular(b); }, " label=\"Indirect Specular\"");
 
-		// Statistics
-	m_tweakBar->AddReadWrite<bool>("Track Light Cache Count", [&](){ return m_renderer->GetReadLightCacheCount(); },
-		[&](bool b){ return m_renderer->SetReadLightCacheCount(b); }, " group=Statistics");
-	m_tweakBar->AddReadOnly("#Active Caches", [&](){ return std::to_string(m_renderer->GetLightCacheActiveCount()); }, " group=Statistics");
+			// Cache Settings
+		m_tweakBar->AddReadWrite<int>("Address Volume Size", [&](){ return m_renderer->GetCacheAddressVolumeSize(); },
+			[&](int i){ return m_renderer->SetCacheAdressVolumeSize(i); }, " min=16 max=256 step=16");
+		m_tweakBar->AddReadWrite<int>("Max Total Cache Count", [&](){ return m_renderer->GetMaxCacheCount(); },
+			[&](int i){ return m_renderer->SetMaxCacheCount(i); }, " min=2048 max=1048576 step=2048");
 
-	m_tweakBar->AddSeperator("Rendering settings");
+		std::vector<TwEnumVal> specEnvMapRes = { { 4, "4x4" }, { 8, "8x8" }, { 16, "16x16" }, { 32, "32x32" }, { 64, "64x64" } };
+		m_tweakBar->AddEnumType("SpecEnvMapRes", specEnvMapRes);
+		m_tweakBar->AddEnum("SpecEnvMap Size", "SpecEnvMapRes", [&](){ return m_renderer->GetPerCacheSpecularEnvMapSize(); }, [&](int i){ return m_renderer->SetPerCacheSpecularEnvMapSize(i); });
+		m_tweakBar->AddReadWrite<int>("SpecEnvMap Hole Fill Level", [&](){ return m_renderer->GetSpecularEnvMapHoleFillLevel(); }, [&](int i){ return m_renderer->SetSpecularEnvMapHoleFillLevel(i); }, " min=0 max=5 step=1");
+		m_tweakBar->AddSeperator("Render Settings");
 
-	// Camera
-	m_tweakBar->AddReadWrite<float>("Camera Speed", [&](){ return m_camera->GetMoveSpeed(); }, [&](float f){ return m_camera->SetMoveSpeed(f); }, " min=0.01 max=100 step=0.01 label=Speed group=Camera");
-	m_tweakBar->AddReadWrite<ei::Vec3>("Camera Direction", [&](){ return m_camera->GetDirection(); }, [&](const ei::Vec3& v){ return m_camera->SetDirection(v); }, "label=Direction group=Camera");
-	m_tweakBar->AddReadWrite<ei::Vec3>("Camera Position", [&](){ return m_camera->GetPosition(); }, [&](const ei::Vec3& v){ return m_camera->SetPosition(v); }, "label=Position group=Camera", AntTweakBarInterface::TypeHint::POSITION);
+			// Statistics
+		m_tweakBar->AddReadWrite<bool>("Track Light Cache Count", [&](){ return m_renderer->GetReadLightCacheCount(); },
+			[&](bool b){ return m_renderer->SetReadLightCacheCount(b); }, " group=Statistics");
+		m_tweakBar->AddReadOnly("#Active Caches", [&](){ return std::to_string(m_renderer->GetLightCacheActiveCount()); }, " group=Statistics");
 
-	// Tonemap
-	m_tweakBar->AddReadWrite<float>("Exposure", [&](){ return m_renderer->GetExposure(); }, [&](float f){ return m_renderer->SetExposure(f); }, " min=0.1 max=100 step=0.05 ");
+		m_tweakBar->AddSeperator("Rendering settings");
+	}
 
+	{
+		// Camera
+		m_tweakBar->AddReadWrite<float>("Camera Speed", [&](){ return m_camera->GetMoveSpeed(); }, [&](float f){ return m_camera->SetMoveSpeed(f); }, " min=0.01 max=100 step=0.01 label=Speed group=Camera");
+		m_tweakBar->AddReadWrite<ei::Vec3>("Camera Direction", [&](){ return m_camera->GetDirection(); }, [&](const ei::Vec3& v){ return m_camera->SetDirection(v); }, "label=Direction group=Camera");
+		m_tweakBar->AddReadWrite<ei::Vec3>("Camera Position", [&](){ return m_camera->GetPosition(); }, [&](const ei::Vec3& v){ return m_camera->SetPosition(v); }, "label=Position group=Camera", AntTweakBarInterface::TypeHint::POSITION);
 
-	m_tweakBar->AddSeperator("Scene Settings");
+		// Tonemap
+		m_tweakBar->AddReadWrite<float>("Exposure", [&](){ return m_renderer->GetExposure(); }, [&](float f){ return m_renderer->SetExposure(f); }, " min=0.1 max=100 step=0.05 ");
+
+		m_tweakBar->AddSeperator("Scene Settings");
+
+	}
 
 	// Entity settings
-	std::function<void(const int&)> changeEntityCount = std::bind(&Application::ChangeEntityCount, this, std::placeholders::_1);
-	m_tweakBar->AddReadWrite<int>("Entity Count", [&](){ return static_cast<int>(m_scene->GetEntities().size()); }, changeEntityCount, " min=1 max=16 step=1 group=Entities");
+	{
+		std::function<void(const int&)> changeEntityCount = std::bind(&Application::ChangeEntityCount, this, std::placeholders::_1);
+		m_tweakBar->AddReadWrite<int>("Entity Count", [&](){ return static_cast<int>(m_scene->GetEntities().size()); }, changeEntityCount, " min=1 max=16 step=1 group=Entities");
+	}
 
 	// Light settings
-		// Define light type
-	std::vector<TwEnumVal> lightTypeVals =
 	{
-		{ static_cast<int>(Light::Type::SPOT), "Spot" }
-	};
-	m_tweakBar->AddEnumType("LightType", lightTypeVals);
-		// Define RSM resolution
-	std::vector<TwEnumVal> rsmResVals = { { 16, "16x16" }, { 32, "32x32" }, { 64, "64x64" }, { 128, "128x128" }, { 256, "256x256" }, { 512, "512x512" } };
-	m_tweakBar->AddEnumType("RSMResolution", rsmResVals);
+			// Define light type
+		std::vector<TwEnumVal> lightTypeVals =
+		{
+			{ static_cast<int>(Light::Type::SPOT), "Spot" }
+		};
+		m_tweakBar->AddEnumType("LightType", lightTypeVals);
+			// Define RSM resolution
+		std::vector<TwEnumVal> rsmResVals = { { 16, "16x16" }, { 32, "32x32" }, { 64, "64x64" }, { 128, "128x128" }, { 256, "256x256" }, { 512, "512x512" } };
+		m_tweakBar->AddEnumType("RSMResolution", rsmResVals);
 
-	std::function<void(const int&)> changeLightCount = std::bind(&Application::ChangeLightCount, this, std::placeholders::_1);
-	m_tweakBar->AddReadWrite<int>("Light Count", [&](){ return static_cast<int>(m_scene->GetLights().size()); }, changeLightCount, " min=1 max=16 step=1 group=Lights");
+		std::function<void(const int&)> changeLightCount = std::bind(&Application::ChangeLightCount, this, std::placeholders::_1);
+		m_tweakBar->AddReadWrite<int>("Light Count", [&](){ return static_cast<int>(m_scene->GetLights().size()); }, changeLightCount, " min=1 max=16 step=1 group=Lights");
+	}
 }
 
 void Application::Run()
