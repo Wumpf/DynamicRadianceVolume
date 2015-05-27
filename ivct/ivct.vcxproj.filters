@@ -49,6 +49,9 @@
     <Filter Include="dependencies\jsoncpp\json">
       <UniqueIdentifier>{2de7e87d-3b6c-4144-a2c0-d7489e59d8a0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\shaderreload">
+      <UniqueIdentifier>{69fb15de-2370-4523-962e-a4fcc43a843a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="outputwindow.cpp">
@@ -103,9 +106,6 @@
       <Filter>source\FileWatcher</Filter>
     </ClCompile>
     <ClCompile Include="application.cpp">
-      <Filter>source</Filter>
-    </ClCompile>
-    <ClCompile Include="shaderfilewatcher.cpp">
       <Filter>source</Filter>
     </ClCompile>
     <ClCompile Include="rendering\renderer.cpp">
@@ -189,6 +189,12 @@
     <ClCompile Include="..\dependencies\glhelper\glhelper\textureview.cpp">
       <Filter>dependencies\glhelper</Filter>
     </ClCompile>
+    <ClCompile Include="shaderreload\shaderfilewatcher.cpp">
+      <Filter>source\shaderreload</Filter>
+    </ClCompile>
+    <ClCompile Include="shaderreload\autoreloadshaderptr.cpp">
+      <Filter>source\shaderreload</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="outputwindow.hpp">
@@ -266,9 +272,6 @@
     <ClInclude Include="application.hpp">
       <Filter>source</Filter>
     </ClInclude>
-    <ClInclude Include="shaderfilewatcher.hpp">
-      <Filter>source</Filter>
-    </ClInclude>
     <ClInclude Include="rendering\renderer.hpp">
       <Filter>source\rendering</Filter>
     </ClInclude>
@@ -340,6 +343,12 @@
     </ClInclude>
     <ClInclude Include="..\dependencies\glhelper\glhelper\textureview.hpp">
       <Filter>dependencies\glhelper</Filter>
+    </ClInclude>
+    <ClInclude Include="shaderreload\shaderfilewatcher.hpp">
+      <Filter>source\shaderreload</Filter>
+    </ClInclude>
+    <ClInclude Include="shaderreload\autoreloadshaderptr.hpp">
+      <Filter>source\shaderreload</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

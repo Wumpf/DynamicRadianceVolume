@@ -14,7 +14,7 @@
 
 #include "camera/interactivecamera.hpp"
 
-#include "shaderfilewatcher.hpp"
+#include "shaderreload/shaderfilewatcher.hpp"
 #include "anttweakbarinterface.hpp"
 
 #include "glhelper/utils/pathutils.hpp"
@@ -279,12 +279,11 @@ void Application::SetupTweakBarBinding()
 	m_tweakBar->AddButton("Save HDR Image", [&](){ std::string filename = SaveFileDialog("image.pfm", ".pfm"); if(!filename.empty()) m_renderer->SaveToPFM(filename); });
 	m_tweakBar->AddSeperator("main");
 
-	// Render mode
+	// Render mode settings
 	std::vector<TwEnumVal> renderModeVals =
 	{
 		TwEnumVal{ (int)Renderer::Mode::RSM_BRUTEFORCE, "RSM Bruteforce" },
-		TwEnumVal{ (int)Renderer::Mode::RSM_CACHE, "RSM Cache" },
-		TwEnumVal{ (int)Renderer::Mode::RSM_CACHE_INDSHADOW, "RSM Cache, VCT shadow" },
+		TwEnumVal{ (int)Renderer::Mode::DYN_RADIANCE_VOLUME, "Dyn. Cache Volume" },
 		TwEnumVal{ (int)Renderer::Mode::GBUFFER_DEBUG, "GBuffer Debug" },
 		TwEnumVal{ (int)Renderer::Mode::DIRECTONLY, "DirectLight only" },
 		TwEnumVal{ (int)Renderer::Mode::DIRECTONLY_CACHE, "DirectLight only - via Cache" },
@@ -293,6 +292,8 @@ void Application::SetupTweakBarBinding()
 	};
 	m_tweakBar->AddEnumType("RenderModeType", renderModeVals);
 	m_tweakBar->AddEnum("RenderMode", "RenderModeType", [&](){ return (int)m_renderer->GetMode(); }, [&](int mode){ return m_renderer->SetMode(static_cast<Renderer::Mode>(mode)); });
+	m_tweakBar->AddReadWrite<bool>("IndirectShadow", [&](){ return m_renderer->GetIndirectShadow(); }, [&](bool b){ return m_renderer->SetIndirectShadow(b); }, " label=\"Indirect Shadow\"");
+	m_tweakBar->AddReadWrite<bool>("IndirectSpecular", [&](){ return m_renderer->GetIndirectSpecular(); }, [&](bool b){ return m_renderer->SetIndirectSpecular(b); }, " label=\"Indirect Specular\"");
 
 	// Camera
 	m_tweakBar->AddReadWrite<float>("Camera Speed", [&](){ return m_camera->GetMoveSpeed(); }, [&](float f){ return m_camera->SetMoveSpeed(f); }, " min=0.01 max=100 step=0.01 label=Speed group=Camera");

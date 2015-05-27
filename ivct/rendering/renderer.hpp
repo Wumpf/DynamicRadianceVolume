@@ -4,7 +4,10 @@
 #include <vector>
 #include <ei/vector.hpp>
 #include "camera/camera.hpp"
+#include "../shaderreload/autoreloadshaderptr.hpp"
+
 #include <glhelper/shaderdatametainfo.hpp>
+
 
 namespace gl
 {
@@ -22,7 +25,6 @@ class SceneEntity;
 class Voxelization;
 
 typedef std::unique_ptr<gl::Texture2D> Texture2DPtr;
-typedef std::unique_ptr<gl::ShaderObject> ShaderPtr;
 typedef std::unique_ptr<gl::Buffer> BufferPtr;
 typedef std::unique_ptr<gl::FramebufferObject> FramebufferObjectPtr;
 
@@ -34,10 +36,10 @@ public:
 
 	enum class Mode
 	{
-		RSM_BRUTEFORCE,
-		RSM_CACHE,
-		RSM_CACHE_INDSHADOW,
-		GBUFFER_DEBUG,
+		RSM_BRUTEFORCE = 0,
+		DYN_RADIANCE_VOLUME = 1,
+
+		GBUFFER_DEBUG = 3,
 		DIRECTONLY,
 		DIRECTONLY_CACHE,
 		VOXELVIS,
@@ -46,6 +48,15 @@ public:
 
 	void SetMode(Mode mode) { m_mode = mode; }
 	Mode GetMode() const { return m_mode; }
+
+	// Settings only for dynamic radiance volume.
+	/// Activate/deactivates casting of indirect shadows.
+	void SetIndirectShadow(bool active)		{ m_indirectShadow = active; ReloadSettingDependentCacheShader(); }
+	bool GetIndirectShadow()				{ return m_indirectShadow; }
+	/// Activates/deactivates glossy indirect lighting.
+	void SetIndirectSpecular(bool active)	{ m_indirectSpecular = active; ReloadSettingDependentCacheShader(); }
+	bool GetIndirectSpecular()				{ return m_indirectSpecular; }
+
 
 	void OnScreenResize(const ei::UVec2& newResolution);
 
@@ -57,6 +68,8 @@ public:
 	/// Saves HDR buffer to a pfm file.
 	void SaveToPFM(const std::string& filename) const;
 
+	/// Enables/Disables tracking of current light cache count.
+	/// \attention Tracking can seriously hurt the overall performance! 
 	void SetReadLightCacheCount(bool trackLightCacheCreationStats);
 	bool GetReadLightCacheCount() const;
 	unsigned int GetLightCacheActiveCount() const;
@@ -72,7 +85,9 @@ public:
 private:
 	std::shared_ptr<const Scene> m_scene;
 
-	void LoadShader();
+	void LoadAllShaders();
+	/// Reloads several cache related shaders that have macros depending on the current configuration.
+	void ReloadSettingDependentCacheShader();
 
 	unsigned int RoundSizeToUBOAlignment(unsigned int size) { return size + (m_UBOAlignment - size % m_UBOAlignment) % m_UBOAlignment; }
 
@@ -103,12 +118,12 @@ private:
 	void OutputHDRTextureToBackbuffer();
 
 	void GatherLightCaches();
-	void ApplyLightCaches(bool contactShadowHack);
+	void ApplyLightCaches();
 
 	/// Applies direct light to caches (mainly for debug purposes)
 	void CacheLightingDirect();
 	/// Applies indirect light to caches (the way its meant to be used)
-	void CacheLightingRSM(bool indirectShadow);
+	void CacheLightingRSM();
 
 
 	void ConeTraceAO();
@@ -122,12 +137,6 @@ private:
 	// ------------------------------------------------------------
 	// Indirect lighting
 
-	ShaderPtr m_shaderCacheGather;
-	ShaderPtr m_shaderCacheApply;
-
-	//unsigned int m_lightCacheHashMapSize;
-	//std::unique_ptr<gl::ShaderStorageBufferView> m_lightCacheHashMap;
-
 	std::unique_ptr<gl::Texture3D> m_lightCacheAddressVolume;
 
 	unsigned int m_maxNumLightCaches;
@@ -136,28 +145,34 @@ private:
 	BufferPtr m_lightCacheBuffer;
 	BufferPtr m_lightCacheCounter;
 
+	bool m_indirectSpecular;
 	Texture2DPtr m_specularCacheEnvmap;
 	std::vector<std::shared_ptr<gl::FramebufferObject>> m_specularCacheEnvmapFBOs;
 	unsigned int m_specularEnvmapPerCacheSize; ///< Resolution of specular map per cache
 	unsigned int m_specularEnvmapMaxFillHolesLevel; ///< Zero means no push pull
 
-	ShaderPtr m_shaderLightCachePrepare;
-	ShaderPtr m_shaderLightCachesDirect;
-	ShaderPtr m_shaderLightCachesRSM;
-	ShaderPtr m_shaderLightCachesRSM_shadow;
-	ShaderPtr m_shaderSpecularEnvmapMipMap;
-	ShaderPtr m_shaderSpecularEnvmapFillHoles;
-	ShaderPtr m_shaderConeTraceAO;
+	bool m_indirectShadow;
+
+	AutoReloadShaderPtr m_shaderCacheGather;
+	AutoReloadShaderPtr m_shaderCacheApply;
+	AutoReloadShaderPtr m_shaderLightCachePrepare;
+	AutoReloadShaderPtr m_shaderLightCachesDirect;
+	AutoReloadShaderPtr m_shaderLightCachesRSM;
+
+	AutoReloadShaderPtr m_shaderSpecularEnvmapMipMap;
+	AutoReloadShaderPtr m_shaderSpecularEnvmapFillHoles;
+
+	AutoReloadShaderPtr m_shaderConeTraceAO;
 
 
 	// ------------------------------------------------------------
 	// Direct lighting / RSM
 
-	ShaderPtr m_shaderDebugGBuffer;
-	ShaderPtr m_shaderFillGBuffer;
-	ShaderPtr m_shaderFillRSM;
+	AutoReloadShaderPtr m_shaderDebugGBuffer;
+	AutoReloadShaderPtr m_shaderFillGBuffer;
+	AutoReloadShaderPtr m_shaderFillRSM;
 
-	ShaderPtr m_shaderDeferredDirectLighting_Spot;
+	AutoReloadShaderPtr m_shaderDeferredDirectLighting_Spot;
 
 	gl::UniformBufferMetaInfo m_uboInfoSpotLight;
 	std::unique_ptr<gl::PersistentRingBuffer> m_uboRing_SpotLight;
@@ -193,9 +208,9 @@ private:
 
 	Texture2DPtr m_HDRBackbufferTexture;
 	FramebufferObjectPtr m_HDRBackbuffer;
-	ShaderPtr m_shaderTonemap;
+	AutoReloadShaderPtr m_shaderTonemap;
 
-	ShaderPtr m_shaderIndirectLightingBruteForceRSM;
+	AutoReloadShaderPtr m_shaderIndirectLightingBruteForceRSM;
 
 	// ------------------------------------------------------------
 	// General
@@ -219,8 +234,5 @@ private:
 	const gl::SamplerObject& m_samplerLinearClamp;
 	const gl::SamplerObject& m_samplerNearest;
 	const gl::SamplerObject& m_samplerShadow;
-
-	/// List of all shaders for convenience purposes.
-	std::vector<gl::ShaderObject*> m_allShaders;
 };
 

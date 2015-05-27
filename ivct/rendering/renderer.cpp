@@ -7,8 +7,6 @@
 #include "../scene/scene.hpp"
 #include "../camera/camera.hpp"
 
-#include "../shaderfilewatcher.hpp"
-
 #include <glhelper/samplerobject.hpp>
 #include <glhelper/shaderobject.hpp>
 #include <glhelper/texture3d.hpp>
@@ -31,35 +29,39 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	m_readLightCacheCount(false),
 	m_lastNumLightCaches(0),
 	m_exposure(1.0f),
-	m_mode(Renderer::Mode::RSM_CACHE_INDSHADOW),
+	m_mode(Renderer::Mode::DYN_RADIANCE_VOLUME),
 
 	m_specularEnvmapPerCacheSize(16),
-	m_specularEnvmapMaxFillHolesLevel(2)
+	m_specularEnvmapMaxFillHolesLevel(2),
+	m_indirectShadow(true),
+	m_indirectSpecular(false)
 {
 	glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &m_UBOAlignment);
 	LOG_INFO("Uniform buffer alignment is " << m_UBOAlignment);
 
 	m_screenTriangle = std::make_unique<gl::ScreenAlignedTriangle>();
 
-	LoadShader();
+	LoadAllShaders();
 	
 	// Init global ubos.
-	m_uboInfoConstant = m_allShaders[0]->GetUniformBufferInfo()["Constant"];
-	m_uboConstant = std::make_unique<gl::Buffer>(m_uboInfoConstant.bufferDataSizeByte, gl::Buffer::MAP_WRITE);
-	m_allShaders[0]->BindUBO(*m_uboConstant, "Constant");
+	gl::ShaderObject* uboPrototypeShader = m_shaderLightCachesRSM.get();
 
-	m_uboInfoPerFrame = m_allShaders[0]->GetUniformBufferInfo()["PerFrame"];
+	m_uboInfoConstant = uboPrototypeShader->GetUniformBufferInfo()["Constant"];
+	m_uboConstant = std::make_unique<gl::Buffer>(m_uboInfoConstant.bufferDataSizeByte, gl::Buffer::MAP_WRITE);
+	uboPrototypeShader->BindUBO(*m_uboConstant, "Constant");
+
+	m_uboInfoPerFrame = uboPrototypeShader->GetUniformBufferInfo()["PerFrame"];
 	m_uboPerFrame = std::make_unique<gl::Buffer>(m_uboInfoPerFrame.bufferDataSizeByte, gl::Buffer::MAP_WRITE);
-	m_allShaders[0]->BindUBO(*m_uboPerFrame, "PerFrame");
+	uboPrototypeShader->BindUBO(*m_uboPerFrame, "PerFrame");
 
 	// Expecting about 16 objects.
 	const unsigned int maxExpectedObjects = 16;
-	m_uboInfoPerObject = m_allShaders[0]->GetUniformBufferInfo()["PerObject"];
+	m_uboInfoPerObject = uboPrototypeShader->GetUniformBufferInfo()["PerObject"];
 	m_uboRing_PerObject = std::make_unique<gl::PersistentRingBuffer>(maxExpectedObjects * RoundSizeToUBOAlignment(m_uboInfoPerObject.bufferDataSizeByte) * 3);
 
 	// Light UBO.
 	const unsigned int maxExpectedLights = 16;
-	m_uboInfoSpotLight = m_allShaders[0]->GetUniformBufferInfo()["SpotLight"];
+	m_uboInfoSpotLight = uboPrototypeShader->GetUniformBufferInfo()["SpotLight"];
 	m_uboRing_SpotLight = std::make_unique<gl::PersistentRingBuffer>(maxExpectedLights * RoundSizeToUBOAlignment(m_uboInfoSpotLight.bufferDataSizeByte) * 3);
 
 	// Create voxelization module.
@@ -107,96 +109,92 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 
 Renderer::~Renderer()
 {
-	// Unregister all shader for auto reload on change.
-	for (auto it : m_allShaders)
-		ShaderFileWatcher::Instance().UnregisterShaderForReloadOnChange(it);
 }
 
-void Renderer::LoadShader()
+void Renderer::LoadAllShaders()
 {
-	m_shaderDebugGBuffer = std::make_unique<gl::ShaderObject>("gbuffer debug");
+	m_shaderDebugGBuffer = new gl::ShaderObject("gbuffer debug");
 	m_shaderDebugGBuffer->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
 	m_shaderDebugGBuffer->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/debuggbuffer.frag");
 	m_shaderDebugGBuffer->CreateProgram();
 
-	m_shaderFillGBuffer = std::make_unique<gl::ShaderObject>("fill gbuffer");
+	m_shaderFillGBuffer = new gl::ShaderObject("fill gbuffer");
 	m_shaderFillGBuffer->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/defaultmodel.vert");
 	m_shaderFillGBuffer->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/fillgbuffer.frag");
 	m_shaderFillGBuffer->CreateProgram();
 
-	m_shaderFillRSM = std::make_unique<gl::ShaderObject>("fill rsm");
+	m_shaderFillRSM = new gl::ShaderObject("fill rsm");
 	m_shaderFillRSM->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/defaultmodel_rsm.vert");
 	m_shaderFillRSM->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/fillrsm.frag");
 	m_shaderFillRSM->CreateProgram();
 
-	m_shaderDeferredDirectLighting_Spot = std::make_unique<gl::ShaderObject>("direct lighting - spot");
+	m_shaderDeferredDirectLighting_Spot = new gl::ShaderObject("direct lighting - spot");
 	m_shaderDeferredDirectLighting_Spot->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
 	m_shaderDeferredDirectLighting_Spot->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/directdeferredlighting.frag");
 	m_shaderDeferredDirectLighting_Spot->CreateProgram();
 
-	m_shaderTonemap = std::make_unique<gl::ShaderObject>("texture output");
+	m_shaderTonemap = new gl::ShaderObject("texture output");
 	m_shaderTonemap->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
 	m_shaderTonemap->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/tonemapping.frag");
 	m_shaderTonemap->CreateProgram();
 	m_shaderTonemap->Activate();
 	GL_CALL(glUniform1f, 0, m_exposure);
 
-	m_shaderCacheGather = std::make_unique<gl::ShaderObject>("cache gather");
+	m_shaderCacheGather = new gl::ShaderObject("cache gather");
 	m_shaderCacheGather->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cacheGather.comp");
 	m_shaderCacheGather->CreateProgram();
 
-	m_shaderCacheApply = std::make_unique<gl::ShaderObject>("apply caches");
-	m_shaderCacheApply->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
-	m_shaderCacheApply->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/cacheApply.frag");
-	m_shaderCacheApply->CreateProgram();
-
-	m_shaderLightCachesDirect = std::make_unique<gl::ShaderObject>("cache lighting direct");
+	m_shaderLightCachesDirect = new gl::ShaderObject("cache lighting direct");
 	m_shaderLightCachesDirect->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cacheLightingDirect.comp");
 	m_shaderLightCachesDirect->CreateProgram();
 
-	std::string define_specularEnvmapPerCacheSize_Texel = "#define SPECULARENVMAP_PERCACHESIZE " + std::to_string(m_specularEnvmapPerCacheSize) + "\n";
-	m_shaderLightCachesRSM = std::make_unique<gl::ShaderObject>("cache lighting rsm");
-	m_shaderLightCachesRSM->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cacheLightingRSM.comp", define_specularEnvmapPerCacheSize_Texel);
-	m_shaderLightCachesRSM->CreateProgram();
-
-	m_shaderLightCachesRSM_shadow = std::make_unique<gl::ShaderObject>("cache lighting rsm with indirect shadow");
-	m_shaderLightCachesRSM_shadow->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cacheLightingRSM.comp", "#define INDIRECT_SHADOW\n" + define_specularEnvmapPerCacheSize_Texel);
-	m_shaderLightCachesRSM_shadow->CreateProgram();
-
-	m_shaderLightCachePrepare = std::make_unique<gl::ShaderObject>("cache lighting prepare");
-	m_shaderLightCachePrepare->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cachePrepareLighting.comp");
-	m_shaderLightCachePrepare->CreateProgram();
-
-	m_shaderIndirectLightingBruteForceRSM = std::make_unique<gl::ShaderObject>("brute force rsm");
+	m_shaderIndirectLightingBruteForceRSM = new gl::ShaderObject("brute force rsm");
 	m_shaderIndirectLightingBruteForceRSM->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
 	m_shaderIndirectLightingBruteForceRSM->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/bruteforcersm.frag");
 	m_shaderIndirectLightingBruteForceRSM->CreateProgram();
 
-	m_shaderConeTraceAO = std::make_unique<gl::ShaderObject>("cone trace ao caches");
+	m_shaderConeTraceAO = new gl::ShaderObject("cone trace ao caches");
 	m_shaderConeTraceAO->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
 	m_shaderConeTraceAO->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/ambientocclusion.frag");
 	m_shaderConeTraceAO->CreateProgram();
 	
+	m_shaderLightCachePrepare = new gl::ShaderObject("cache lighting prepare");
+	m_shaderLightCachePrepare->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cachePrepareLighting.comp");
+	m_shaderLightCachePrepare->CreateProgram();
 
-
-	m_shaderSpecularEnvmapMipMap = std::make_unique<gl::ShaderObject>("specular envmap mipmap");
+	m_shaderSpecularEnvmapMipMap = new gl::ShaderObject("specular envmap mipmap");
 	m_shaderSpecularEnvmapMipMap->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/specularenvmap.vert");
 	m_shaderSpecularEnvmapMipMap->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/specularenvmap_mipmap.frag");
 	m_shaderSpecularEnvmapMipMap->CreateProgram();
 
-	m_shaderSpecularEnvmapFillHoles = std::make_unique<gl::ShaderObject>("specular fill holes");
+	m_shaderSpecularEnvmapFillHoles = new gl::ShaderObject("specular fill holes");
 	m_shaderSpecularEnvmapFillHoles->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/specularenvmap.vert");
 	m_shaderSpecularEnvmapFillHoles->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/specularenvmap_fillholes.frag");
 	m_shaderSpecularEnvmapFillHoles->CreateProgram();
 
+	ReloadSettingDependentCacheShader();
+}
 
-	// Register all shader for auto reload on change.
-	m_allShaders = { m_shaderDebugGBuffer.get(), m_shaderFillGBuffer.get(), m_shaderDeferredDirectLighting_Spot.get(), 
-		m_shaderTonemap.get(), m_shaderCacheGather.get(), m_shaderCacheApply.get(), m_shaderLightCachesDirect.get(), m_shaderLightCachesRSM.get(), m_shaderLightCachesRSM_shadow.get(),
-		m_shaderFillRSM.get(), m_shaderIndirectLightingBruteForceRSM.get(), m_shaderLightCachePrepare.get(), m_shaderConeTraceAO.get(), 
-		m_shaderSpecularEnvmapFillHoles.get(), m_shaderSpecularEnvmapMipMap.get() };
-	for (auto it : m_allShaders)
-		ShaderFileWatcher::Instance().RegisterShaderForReloadOnChange(it);
+void Renderer::ReloadSettingDependentCacheShader()
+{
+	std::string indirectSpecularSetting;
+	if(m_indirectSpecular)
+		indirectSpecularSetting = "#define INDIRECT_SPECULAR\n"
+								 "#define SPECULARENVMAP_PERCACHESIZE " + std::to_string(m_specularEnvmapPerCacheSize) + "\n";
+
+	std::string indirectShadowSetting;
+	if (m_indirectShadow)
+		indirectShadowSetting += "#define INDIRECT_SHADOW\n";
+
+
+	m_shaderLightCachesRSM = new gl::ShaderObject("cache lighting rsm");
+	m_shaderLightCachesRSM->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cacheLightingRSM.comp", indirectShadowSetting + indirectSpecularSetting);
+	m_shaderLightCachesRSM->CreateProgram();
+
+	m_shaderCacheApply = new gl::ShaderObject("apply caches");
+	m_shaderCacheApply->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
+	m_shaderCacheApply->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/cacheApply.frag", indirectSpecularSetting);
+	m_shaderCacheApply->CreateProgram();
 }
 
 void Renderer::UpdateConstantUBO()
@@ -232,7 +230,7 @@ void Renderer::UpdatePerFrameUBO(const Camera& camera)
 	float largestExtent = ei::max(extent);
 	VolumeWorldMax += ei::Vec3(largestExtent) - extent;
 
-	gl::MappedUBOView mappedMemory(m_allShaders[0]->GetUniformBufferInfo()["PerFrame"], m_uboPerFrame->Map(gl::Buffer::MapType::WRITE, gl::Buffer::MapWriteFlag::INVALIDATE_BUFFER));
+	gl::MappedUBOView mappedMemory(m_shaderLightCachesRSM->GetUniformBufferInfo()["PerFrame"], m_uboPerFrame->Map(gl::Buffer::MapType::WRITE, gl::Buffer::MapWriteFlag::INVALIDATE_BUFFER));
 	mappedMemory["Projection"].Set(projection);
 	//mappedMemory["View"].Set(view);
 	mappedMemory["ViewProjection"].Set(viewProjection);
@@ -314,14 +312,13 @@ void Renderer::Draw(const Camera& camera)
 		break;
 
 	case Mode::DIRECTONLY_CACHE:
-	case Mode::RSM_CACHE:
-	case Mode::RSM_CACHE_INDSHADOW:
-		if (m_mode == Mode::RSM_CACHE_INDSHADOW)
+	case Mode::DYN_RADIANCE_VOLUME:
+		if (m_indirectShadow)
 			m_voxelization->VoxelizeScene(*this);
 
 		m_uboRing_PerObject->CompleteFrame();
 
-		if (m_mode == Mode::RSM_CACHE_INDSHADOW)
+		if (m_indirectShadow)
 			m_voxelization->GenMipMap();
 
 		GatherLightCaches();
@@ -330,7 +327,7 @@ void Renderer::Draw(const Camera& camera)
 			CacheLightingDirect();
 		else
 		{
-			CacheLightingRSM(m_mode == Mode::RSM_CACHE_INDSHADOW);
+			CacheLightingRSM();
 			PrepareSpecularCacheEnvmaps();
 		}
 
@@ -342,7 +339,7 @@ void Renderer::Draw(const Camera& camera)
 
 		m_uboRing_SpotLight->CompleteFrame();
 
-		ApplyLightCaches(m_mode == Mode::RSM_CACHE_INDSHADOW);
+		ApplyLightCaches();
 
 		OutputHDRTextureToBackbuffer();
 		break;
@@ -549,6 +546,7 @@ void Renderer::DrawShadowMaps()
 void Renderer::DrawGBufferDebug()
 {
 	gl::Disable(gl::Cap::DEPTH_TEST);
+	gl::Disable(gl::Cap::CULL_FACE);
 	GL_CALL(glViewport, 0, 0, m_HDRBackbufferTexture->GetWidth(), m_HDRBackbufferTexture->GetHeight());
 
 	m_shaderDebugGBuffer->Activate();
@@ -561,8 +559,9 @@ void Renderer::DrawGBufferDebug()
 
 void Renderer::DrawLights()
 {
+	gl::Disable(gl::Cap::CULL_FACE);
 	gl::Disable(gl::Cap::DEPTH_TEST);
-	//gl::Enable(gl::Cap::BLEND);
+	gl::Enable(gl::Cap::BLEND);
 
 	m_shaderDeferredDirectLighting_Spot->Activate();
 
@@ -626,7 +625,7 @@ void Renderer::CacheLightingDirect()
 	}
 }
 
-void Renderer::CacheLightingRSM(bool indirectShadow)
+void Renderer::CacheLightingRSM()
 {
 	m_specularCacheEnvmap->ClearToZero();
 	m_specularCacheEnvmap->BindImage(0, gl::Texture::ImageAccess::WRITE);
@@ -639,14 +638,13 @@ void Renderer::CacheLightingRSM(bool indirectShadow)
 	m_samplerLinearClamp.BindSampler(1); // filtering allowed for depthLinSq
 	m_samplerNearest.BindSampler(2);
 
-	if (indirectShadow)
+	if (m_indirectShadow)
 	{
 		m_samplerLinearClamp.BindSampler(4);
 		m_voxelization->GetVoxelTexture().Bind(4);
-		m_shaderLightCachesRSM_shadow->Activate();
 	}
-	else
-		m_shaderLightCachesRSM->Activate();
+	
+	m_shaderLightCachesRSM->Activate();
 
 	GL_CALL(glMemoryBarrier, GL_SHADER_STORAGE_BARRIER_BIT | GL_COMMAND_BARRIER_BIT);
 
@@ -770,7 +768,7 @@ void Renderer::PrepareSpecularCacheEnvmaps()
 	GL_CALL(glColorMask, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 }
 
-void Renderer::ApplyLightCaches(bool contactShadowFix)
+void Renderer::ApplyLightCaches()
 {
 	gl::Disable(gl::Cap::CULL_FACE);
 	gl::Disable(gl::Cap::DEPTH_TEST);
@@ -785,7 +783,7 @@ void Renderer::ApplyLightCaches(bool contactShadowFix)
 	m_lightCacheAddressVolume->Bind(4);
 	m_samplerNearest.BindSampler(4);
 
-	if (contactShadowFix)
+	if (m_indirectShadow)
 	{
 		m_voxelization->GetVoxelTexture().Bind(5);
 		m_samplerLinearClamp.BindSampler(5);

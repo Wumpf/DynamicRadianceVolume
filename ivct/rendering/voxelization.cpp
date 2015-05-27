@@ -4,8 +4,6 @@
 #include "../scene/scene.hpp"
 #include "renderer.hpp"
 
-#include "../shaderfilewatcher.hpp"
-
 #include <algorithm>
 
 #include <glhelper/samplerobject.hpp>
@@ -24,29 +22,22 @@ Voxelization::Voxelization(unsigned int resolution) :
 {
 	m_screenTriangle = std::make_unique<gl::ScreenAlignedTriangle>();
 
-	m_shaderVoxelize = std::make_unique<gl::ShaderObject>("voxelization");
+	m_shaderVoxelize = new gl::ShaderObject("voxelization");
 	m_shaderVoxelize->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/voxelize.vert");
 	m_shaderVoxelize->AddShaderFromFile(gl::ShaderObject::ShaderType::GEOMETRY, "shader/voxelize.geom");
 	m_shaderVoxelize->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/voxelize.frag");
 	m_shaderVoxelize->CreateProgram();
 
-	m_shaderVoxelDebug = std::make_unique<gl::ShaderObject>("voxel debug");
+	m_shaderVoxelDebug = new gl::ShaderObject("voxel debug");
 	m_shaderVoxelDebug->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
 	m_shaderVoxelDebug->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/voxeldebug.frag");
 	m_shaderVoxelDebug->CreateProgram();
 
 	m_voxelSceneTexture = std::make_unique<gl::Texture3D>(resolution, resolution, resolution, gl::TextureFormat::R8, 0);
-
-
-	// Register all shader for auto reload on change.
-	ShaderFileWatcher::Instance().RegisterShaderForReloadOnChange(m_shaderVoxelDebug.get());
-	ShaderFileWatcher::Instance().RegisterShaderForReloadOnChange(m_shaderVoxelize.get());
 }
 
 Voxelization::~Voxelization()
 {
-	ShaderFileWatcher::Instance().UnregisterShaderForReloadOnChange(m_shaderVoxelDebug.get());
-	ShaderFileWatcher::Instance().UnregisterShaderForReloadOnChange(m_shaderVoxelize.get());
 }
 
 void Voxelization::DrawVoxelRepresentation()

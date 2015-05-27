@@ -32,16 +32,16 @@ void main()
 	vec3 toCamera = normalize(vec3(CameraPosition - worldPosition));
 	
 	// Evaluate direct light.
-	vec3 scaledIntensity = LightIntensity * (shadowing * ComputeSpotFalloff(toLight) / lightDistanceSq);
+	vec3 radiance = LightIntensity * (shadowing * ComputeSpotFalloff(toLight) / lightDistanceSq);
 
 
 	// Diffuse
 /*	const float factor0 = sqrt(PI) / 2.0;
 	const float factor1 = sqrt(PI / 3.0);
-	vec3 SH00 = factor0 * scaledIntensity;
-	vec3 SH1neg1 = -(factor1 * toLight.y) * scaledIntensity;
-	vec3 SH10 = (factor1 * toLight.z) * scaledIntensity;
-	vec3 SH1pos1 = -(factor1 * toLight.x) * scaledIntensity;
+	vec3 SH00 = factor0 * radiance;
+	vec3 SH1neg1 = -(factor1 * toLight.y) * radiance;
+	vec3 SH10 = (factor1 * toLight.z) * radiance;
+	vec3 SH1pos1 = -(factor1 * toLight.x) * radiance;
 
 
 	// Specular
@@ -49,19 +49,19 @@ void main()
 
 	const float specFactor0 = sqrt(PI);
 	const float specFactor1 = sqrt(3*PI);
-	vec3 spec_SH00 = specFactor0 * scaledIntensity;
-	vec3 spec_SH1neg1 = -(specFactor1 * halfVector.y) * scaledIntensity;
-	vec3 spec_SH10 = (specFactor1 * halfVector.z) * scaledIntensity;
-	vec3 spec_SH1pos1 = -(specFactor1 * halfVector.x) * scaledIntensity;
+	vec3 spec_SH00 = specFactor0 * radiance;
+	vec3 spec_SH1neg1 = -(specFactor1 * halfVector.y) * radiance;
+	vec3 spec_SH10 = (specFactor1 * halfVector.z) * radiance;
+	vec3 spec_SH1pos1 = -(specFactor1 * halfVector.x) * radiance;
 
 
 	const float specFactor2 = sqrt(15.0 * PI) / 2.0;
 	const float specFactor3 = sqrt(5.0 * PI) / 4.0;
-	vec3 spec_SH2neg2 = (specFactor2 * halfVector.x * halfVector.y) * scaledIntensity;
-	vec3 spec_SH2neg1 = -(specFactor2 * halfVector.y * halfVector.z) * scaledIntensity;
-	vec3 spec_SH20 = (specFactor3 * (halfVector.z * halfVector.z * 3.0 - 1.0)) * scaledIntensity;
-	vec3 spec_SH2pos1 = -(specFactor2 * halfVector.x * halfVector.z) * scaledIntensity;
-	vec3 spec_SH2pos2 = (specFactor2 * (halfVector.x * halfVector.x - halfVector.y * halfVector.y)) * scaledIntensity; 
+	vec3 spec_SH2neg2 = (specFactor2 * halfVector.x * halfVector.y) * radiance;
+	vec3 spec_SH2neg1 = -(specFactor2 * halfVector.y * halfVector.z) * radiance;
+	vec3 spec_SH20 = (specFactor3 * (halfVector.z * halfVector.z * 3.0 - 1.0)) * radiance;
+	vec3 spec_SH2pos1 = -(specFactor2 * halfVector.x * halfVector.z) * radiance;
+	vec3 spec_SH2pos2 = (specFactor2 * (halfVector.x * halfVector.x - halfVector.y * halfVector.y)) * radiance; 
 
 
 	// Save to buffer.

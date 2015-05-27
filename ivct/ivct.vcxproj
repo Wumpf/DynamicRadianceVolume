@@ -195,7 +195,8 @@
     <ClCompile Include="scene\scene.cpp" />
     <ClCompile Include="scene\sceneentity.cpp" />
     <ClCompile Include="scene\texturemanager.cpp" />
-    <ClCompile Include="shaderfilewatcher.cpp" />
+    <ClCompile Include="shaderreload\shaderfilewatcher.cpp" />
+    <ClCompile Include="shaderreload\autoreloadshaderptr.cpp" />
     <ClCompile Include="Time\Implementation\Stopwatch.cpp" />
     <ClCompile Include="Time\Implementation\Time.cpp" />
     <ClCompile Include="utilities\assert.cpp" />
@@ -242,7 +243,8 @@
     <ClInclude Include="scene\scene.hpp" />
     <ClInclude Include="scene\sceneentity.hpp" />
     <ClInclude Include="scene\texturemanager.hpp" />
-    <ClInclude Include="shaderfilewatcher.hpp" />
+    <ClInclude Include="shaderreload\shaderfilewatcher.hpp" />
+    <ClInclude Include="shaderreload\autoreloadshaderptr.hpp" />
     <ClInclude Include="Time\Implementation\Time_inl.h" />
     <ClInclude Include="Time\Stopwatch.h" />
     <ClInclude Include="Time\Time.h" />

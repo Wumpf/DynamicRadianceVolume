@@ -5,8 +5,8 @@
 
 #include <stb_image.h>
 
-const float TextureManager::s_defaultRoughness = 0.2f;
-const float TextureManager::s_defaultMetallic = 0.0f;
+const float TextureManager::s_defaultRoughness = 0.4f;
+const float TextureManager::s_defaultMetallic = 0.01f;
 
 TextureManager& TextureManager::GetInstance()
 {

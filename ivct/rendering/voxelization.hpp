@@ -3,6 +3,7 @@
 #include <memory>
 #include <ei/vector.hpp>
 #include "camera/camera.hpp"
+#include "../shaderreload/autoreloadshaderptr.hpp"
 
 namespace gl
 {
@@ -41,8 +42,8 @@ public:
 private:
 	std::unique_ptr<gl::ScreenAlignedTriangle> m_screenTriangle;
 
-	std::unique_ptr<gl::ShaderObject> m_shaderVoxelize;
-	std::unique_ptr<gl::ShaderObject> m_shaderVoxelDebug;
+	AutoReloadShaderPtr m_shaderVoxelize;
+	AutoReloadShaderPtr m_shaderVoxelDebug;
 
 	std::unique_ptr<gl::Texture3D> m_voxelSceneTexture;
 
