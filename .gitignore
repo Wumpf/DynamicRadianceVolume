@@ -38,7 +38,7 @@
 
 # Build directories
 /x64
-/ivct/x64
+/DynamicRadianceVolume/x64
 
 # Non-submodule dependencies or local replica in /dependencies/ path
 /dependencies/glew
@@ -47,9 +47,13 @@
 
 # Data
 /models/
-/ivct/FileWatcher/FileWatcherLinux.cpp
-/ivct/FileWatcher/FileWatcherLinux.h
-/ivct/FileWatcher/FileWatcherOSX.cpp
-/ivct/FileWatcher/FileWatcherOSX.h
-/ivct/log.txt
-/ivct/shader/experiments
+
+# Code
+/DynamicRadianceVolume/FileWatcher/FileWatcherLinux.cpp
+/DynamicRadianceVolume/FileWatcher/FileWatcherLinux.h
+/DynamicRadianceVolume/FileWatcher/FileWatcherOSX.cpp
+/DynamicRadianceVolume/FileWatcher/FileWatcherOSX.h
+/DynamicRadianceVolume/shader/experiments
+
+# Runtime generated data
+/DynamicRadianceVolume/log.txt
