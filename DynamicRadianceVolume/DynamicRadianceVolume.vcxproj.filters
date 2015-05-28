@@ -195,6 +195,9 @@
     <ClCompile Include="shaderreload\autoreloadshaderptr.cpp">
       <Filter>source\shaderreload</Filter>
     </ClCompile>
+    <ClCompile Include="tweakbarsetup.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="outputwindow.hpp">

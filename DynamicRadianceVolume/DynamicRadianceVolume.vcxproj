@@ -199,6 +199,7 @@
     <ClCompile Include="shaderreload\autoreloadshaderptr.cpp" />
     <ClCompile Include="Time\Implementation\Stopwatch.cpp" />
     <ClCompile Include="Time\Implementation\Time.cpp" />
+    <ClCompile Include="tweakbarsetup.cpp" />
     <ClCompile Include="utilities\assert.cpp" />
     <ClCompile Include="utilities\color.cpp" />
     <ClCompile Include="utilities\logger.cpp" />
