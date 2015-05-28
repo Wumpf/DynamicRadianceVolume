@@ -382,7 +382,8 @@ void Renderer::Draw(const Camera& camera)
 		else
 		{
 			LightCachesRSM();
-			PrepareSpecularCacheEnvmaps();
+			if (m_indirectSpecular)
+				PrepareSpecularCacheEnvmaps();
 		}
 
 		m_HDRBackbuffer->Bind(true);
