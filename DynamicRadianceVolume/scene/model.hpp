@@ -10,6 +10,8 @@
 #include <glhelper/gl.hpp>
 #include <glhelper/texture2d.hpp>
 
+#include <json/json.h>
+
 namespace gl
 {
 	class Buffer;
@@ -20,8 +22,12 @@ class Model
 {
 public:
 	/// Loads a model from a given filename.
+	/// Checks first if there is a json with the model information. If not or if not valid the given filename will be loaded.
+	/// 
+	/// \param writeRawIfNotFound
+	///		If true and no json was found, a new json and vertex buffer file will be written.
 	/// \return nullptr if the path is invalid or the file could not be loaded.
-	static std::shared_ptr<Model> FromFile(const std::string& filename);
+	static std::shared_ptr<Model> FromFile(const std::string& filename, bool writeRawIfNotFound = true);
 
 	~Model();
 
@@ -31,13 +37,22 @@ public:
 	{
 		Mesh() : startIndex(0), numIndices(0) {}
 		
+		/// Loads textures from origin values.
+		/// \param directory
+		///		Directory to which the texture filenames are relative.
+		void LoadTextures(const std::string& directory);
+
 		unsigned int startIndex;
 		unsigned int numIndices;
 
-		// All textures are always present. If only a single value is available, a 1x1 texture is generated at loading time.
 		std::shared_ptr<gl::Texture2D> diffuse;
 		std::shared_ptr<gl::Texture2D> normalmap;	// Tangent space normals RGB -> XZY*2.0 - 1.0
-		std::shared_ptr<gl::Texture2D> roughnessMetalic; // Combined texture of roughness (R) and metallic values (G)
+		std::shared_ptr<gl::Texture2D> roughnessMetallic; // Combined texture of roughness (R) and metallic values (G)
+
+		Json::Value diffuseOrigin;
+		Json::Value normalmapOrigin;
+		Json::Value roughnessOrigin;
+		Json::Value metallicOrigin;
 	};
 
 	struct Vertex
@@ -64,6 +79,20 @@ public:
 private:
 	Model(const std::string& originFilename);
 
+	void SaveRaw(const std::string& filename, const Vertex* rawVertexData, const std::uint32_t* rawIndexData) const;
+	/// \param filename
+	///		Filename of the json file.
+	/// \param directory
+	///		Directory used for all relative paths (raw, textures)
+	static std::shared_ptr<Model> LoadFromRaw(const std::string& filename, const std::string& directory);
+
+	/// \param filename
+	///		Filename of the model file.
+	/// \param directory
+	///		Directory used for all relative paths (textures)
+	static std::shared_ptr<Model> LoadViaAssimp(const std::string& filename, const std::string& directory, 
+												std::unique_ptr<Vertex[]>& outVertices, std::unique_ptr<std::uint32_t[]>& outIndices);
+
 	static std::unique_ptr<gl::VertexArrayObject> m_vertexArrayObject;
 
 	const std::string m_originFilename;
@@ -77,5 +106,7 @@ private:
 	std::unique_ptr<gl::Buffer> m_indexBuffer;
 
 	ei::Box m_boundingBox;
+
+	static const unsigned int m_rawModelVersion;
 };
 

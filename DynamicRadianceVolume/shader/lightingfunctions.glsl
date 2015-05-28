@@ -22,9 +22,11 @@ float ComputeSpotFalloff(vec3 toLight)
 // - http://www.marmoset.co/toolbag/learn/pbr-practice
 // - Unity Material charts http://blogs.unity3d.com/2015/02/18/working-with-physically-based-shading-a-practical-approach/
 // 		(this gives a good hint of what they do internally with metallic) 
+// - General pbr math and some lookup values http://blog.selfshadow.com/publications/s2014-shading-course/hoffman/s2014_pbs_physics_math_slides.pdf
 
 float RoughnessToBlinnExponent(float roughness)
 {
+	//roughness = 1.0 - roughness;
 	float rsq = roughness * roughness;
 	return 2 / (rsq * rsq + 0.0005); // similar to http://graphicrants.blogspot.de/2013/08/specular-brdf-reference.html
 }
@@ -35,7 +37,7 @@ float BlinnNormalization(float blinnExponent)
 void ComputeMaterialColors(vec3 baseColor, float metallic, out vec3 diffuseColor, out vec3 specularColor)
 {
 	diffuseColor = mix(baseColor, vec3(0.02), metallic);	// Almost dark for Metalic values
-	specularColor = mix(vec3(0.0356), baseColor, metallic); // Greyish for specular. Matches value of Marmoset Tutorial which fits into the range given at the unity material chart.
+	specularColor = mix(vec3(0.04), baseColor, metallic); 	// Greyish for specular. 0.04 is about the the default for everything except metall http://blog.selfshadow.com/publications/s2014-shading-course/hoffman/s2014_pbs_physics_math_slides.pdf
 }
 
 // Evaluates default BRDF.

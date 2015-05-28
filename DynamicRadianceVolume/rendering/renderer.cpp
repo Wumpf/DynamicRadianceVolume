@@ -874,10 +874,10 @@ void Renderer::DrawScene(bool setTextures)
 			{
 				Assert(mesh.diffuse, "Mesh has no diffuse texture. This is not supported by the renderer.");
 				Assert(mesh.normalmap, "Mesh has no normal map. This is not supported by the renderer.");
-				Assert(mesh.roughnessMetalic, "Mesh has no roughnessMetallic map. This is not supported by the renderer.");
+				Assert(mesh.roughnessMetallic, "Mesh has no roughnessMetallic map. This is not supported by the renderer.");
 				mesh.diffuse->Bind(0);
 				mesh.normalmap->Bind(1);
-				mesh.roughnessMetalic->Bind(2);
+				mesh.roughnessMetallic->Bind(2);
 			}
 			GL_CALL(glDrawElements, GL_TRIANGLES, mesh.numIndices, GL_UNSIGNED_INT, reinterpret_cast<const void*>(sizeof(std::uint32_t) * mesh.startIndex));
 		}

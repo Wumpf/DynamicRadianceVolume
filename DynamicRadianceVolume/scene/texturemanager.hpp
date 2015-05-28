@@ -38,22 +38,22 @@ public:
 
 
 
+	/// If metallicTexture is empty, will fallback to default metallic.
 	std::shared_ptr<gl::Texture2D> GetRoughnessMetallic(const std::string& roughnessTexture, const std::string& metallicTexture);
+	std::shared_ptr<gl::Texture2D> GetRoughnessMetallic(const std::string& roughnessTexture, float metallicValue);
+	std::shared_ptr<gl::Texture2D> GetRoughnessMetallic(float roughnessTexture, const std::string& metallicTexture);
+	std::shared_ptr<gl::Texture2D> GetRoughnessMetallic(float roughnessValue, float metallicValue);
 
-	std::shared_ptr<gl::Texture2D> GetRoughnessMetallic(const std::string& roughnessTexture) { GetRoughnessMetallic(roughnessTexture, ""); }
 
-	std::shared_ptr<gl::Texture2D> GetDefaultRoughnessMetallic() { return m_defaultRoughnessMetallic; }
-
+	static const float s_defaultRoughness;
+	static const float s_defaultMetallic;
 
 private:
 	TextureManager();
 	~TextureManager();
 
-	static const float s_defaultRoughness;
-	static const float s_defaultMetallic;
 
 	std::shared_ptr<gl::Texture2D> m_defaultNormalmap;
-	std::shared_ptr<gl::Texture2D> m_defaultRoughnessMetallic;
 	std::unordered_map<std::string, std::shared_ptr<gl::Texture2D>> m_diffuseTextures;
 	std::unordered_map<std::string, std::shared_ptr<gl::Texture2D>> m_normalmapTextures;
 	std::unordered_map<std::string, std::shared_ptr<gl::Texture2D>> m_roughnessMetallicTextures;
