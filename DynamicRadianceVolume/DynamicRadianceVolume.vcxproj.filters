@@ -198,6 +198,9 @@
     <ClCompile Include="tweakbarsetup.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="frameprofiler.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="outputwindow.hpp">
@@ -352,6 +355,9 @@
     </ClInclude>
     <ClInclude Include="shaderreload\autoreloadshaderptr.hpp">
       <Filter>source\shaderreload</Filter>
+    </ClInclude>
+    <ClInclude Include="frameprofiler.hpp">
+      <Filter>source</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

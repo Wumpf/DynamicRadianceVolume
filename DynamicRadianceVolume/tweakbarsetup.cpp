@@ -11,6 +11,7 @@
 #include "camera/interactivecamera.hpp"
 
 #include "anttweakbarinterface.hpp"
+#include "frameprofiler.hpp"
 
 void Application::ChangeEntityCount(unsigned int entityCount)
 {
@@ -133,12 +134,20 @@ void Application::SetupTweakBarBinding()
 {
 	m_tweakBar = std::make_unique<AntTweakBarInterface>(m_window->GetGLFWWindow());
 
+	// general save/load
 	{
-		m_tweakBar->AddReadOnly("Frametime (ms)", [&](){ return std::to_string(m_timeSinceLastUpdate.GetMilliseconds()); });
 		m_tweakBar->AddButton("Save Settings", [&](){ m_tweakBar->SaveReadWriteValuesToJSON(SaveFileDialog("settings.json", ".json")); });
 		m_tweakBar->AddButton("Load Settings", [&](){ m_tweakBar->LoadReadWriteValuesToJSON(OpenFileDialog()); });
 		m_tweakBar->AddButton("Save HDR Image", [&](){ std::string filename = SaveFileDialog("image.pfm", ".pfm"); if (!filename.empty()) m_renderer->SaveToPFM(filename); });
-		m_tweakBar->AddSeperator("main");
+		m_tweakBar->AddSeperator("main save/load");
+	}
+
+	// Statistics
+	{
+		std::string statisticGroup = " group=\"Timer Statistics\"";
+		m_tweakBar->AddReadOnly("TotalFrame", []{ return FrameProfiler::GetInstance().GetFrameDurations().empty() ? "" : std::to_string(FrameProfiler::GetInstance().GetFrameDurations().back() / 1000.0); }, statisticGroup);
+		m_tweakBar->AddReadOnly("#Recorded", []{ return std::to_string(FrameProfiler::GetInstance().GetFrameDurations().size()); }, statisticGroup);
+		m_tweakBar->AddButton("Save CSV", [&](){ std::string filename = SaveFileDialog("timestats.csv", ".csv"); if (!filename.empty()) FrameProfiler::GetInstance().SaveToCSV(filename); }, statisticGroup);
 	}
 
 	// Render mode settings

@@ -11,6 +11,7 @@
 
 #include "shaderreload/shaderfilewatcher.hpp"
 #include "anttweakbarinterface.hpp"
+#include "frameprofiler.hpp"
 
 #undef APIENTRY
 #include <windows.h>
@@ -180,6 +181,8 @@ void Application::Draw()
 	m_renderer->Draw(*m_camera);
 	m_tweakBar->Draw();
 	m_window->Present();
+
+	FrameProfiler::GetInstance().OnFrameEnd();
 }
 
 void Application::Input()

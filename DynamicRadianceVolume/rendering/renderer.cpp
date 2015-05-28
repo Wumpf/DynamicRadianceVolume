@@ -9,6 +9,8 @@
 #include "../scene/scene.hpp"
 #include "../camera/camera.hpp"
 
+#include "../frameprofiler.hpp"
+
 #include <glhelper/samplerobject.hpp>
 #include <glhelper/shaderobject.hpp>
 #include <glhelper/texture3d.hpp>
@@ -17,6 +19,7 @@
 #include <glhelper/framebufferobject.hpp>
 #include <glhelper/statemanagement.hpp>
 #include <glhelper/utils/flagoperators.hpp>
+
 
 Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& resolution) :
 	m_samplerLinearRepeat(gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR,
@@ -329,14 +332,18 @@ void Renderer::SetScene(const std::shared_ptr<const Scene>& scene)
 
 void Renderer::Draw(const Camera& camera)
 {
+	
+
 	// All SRGB frame buffer textures should be do a conversion on writing to them.
 	// This also applies to the backbuffer.
 	gl::Enable(gl::Cap::FRAMEBUFFER_SRGB);
 
 	// Update data.
+	PROFILE_GPU_EVENT_START(PrepareUBOs)
 	UpdatePerFrameUBO(camera);
 	UpdatePerObjectUBORingBuffer();
 	PrepareLights();
+	PROFILE_GPU_EVENT_END(PrepareUBOs)
 
 	// Scene dependent renderings.
 	DrawSceneToGBuffer();
@@ -349,7 +356,7 @@ void Renderer::Draw(const Camera& camera)
 
 		m_HDRBackbuffer->Bind(true);
 		GL_CALL(glClear, GL_COLOR_BUFFER_BIT);
-		DrawLights();
+		ApplyDirectLighting();
 
 		ApplyRSMsBruteForce();
 
@@ -368,13 +375,13 @@ void Renderer::Draw(const Camera& camera)
 		if (m_indirectShadow)
 			m_voxelization->GenMipMap();
 
-		GatherLightCaches();
+		AllocateCaches();
 
 		if (m_mode == Mode::DIRECTONLY_CACHE)
-			CacheLightingDirect();
+			LightCachesDirect();
 		else
 		{
-			CacheLightingRSM();
+			LightCachesRSM();
 			PrepareSpecularCacheEnvmaps();
 		}
 
@@ -382,11 +389,11 @@ void Renderer::Draw(const Camera& camera)
 		GL_CALL(glClear, GL_COLOR_BUFFER_BIT);
 
 		if (m_mode != Mode::DIRECTONLY_CACHE)
-			DrawLights();
+			ApplyDirectLighting();
 
 		m_uboRing_SpotLight->CompleteFrame();
 
-		ApplyLightCaches();
+		ApplyCaches();
 
 		OutputHDRTextureToBackbuffer();
 		break;
@@ -397,7 +404,7 @@ void Renderer::Draw(const Camera& camera)
 
 		m_HDRBackbuffer->Bind(true);
 		GL_CALL(glClear, GL_COLOR_BUFFER_BIT);
-		DrawLights();
+		ApplyDirectLighting();
 
 		m_uboRing_SpotLight->CompleteFrame();
 
@@ -556,6 +563,8 @@ void Renderer::OutputHDRTextureToBackbuffer()
 
 void Renderer::DrawSceneToGBuffer()
 {
+	PROFILE_GPU_EVENT_SCOPED(DrawSceneToGBuffer);
+
 	gl::Enable(gl::Cap::DEPTH_TEST);
 	gl::SetDepthWrite(true);
 
@@ -569,6 +578,8 @@ void Renderer::DrawSceneToGBuffer()
 
 void Renderer::DrawShadowMaps()
 {
+	PROFILE_GPU_EVENT_SCOPED(DrawShadowMaps);
+
 	gl::Enable(gl::Cap::DEPTH_TEST);
 	gl::SetDepthWrite(true);
 
@@ -604,8 +615,10 @@ void Renderer::DrawGBufferDebug()
 	m_screenTriangle->Draw();
 }
 
-void Renderer::DrawLights()
+void Renderer::ApplyDirectLighting()
 {
+	PROFILE_GPU_EVENT_SCOPED(ApplyDirectLighting);
+
 	gl::Disable(gl::Cap::CULL_FACE);
 	gl::Disable(gl::Cap::DEPTH_TEST);
 	gl::Enable(gl::Cap::BLEND);
@@ -651,8 +664,10 @@ void Renderer::ApplyRSMsBruteForce()
 	gl::Disable(gl::Cap::BLEND);
 }
 
-void Renderer::CacheLightingDirect()
+void Renderer::LightCachesDirect()
 {
+	PROFILE_GPU_EVENT_SCOPED(LightCaches);
+
 	m_lightCacheCounter->BindIndirectDispatchBuffer();
 	m_shaderLightCachesDirect->BindSSBO(*m_lightCacheBuffer, "LightCacheBuffer");
 	m_shaderLightCachesDirect->BindSSBO(*m_lightCacheCounter, "LightCacheCounter");
@@ -672,8 +687,10 @@ void Renderer::CacheLightingDirect()
 	}
 }
 
-void Renderer::CacheLightingRSM()
+void Renderer::LightCachesRSM()
 {
+	PROFILE_GPU_EVENT_SCOPED(LightCaches);
+
 	m_specularCacheEnvmap->ClearToZero();
 	m_specularCacheEnvmap->BindImage(0, gl::Texture::ImageAccess::WRITE);
 
@@ -724,8 +741,10 @@ void Renderer::ConeTraceAO()
 	m_screenTriangle->Draw();
 }
 
-void Renderer::GatherLightCaches()
+void Renderer::AllocateCaches()
 {
+	PROFILE_GPU_EVENT_SCOPED(AllocateCaches);
+
 	gl::Disable(gl::Cap::CULL_FACE);
 	gl::Disable(gl::Cap::DEPTH_TEST);
 	gl::SetDepthWrite(false);
@@ -767,6 +786,8 @@ void Renderer::GatherLightCaches()
 
 void Renderer::PrepareSpecularCacheEnvmaps()
 {
+	PROFILE_GPU_EVENT_SCOPED(ProcessSpecularEnvmap);
+
 	gl::Disable(gl::Cap::CULL_FACE);
 	gl::Disable(gl::Cap::DEPTH_TEST);
 	gl::SetDepthWrite(false);
@@ -815,8 +836,10 @@ void Renderer::PrepareSpecularCacheEnvmaps()
 	GL_CALL(glColorMask, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 }
 
-void Renderer::ApplyLightCaches()
+void Renderer::ApplyCaches()
 {
+	PROFILE_GPU_EVENT_SCOPED(ApplyCaches);
+
 	gl::Disable(gl::Cap::CULL_FACE);
 	gl::Disable(gl::Cap::DEPTH_TEST);
 	gl::Enable(gl::Cap::BLEND);

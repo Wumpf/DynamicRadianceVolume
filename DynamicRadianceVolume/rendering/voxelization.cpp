@@ -15,6 +15,8 @@
 #include <glhelper/utils/flagoperators.hpp>
 #include <glhelper/framebufferobject.hpp>
 
+#include "../frameprofiler.hpp"
+
 
 Voxelization::Voxelization(unsigned int resolution) :
 	m_samplerLinearMipNearest(gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR,
@@ -60,6 +62,8 @@ void Voxelization::DrawVoxelRepresentation()
 
 void Voxelization::VoxelizeScene(Renderer& renderer)
 {
+	PROFILE_GPU_EVENT_SCOPED(VoxelizeScene);
+
 	m_voxelSceneTexture->ClearToZero();
 
 	// Disable depthbuffering & culling
@@ -101,5 +105,6 @@ void Voxelization::VoxelizeScene(Renderer& renderer)
 
 void Voxelization::GenMipMap()
 {
+	PROFILE_GPU_EVENT_SCOPED(VoxelMipMap);
 	m_voxelSceneTexture->GenMipMaps();
 }

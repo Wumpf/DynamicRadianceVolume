@@ -138,19 +138,19 @@ private:
 	void DrawGBufferDebug();
 
 	/// Performs direct lighting for all lights.
-	void DrawLights();
+	void ApplyDirectLighting();
 	
 	void ApplyRSMsBruteForce();
 
 	void OutputHDRTextureToBackbuffer();
 
-	void GatherLightCaches();
-	void ApplyLightCaches();
+	void AllocateCaches();
+	void ApplyCaches();
 
 	/// Applies direct light to caches (mainly for debug purposes)
-	void CacheLightingDirect();
+	void LightCachesDirect();
 	/// Applies indirect light to caches (the way its meant to be used)
-	void CacheLightingRSM();
+	void LightCachesRSM();
 
 
 	void ConeTraceAO();

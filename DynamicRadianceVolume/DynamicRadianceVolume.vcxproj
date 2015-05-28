@@ -186,6 +186,7 @@
     <ClCompile Include="camera\interactivecamera.cpp" />
     <ClCompile Include="FileWatcher\FileWatcher.cpp" />
     <ClCompile Include="FileWatcher\FileWatcherWin32.cpp" />
+    <ClCompile Include="frameprofiler.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="outputwindow.cpp" />
     <ClCompile Include="rendering\hdrimage.cpp" />
@@ -234,6 +235,7 @@
     <ClInclude Include="FileWatcher\FileWatcher.h" />
     <ClInclude Include="FileWatcher\FileWatcherImpl.h" />
     <ClInclude Include="FileWatcher\FileWatcherWin32.h" />
+    <ClInclude Include="frameprofiler.hpp" />
     <ClInclude Include="glhelperconfig.hpp" />
     <ClInclude Include="outputwindow.hpp" />
     <ClInclude Include="rendering\hdrimage.hpp" />
