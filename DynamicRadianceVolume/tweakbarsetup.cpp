@@ -144,10 +144,13 @@ void Application::SetupTweakBarBinding()
 
 	// Statistics
 	{
-		std::string statisticGroup = " group=\"Timer Statistics\"";
-		m_tweakBar->AddReadOnly("TotalFrame", []{ return FrameProfiler::GetInstance().GetFrameDurations().empty() ? "" : std::to_string(FrameProfiler::GetInstance().GetFrameDurations().back() / 1000.0); }, statisticGroup);
-		m_tweakBar->AddReadOnly("#Recorded", []{ return std::to_string(FrameProfiler::GetInstance().GetFrameDurations().size()); }, statisticGroup);
-		m_tweakBar->AddButton("Save CSV", [&](){ std::string filename = SaveFileDialog("timestats.csv", ".csv"); if (!filename.empty()) FrameProfiler::GetInstance().SaveToCSV(filename); }, statisticGroup);
+		m_tweakBar->AddButton("Clear stats", [](){ FrameProfiler::GetInstance().WaitForQueryResults();  FrameProfiler::GetInstance().Clear(); }, m_tweakBarStatisticGroupName);
+		m_tweakBar->AddButton("Save CSV", [&](){ std::string filename = SaveFileDialog("timestats.csv", ".csv"); if (!filename.empty()) FrameProfiler::GetInstance().SaveToCSV(filename); }, m_tweakBarStatisticGroupName);
+		m_tweakBar->AddReadWrite<bool>("GPU Queries Active", []{ return FrameProfiler::GetInstance().GetGPUProfilingActive(); }, [](bool active){ FrameProfiler::GetInstance().SetGPUProfilingActive(active); }, m_tweakBarStatisticGroupName);
+
+		m_tweakBar->AddReadOnly("TotalFrame", []{ return FrameProfiler::GetInstance().GetFrameDurations().empty() ? "" : std::to_string(FrameProfiler::GetInstance().GetFrameDurations().back() / 1000.0); }, m_tweakBarStatisticGroupName);
+		m_tweakBar->AddReadOnly("#Recorded", []{ return std::to_string(FrameProfiler::GetInstance().GetFrameDurations().size()); }, m_tweakBarStatisticGroupName);
+		m_tweakBar->AddSeperator("GPU Queries:", m_tweakBarStatisticGroupName);
 	}
 
 	// Render mode settings

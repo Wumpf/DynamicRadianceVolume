@@ -339,11 +339,11 @@ void Renderer::Draw(const Camera& camera)
 	gl::Enable(gl::Cap::FRAMEBUFFER_SRGB);
 
 	// Update data.
-	PROFILE_GPU_EVENT_START(PrepareUBOs)
+	PROFILE_GPU_START(PrepareUBOs)
 	UpdatePerFrameUBO(camera);
 	UpdatePerObjectUBORingBuffer();
 	PrepareLights();
-	PROFILE_GPU_EVENT_END(PrepareUBOs)
+	PROFILE_GPU_END()
 
 	// Scene dependent renderings.
 	DrawSceneToGBuffer();
@@ -563,7 +563,7 @@ void Renderer::OutputHDRTextureToBackbuffer()
 
 void Renderer::DrawSceneToGBuffer()
 {
-	PROFILE_GPU_EVENT_SCOPED(DrawSceneToGBuffer);
+	PROFILE_GPU_SCOPED(DrawSceneToGBuffer);
 
 	gl::Enable(gl::Cap::DEPTH_TEST);
 	gl::SetDepthWrite(true);
@@ -578,7 +578,7 @@ void Renderer::DrawSceneToGBuffer()
 
 void Renderer::DrawShadowMaps()
 {
-	PROFILE_GPU_EVENT_SCOPED(DrawShadowMaps);
+	PROFILE_GPU_SCOPED(DrawShadowMaps);
 
 	gl::Enable(gl::Cap::DEPTH_TEST);
 	gl::SetDepthWrite(true);
@@ -617,7 +617,7 @@ void Renderer::DrawGBufferDebug()
 
 void Renderer::ApplyDirectLighting()
 {
-	PROFILE_GPU_EVENT_SCOPED(ApplyDirectLighting);
+	PROFILE_GPU_SCOPED(ApplyDirectLighting);
 
 	gl::Disable(gl::Cap::CULL_FACE);
 	gl::Disable(gl::Cap::DEPTH_TEST);
@@ -666,7 +666,7 @@ void Renderer::ApplyRSMsBruteForce()
 
 void Renderer::LightCachesDirect()
 {
-	PROFILE_GPU_EVENT_SCOPED(LightCaches);
+	PROFILE_GPU_SCOPED(LightCaches);
 
 	m_lightCacheCounter->BindIndirectDispatchBuffer();
 	m_shaderLightCachesDirect->BindSSBO(*m_lightCacheBuffer, "LightCacheBuffer");
@@ -689,7 +689,7 @@ void Renderer::LightCachesDirect()
 
 void Renderer::LightCachesRSM()
 {
-	PROFILE_GPU_EVENT_SCOPED(LightCaches);
+	PROFILE_GPU_SCOPED(LightCaches);
 
 	m_specularCacheEnvmap->ClearToZero();
 	m_specularCacheEnvmap->BindImage(0, gl::Texture::ImageAccess::WRITE);
@@ -743,7 +743,7 @@ void Renderer::ConeTraceAO()
 
 void Renderer::AllocateCaches()
 {
-	PROFILE_GPU_EVENT_SCOPED(AllocateCaches);
+	PROFILE_GPU_SCOPED(AllocateCaches);
 
 	gl::Disable(gl::Cap::CULL_FACE);
 	gl::Disable(gl::Cap::DEPTH_TEST);
@@ -786,7 +786,7 @@ void Renderer::AllocateCaches()
 
 void Renderer::PrepareSpecularCacheEnvmaps()
 {
-	PROFILE_GPU_EVENT_SCOPED(ProcessSpecularEnvmap);
+	PROFILE_GPU_SCOPED(ProcessSpecularEnvmap);
 
 	gl::Disable(gl::Cap::CULL_FACE);
 	gl::Disable(gl::Cap::DEPTH_TEST);
@@ -838,7 +838,7 @@ void Renderer::PrepareSpecularCacheEnvmaps()
 
 void Renderer::ApplyCaches()
 {
-	PROFILE_GPU_EVENT_SCOPED(ApplyCaches);
+	PROFILE_GPU_SCOPED(ApplyCaches);
 
 	gl::Disable(gl::Cap::CULL_FACE);
 	gl::Disable(gl::Cap::DEPTH_TEST);

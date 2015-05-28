@@ -9,7 +9,8 @@ FrameProfiler& FrameProfiler::GetInstance()
 	return profiler;
 }
 
-FrameProfiler::FrameProfiler()
+FrameProfiler::FrameProfiler() :
+	m_gpuProfilingActive(true)
 {
 }
 
@@ -25,56 +26,34 @@ void FrameProfiler::OnFrameEnd()
 
 void FrameProfiler::RetrieveQueryResults()
 {
+	Event evt;
+
 	// Traverse from old to new.
 	for (auto it = m_openQueries.begin(); it != m_openQueries.end(); ++it)
 	{
-		if (it->notEndedYet)
-		{
-			LOG_ERROR("Event from previous frame \"" << it->name << "\" was not yet ended. You should call ReportGPUEventEnd for all event before starting a new frame.");
-			ReportGPUEventEnd(it->name);
-			continue; // Do not process this now, since there might be multiple queries with this name - the function could have closed the wrong one!
-		}
+		evt.frame = it->frame;
+		evt.duration = std::numeric_limits<std::uint32_t>::max();
+		GL_CALL(glGetQueryObjectuiv, it->query, GL_QUERY_RESULT_NO_WAIT, &evt.duration);
 
-		if (it->start == 0)
+		if (evt.duration != std::numeric_limits<std::uint32_t>::max())
 		{
-			GL_CALL(glGetQueryObjectui64v, it->startQuery, GL_QUERY_RESULT_NO_WAIT, &it->start);
-			if (it->start != 0)
-			{
-				ReturnQueryToPool(it->startQuery);
-				it->startQuery = 0;
-			}
-		}
-		if (it->end == 0)
-		{
-			GL_CALL(glGetQueryObjectui64v, it->endQuery, GL_QUERY_RESULT_NO_WAIT, &it->end);
-			if (it->end != 0)
-			{
-				ReturnQueryToPool(it->endQuery);
-				it->endQuery = 0;
-			}
-		}
+			ReturnQueryToPool(it->query);
 
-		// Both start end end have valid values now?
-		if (it->start != 0 && it->end != 0)
-		{
 			// Archive.
 			auto archiveIt = m_eventLists.begin();
 			for (; archiveIt != m_eventLists.end(); ++archiveIt)
 			{
 				if (archiveIt->first == it->name) break;
 			}
-			if (archiveIt == m_eventLists.end())
-				m_eventLists.emplace_back(it->name, std::vector<Event>({ Event(*it) }));
-			else
-			{
-				// It may happen that the query of a newer event was retrieved earlier!
-				auto insertPosition = archiveIt->second.crbegin();
-				while(insertPosition != archiveIt->second.crend() && insertPosition->frame > it->frame)
-					++insertPosition;
+			Assert(archiveIt != m_eventLists.end(), "Eventtype was not yet created! Should have happened in ReportGPUEventStart.");
 
-				archiveIt->second.insert(insertPosition.base(), Event(*it));
-				Assert(archiveIt->second[archiveIt->second.size() - 2].frame <= archiveIt->second[archiveIt->second.size() - 1].frame, "Events are not ordered by frame id!"); // Just to be sure the above is right.
-			}
+			// It may happen that the query of a newer event was retrieved earlier!
+			auto insertPosition = archiveIt->second.crbegin();
+			while (insertPosition != archiveIt->second.crend() && insertPosition->frame > it->frame)
+				++insertPosition;
+
+			archiveIt->second.insert(insertPosition.base(), evt);
+			Assert(archiveIt->second.size() == 1 || archiveIt->second[archiveIt->second.size() - 2].frame <= archiveIt->second[archiveIt->second.size() - 1].frame, "Events are not ordered by frame id!"); // Just to be sure the above is right.
 
 			// Remove from open list.
 			it = m_openQueries.erase(it);
@@ -84,44 +63,46 @@ void FrameProfiler::RetrieveQueryResults()
 	}
 }
 
-void FrameProfiler::ReportGPUEventStart(const std::string& eventIdentifier)
+void FrameProfiler::StartQuery(const std::string& eventType)
 {
-#ifdef _DEBUG
-	for (const auto& openQuery : m_openQueries)
-	{
-		if (openQuery.name == eventIdentifier && openQuery.notEndedYet)
-		{
-			LOG_ERROR("Can't start query within a query with the same name!");
-			return;
-		}
-	}
-#endif
+	if (!m_gpuProfilingActive) return;
 
-	m_openQueries.emplace_back();
-	OpenQuery& newOpenQuery = m_openQueries.back();
-	newOpenQuery.name = eventIdentifier;
-	newOpenQuery.frame = static_cast<unsigned int>(m_recordedFrameDurations.size());
-	newOpenQuery.start = 0;
-	newOpenQuery.end = 0;
-	newOpenQuery.notEndedYet = true;
-	newOpenQuery.startQuery = GetQueryFromPool();
-	GL_CALL(glQueryCounter, newOpenQuery.startQuery, GL_TIMESTAMP);
+	if (m_awaitingQueryEndCall)
+	{
+		LOG_ERROR("It is not possible to nest GPU time elapsed queries! Event type: \"" << eventType << "\"");
+		return;
+	}
+
+	// Event type known?
+	auto archiveIt = m_eventLists.begin();
+	for (; archiveIt != m_eventLists.end(); ++archiveIt)
+	{
+		if (archiveIt->first == eventType) break;
+	}
+	if (archiveIt == m_eventLists.end())
+		m_eventLists.emplace_back(eventType, std::vector<Event>());
+
+	// Add
+	m_awaitingQueryEndCall = true;
+	m_activeQuery.name = eventType;
+	m_activeQuery.frame = static_cast<unsigned int>(m_recordedFrameDurations.size());
+	m_activeQuery.query = GetQueryFromPool();
+	GL_CALL(glBeginQuery, GL_TIME_ELAPSED, m_activeQuery.query);
 }
 
-void FrameProfiler::ReportGPUEventEnd(const std::string& eventIdentifier)
+void FrameProfiler::EndQuery()
 {
-	for (auto openQueryIt = m_openQueries.rbegin(); openQueryIt != m_openQueries.rend(); ++openQueryIt)
+	if (!m_gpuProfilingActive) return;
+
+	if (!m_awaitingQueryEndCall)
 	{
-		if (openQueryIt->name == eventIdentifier && openQueryIt->notEndedYet)
-		{
-			openQueryIt->notEndedYet = false;
-			openQueryIt->endQuery = GetQueryFromPool();
-			GL_CALL(glQueryCounter, openQueryIt->endQuery, GL_TIMESTAMP);
-			return;
-		}
+		LOG_ERROR("No query started yet!");
+		return;
 	}
 
-	LOG_ERROR("Query with identifier " << eventIdentifier << " was either already ended or never started!");
+	GL_CALL(glEndQuery, GL_TIME_ELAPSED);
+	m_awaitingQueryEndCall = false;
+	m_openQueries.push_back(m_activeQuery);
 }
 
 void FrameProfiler::WaitForQueryResults()
@@ -138,7 +119,7 @@ gl::QueryId FrameProfiler::GetQueryFromPool()
 	if (m_timerQueryPool.empty())
 	{
 		m_timerQueryPool.resize(s_queryPoolAllocationSize);
-		GL_CALL(glCreateQueries, GL_TIMESTAMP, s_queryPoolAllocationSize, m_timerQueryPool.data());
+		GL_CALL(glCreateQueries, GL_TIME_ELAPSED, s_queryPoolAllocationSize, m_timerQueryPool.data());
 	}
 
 	gl::QueryId queryId = m_timerQueryPool.back();

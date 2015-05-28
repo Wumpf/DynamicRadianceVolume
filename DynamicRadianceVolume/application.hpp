@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 #include "Time/Stopwatch.h"
 
 class OutputWindow;
@@ -43,4 +44,7 @@ private:
 	std::unique_ptr<AntTweakBarInterface> m_tweakBar;
 
 	ezTime m_timeSinceLastUpdate;
+
+	std::string m_tweakBarStatisticGroupName;
+	std::vector<std::string> m_tweakBarStatisticEntries;
 };

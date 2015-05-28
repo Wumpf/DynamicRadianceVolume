@@ -18,7 +18,8 @@
 #include <shlwapi.h>
 
 
-Application::Application(int argc, char** argv)
+Application::Application(int argc, char** argv) :
+	m_tweakBarStatisticGroupName(" group=\"Timer Statistics\"")
 {
 	// Logger init.
 	Logger::g_logger.Initialize(new Logger::FilePolicy("log.txt"));
@@ -63,7 +64,7 @@ Application::Application(int argc, char** argv)
 	m_scene->GetLights()[0].intensity = ei::Vec3(100.0f, 100.0f, 100.0f);
 	m_scene->GetLights()[0].position = ei::Vec3(0.0f, 1.7f, 3.3f);
 	m_scene->GetLights()[0].direction = ei::Vec3(0.0f, 0.0f, -1.0f);
-	m_scene->GetLights()[0].halfAngle = 30.0f * (ei::PI / 180.0f);
+	m_scene->GetLights()[0].halfAngle = 30.0f * (ei::PI / 180.0f);	
 }
 
 Application::~Application()
@@ -174,6 +175,29 @@ void Application::Update()
 
 	m_window->SetTitle("time per frame " +
 		std::to_string(m_timeSinceLastUpdate.GetMilliseconds()) + "ms (FPS: " + std::to_string(1.0f / m_timeSinceLastUpdate.GetSeconds()) + ")");
+
+	if (m_tweakBarStatisticEntries.size() != FrameProfiler::GetInstance().GetAllRecordedEvents().size())
+	{
+		// Remove old entries.
+		for (const std::string& entry : m_tweakBarStatisticEntries)
+			m_tweakBar->Remove(entry);
+		m_tweakBarStatisticEntries.clear();
+
+		// Add
+		for (const auto& entry : FrameProfiler::GetInstance().GetAllRecordedEvents())
+		{
+			std::string name = entry.first;
+			m_tweakBar->AddReadOnly(name, [name]{
+					auto it = std::find_if(FrameProfiler::GetInstance().GetAllRecordedEvents().begin(), FrameProfiler::GetInstance().GetAllRecordedEvents().end(),
+											[name](const FrameProfiler::EventList& v){ return v.first == name; });
+					if (it != FrameProfiler::GetInstance().GetAllRecordedEvents().end() && !it->second.empty())
+						return std::to_string(it->second.back().duration);
+					else
+						return std::string("");
+				}, m_tweakBarStatisticGroupName);
+			m_tweakBarStatisticEntries.push_back(name);
+		}
+	}
 }
 
 void Application::Draw()
