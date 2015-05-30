@@ -802,6 +802,7 @@ void Renderer::PrepareSpecularCacheEnvmaps()
 
 	// MipMap remaining levels.
 	m_specularCacheEnvmap->Bind(0);
+	m_samplerLinearClamp.BindSampler(0);
 	m_shaderSpecularEnvmapMipMap->Activate();
 	for (int i = 1; i < m_specularCacheEnvmapFBOs.size(); ++i)
 	{

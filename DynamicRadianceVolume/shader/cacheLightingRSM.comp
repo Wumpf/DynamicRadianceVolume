@@ -20,7 +20,7 @@ layout(binding=2) uniform isampler2D RSM_Normal;
 	// Needs to be defined:
 	//#define SPECULARENVMAP_PERCACHESIZE
 
-	#define DIRECT_SPECULAR_MAP_WRITE
+	//#define DIRECT_SPECULAR_MAP_WRITE
 
 	#ifdef DIRECT_SPECULAR_MAP_WRITE
 	layout(binding = 0, r11f_g11f_b10f) restrict uniform image2D CacheSpecularEnvmap;
@@ -88,7 +88,7 @@ void main()
 										gl_GlobalInvocationID.x / SpecularEnvmapNumCachesPerDimension) * SPECULARENVMAP_PERCACHESIZE;
 
 	#ifndef DIRECT_SPECULAR_MAP_WRITE
-	uint localSpecularEnvmap[SPECULARENVMAP_PERCACHESIZE * SPECULARENVMAP_PERCACHESIZE]; // Encoded in R11G11B10
+	uint localSpecularEnvmap[SPECULARENVMAP_PERCACHESIZE * SPECULARENVMAP_PERCACHESIZE];
 	for(int i=0; i<SPECULARENVMAP_PERCACHESIZE * SPECULARENVMAP_PERCACHESIZE; ++i)
 		localSpecularEnvmap[i] = 0;
 	#endif
