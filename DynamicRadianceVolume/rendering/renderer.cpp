@@ -240,6 +240,19 @@ void Renderer::UpdateConstantUBO()
 	if (!m_HDRBackbufferTexture) return;
 
 	gl::MappedUBOView mappedMemory(m_uboInfoConstant, m_uboConstant->Map(gl::Buffer::MapType::WRITE, gl::Buffer::MapWriteFlag::INVALIDATE_BUFFER));
+
+	mappedMemory["ShCosLobeFactor0"].Set(sqrtf(ei::PI) / 2.0f);
+	mappedMemory["ShCosLobeFactor1"].Set(sqrtf(ei::PI / 3.0f));
+	mappedMemory["ShCosLobeFactor2n2_p1_n1"].Set(-sqrtf(15.0f * ei::PI) / 8.0f);
+	mappedMemory["ShCosLobeFactor20"].Set(sqrtf(5.0f * ei::PI) / 16.0f);
+	mappedMemory["ShCosLobeFactor2p2"].Set(sqrtf(15.0f * ei::PI) / 16.0f);
+
+	mappedMemory["ShEvaFactor0"].Set(1.0f / (2.0f * sqrt(ei::PI)));
+	mappedMemory["ShEvaFactor1"].Set(sqrtf(3.0f) / (2.0f * sqrt(ei::PI)));
+	mappedMemory["ShEvaFactor2n2_p1_n1"].Set(sqrtf(15.0f / (4.0f * ei::PI)));
+	mappedMemory["ShEvaFactor20"].Set(sqrtf(5.0f / (16.0f * ei::PI)));
+	mappedMemory["ShEvaFactor2p2"].Set(sqrtf(15.0f / (16.0f * ei::PI)));
+
 	mappedMemory["BackbufferResolution"].Set(ei::IVec2(m_HDRBackbufferTexture->GetWidth(), m_HDRBackbufferTexture->GetHeight()));
 	mappedMemory["VoxelResolution"].Set(m_voxelization->GetVoxelTexture().GetWidth());
 	mappedMemory["AddressVolumeResolution"].Set(m_lightCacheAddressVolume->GetWidth());

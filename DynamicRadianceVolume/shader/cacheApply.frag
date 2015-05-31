@@ -81,17 +81,7 @@ void main()
 		vec3 irradiance[8];
 		vec3 specular[8];
 
-		#if defined(INDDIFFUSE_VIA_SH1) || defined(INDDIFFUSE_VIA_SH2)
-			const float shEvaFactor0 = 1.0 / (2.0 * sqrt(PI));
-			const float shEvaFactor1 = sqrt(3.0) / (2.0 * sqrt(PI));
-
-			const float shEvaFactor2n2 = sqrt(15.0 / (4.0 * PI));
-			const float shEvaFactor2n1 = -sqrt(15.0 / (4.0 * PI));
-			const float shEvaFactor20 = sqrt(5.0 / (16.0 * PI));
-			const float shEvaFactor2p1 =  -sqrt(15.0 / (4.0 * PI));
-			const float shEvaFactor2p2 =  sqrt(15.0 / (16.0 * PI));
-
-		#elif defined(INDDIFFUSE_VIA_H)
+		#ifdef INDDIFFUSE_VIA_H
 			const float factor0 = 1.0 / (2.0 * PI);
 			const float factor1 = sqrt(3.0) / sqrt(2.0 * PI);
 			const float factor2 = sqrt(15.0) / sqrt(2.0 * PI);
@@ -136,22 +126,22 @@ void main()
 			// Band 0
 			irradiance[i] = vec3(LightCacheEntries[cacheAddress].SH00_r,
 									LightCacheEntries[cacheAddress].SH00_g,
-									LightCacheEntries[cacheAddress].SH00_b) * shEvaFactor0;
+									LightCacheEntries[cacheAddress].SH00_b) * ShEvaFactor0;
 
 			// Band 1
-			irradiance[i] -= LightCacheEntries[cacheAddress].SH1neg1 * (shEvaFactor1 * worldNormal.y);
-			irradiance[i] += LightCacheEntries[cacheAddress].SH10 * (shEvaFactor1 * worldNormal.z);
-			irradiance[i] -= LightCacheEntries[cacheAddress].SH1pos1 * (shEvaFactor1 * worldNormal.x);
+			irradiance[i] -= LightCacheEntries[cacheAddress].SH1neg1 * (ShEvaFactor1 * worldNormal.y);
+			irradiance[i] += LightCacheEntries[cacheAddress].SH10 * (ShEvaFactor1 * worldNormal.z);
+			irradiance[i] -= LightCacheEntries[cacheAddress].SH1pos1 * (ShEvaFactor1 * worldNormal.x);
 
 			// Band 2
 			#ifdef INDDIFFUSE_VIA_SH2
-			irradiance[i] += LightCacheEntries[cacheAddress].SH2neg2 * (shEvaFactor2n2 * worldNormal.x * worldNormal.y);
-			irradiance[i] += LightCacheEntries[cacheAddress].SH2neg1 * (shEvaFactor2n1 * worldNormal.y * worldNormal.z);
+			irradiance[i] += LightCacheEntries[cacheAddress].SH2neg2 * (ShEvaFactor2n2 * worldNormal.x * worldNormal.y);
+			irradiance[i] += LightCacheEntries[cacheAddress].SH2neg1 * (ShEvaFactor2n1 * worldNormal.y * worldNormal.z);
 			irradiance[i] += vec3(LightCacheEntries[cacheAddress].SH20_r,
 									LightCacheEntries[cacheAddress].SH20_g,
-									LightCacheEntries[cacheAddress].SH20_b) * (shEvaFactor20 * (worldNormal.z * worldNormal.z * 3.0 - 1.0));
-			irradiance[i] += LightCacheEntries[cacheAddress].SH2pos1 * (shEvaFactor2p1 * worldNormal.x * worldNormal.z);
-			irradiance[i] += LightCacheEntries[cacheAddress].SH2pos2 * (shEvaFactor2p2 * (worldNormal.x * worldNormal.x - worldNormal.y * worldNormal.y));	
+									LightCacheEntries[cacheAddress].SH20_b) * (ShEvaFactor20 * (worldNormal.z * worldNormal.z * 3.0 - 1.0));
+			irradiance[i] += LightCacheEntries[cacheAddress].SH2pos1 * (ShEvaFactor2p1 * worldNormal.x * worldNormal.z);
+			irradiance[i] += LightCacheEntries[cacheAddress].SH2pos2 * (ShEvaFactor2p2 * (worldNormal.x * worldNormal.x - worldNormal.y * worldNormal.y));	
 
 			#endif
 

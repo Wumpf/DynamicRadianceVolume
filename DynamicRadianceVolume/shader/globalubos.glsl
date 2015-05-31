@@ -1,6 +1,18 @@
 // UBO for values that change very rarely (max every few seconds or even minutes)
 layout(binding = 0, shared) uniform Constant
 {
+	float ShCosLobeFactor0; 	// = sqrt(PI) / 2.0;
+	float ShCosLobeFactor1; 	// = -sqrt(PI / 3.0); 	// 1p1: -toVal.y; 10: toVal.z 1n1: -toVal.x
+	float ShCosLobeFactor2n2_p1_n1; // = sqrt(15.0 * PI) / 8.0;  // 2n2: -toVal.x * toVal.y; 1n1: toVal.y * toVal.z; 1p1: toVal.x * toVal.z;	
+	float ShCosLobeFactor20; 	// =  sqrt(5.0 * PI)  / 16.0; // * (toVal.z * toVal.z * 3.0 - 1.0);
+	float ShCosLobeFactor2p2; 	// =  sqrt(15.0 * PI) / 16.0; // * (toVal.x*toVal.x - toVal.y*toVal.y);
+
+	float ShEvaFactor0; 	// = 1.0 / (2.0 * sqrt(PI));
+	float ShEvaFactor1; 	// = sqrt(3.0) / (2.0 * sqrt(PI));
+	float ShEvaFactor2n2_p1_n1; // = sqrt(15.0 / (4.0 * PI)); // 2n2: -toVal.x * toVal.y; 1n1: toVal.y * toVal.z; 1p1: toVal.x * toVal.z;	
+	float ShEvaFactor20; 	// = sqrt(5.0 / (16.0 * PI));
+	float ShEvaFactor2p2; 	// =  sqrt(15.0 / (16.0 * PI));
+
 	ivec2 BackbufferResolution;
 	int VoxelResolution;
 	int AddressVolumeResolution;

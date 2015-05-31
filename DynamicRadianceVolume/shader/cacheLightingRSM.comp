@@ -61,7 +61,7 @@ uvec2 Morton_2D_Decode_16bit(in uint morton)
 }
 
 
-uint EncoderadianceIn(vec3 radianceIn)
+uint EndcodeRadiance(vec3 radianceIn)
 {
 	vec4 sharedExponent;
 	float maxVal = max(radianceIn.r, max(radianceIn.g, radianceIn.b));
@@ -70,7 +70,7 @@ uint EncoderadianceIn(vec3 radianceIn)
 	sharedExponent.a = (sharedExponent.a + 128.0) / 255.0;
 	return packUnorm4x8(sharedExponent);
 }
-vec3 DecoderadianceIn(uint encodedradianceIn)
+vec3 DecodeRadiance(uint encodedradianceIn)
 {
 	vec4 sharedExponent = unpackUnorm4x8(encodedradianceIn);
 	return sharedExponent.rgb * exp2(sharedExponent.a * 255.0 - 128.0);
@@ -104,17 +104,6 @@ void main()
 	float startOffset = sqrt(2.0) * AddressVolumeVoxelSize / VoxelSizeInWorld + 0.5;
 #endif
 
-	// TODO: Use UBO for these.
-	const float shCosLobeFactor00 = sqrt(PI) / 2.0;
-	const float shCosLobeFactor1n1 = -sqrt(PI / 3.0); 	// * toVal.y;
-	const float shCosLobeFactor10 = sqrt(PI / 3.0); 	// * toVal.z;
-	const float shCosLobeFactor1p1 = -sqrt(PI / 3.0); 	// * toVal.x;
-	const float shCosLobeFactor2n2 = sqrt(15.0 * PI) / 8.0 ; //* toVal.x * toVal.y;
-	const float shCosLobeFactor2n1 = -sqrt(15.0 * PI) / 8.0; // * toVal.y * toVal.z;
-	const float shCosLobeFactor20 = sqrt(5.0 * PI) / 16.0; 	// * (toVal.z * toVal.z * 3.0 - 1.0);
-	const float shCosLobeFactor2p1 = -sqrt(15.0 * PI) / 8.0; // * toVal.x * toVal.z;
-	const float shCosLobeFactor2p2 = sqrt(15.0 * PI) / 16.0; // * (toVal.x*toVal.x - toVal.y*toVal.y);
-
 
 #if defined(INDDIFFUSE_VIA_SH1) || defined(INDDIFFUSE_VIA_SH2)
 	vec3 SH00 = vec3(0);
@@ -132,6 +121,11 @@ void main()
 
 #if defined(INDIRECT_SPECULAR) || defined(INDDIFFUSE_VIA_H)
 	mat3 cacheLocalViewSpace = ComputeLocalViewSpace(worldPosition);
+#endif
+#ifdef INDDIFFUSE_VIA_H
+	vec3 irradianceHBasis[INDDIFFUSE_VIA_H];
+	for(int i=0; i<INDDIFFUSE_VIA_H; ++i)
+		irradianceHBasis[i] = vec3(0);
 #endif
 
 	float distThreshholdSq = dot(AddressVolumeVoxelSize, AddressVolumeVoxelSize);
@@ -269,17 +263,17 @@ void main()
 
 			#if defined(INDDIFFUSE_VIA_SH1) || defined(INDDIFFUSE_VIA_SH2)
 				// SH IrradianceIn
-				SH00 += shCosLobeFactor00 * radianceIn;
-				SH1neg1 += (shCosLobeFactor1n1 * toVal.y) * radianceIn;
-				SH10 += (shCosLobeFactor10 * toVal.z) * radianceIn;
-				SH1pos1 += (shCosLobeFactor1p1 * toVal.x) * radianceIn;
+				SH00 += ShCosLobeFactor0 * radianceIn;
+				SH1neg1 -= (ShCosLobeFactor1 * toVal.y) * radianceIn;
+				SH10 += (ShCosLobeFactor1 * toVal.z) * radianceIn;
+				SH1pos1 -= (ShCosLobeFactor1 * toVal.x) * radianceIn;
 
 				#ifdef INDDIFFUSE_VIA_SH2
-					SH2neg2 += (shCosLobeFactor2n2 * toVal.x * toVal.y) * radianceIn;
-					SH2neg1 += (shCosLobeFactor2n1 * toVal.y * toVal.z) * radianceIn;
-					SH20 += (shCosLobeFactor20 * (toVal.z * toVal.z * 3.0 - 1.0)) * radianceIn;
-					SH2pos1 += (shCosLobeFactor2p1 * toVal.x * toVal.z) * radianceIn;
-					SH2pos2 += (shCosLobeFactor2p2 * (toVal.x * toVal.x - toVal.y * toVal.y)) * radianceIn;
+					SH2neg2 -= (ShCosLobeFactor2n2_p1_n1 * toVal.x * toVal.y) * radianceIn;
+					SH2neg1 += (ShCosLobeFactor2n2_p1_n1 * toVal.y * toVal.z) * radianceIn;
+					SH20 += (ShCosLobeFactor20 * (toVal.z * toVal.z * 3.0 - 1.0)) * radianceIn;
+					SH2pos1 += (ShCosLobeFactor2n2_p1_n1 * toVal.x * toVal.z) * radianceIn;
+					SH2pos2 += (ShCosLobeFactor2p2 * (toVal.x * toVal.x - toVal.y * toVal.y)) * radianceIn;
 				#endif
 			#endif
 
@@ -288,54 +282,56 @@ void main()
 			#endif
 
 			#ifdef INDDIFFUSE_VIA_H
-				// H-Basis IrradianceIn
-				float SH00 = shCosLobeFactor00;
-				float SH1neg1 = shCosLobeFactor1n1  * toValCacheLocal.y;
-				float SH10 = shCosLobeFactor10  * toValCacheLocal.z;
-				float SH1pos1 = shCosLobeFactor1p1 * toValCacheLocal.x;
-				float SH2neg2 = shCosLobeFactor2n2 * toValCacheLocal.x * toValCacheLocal.y;
-				float SH2neg1 = shCosLobeFactor2n1 * toValCacheLocal.y * toValCacheLocal.z;
-				float SH20 = shCosLobeFactor20 * (toValCacheLocal.z * toValCacheLocal.z * 3.0 - 1.0);
-				float SH2pos1 = shCosLobeFactor2p1  * toValCacheLocal.x * toValCacheLocal.z;
-				float SH2pos2 = shCosLobeFactor2p2  * (toValCacheLocal.x*toValCacheLocal.x - toValCacheLocal.y*toValCacheLocal.y);
+				// H-Basis Irradiance
+				// The H-Basis version is comparatively unoptimized since the visual results were not as good:
+				// It leads to "swimming" of the lighting which makes it rather unsuitable.
+				float SH00 = ShCosLobeFactor0;
+				float SH1neg1 = -ShCosLobeFactor1  * toValCacheLocal.y;
+				float SH10 = ShCosLobeFactor1  * toValCacheLocal.z;
+				float SH1pos1 = -ShCosLobeFactor1 * toValCacheLocal.x;
+				float SH2neg2 = -ShCosLobeFactor2n2_p1_n1 * toValCacheLocal.x * toValCacheLocal.y;
+				float SH2neg1 = ShCosLobeFactor2n2_p1_n1 * toValCacheLocal.y * toValCacheLocal.z;
+				float SH20 = ShCosLobeFactor20 * (toValCacheLocal.z * toValCacheLocal.z * 3.0 - 1.0);
+				float SH2pos1 = ShCosLobeFactor2n2_p1_n1  * toValCacheLocal.x * toValCacheLocal.z;
+				float SH2pos2 = ShCosLobeFactor2p2  * (toValCacheLocal.x*toValCacheLocal.x - toValCacheLocal.y*toValCacheLocal.y);
 
-				irradianceInHBasis[0] += (1.0 / sqrt(2) * SH00 		+ 0.5 * sqrt(3.0/2.0) * SH10) * radianceIn; 
-				irradianceInHBasis[1] += (1.0 / sqrt(2) * SH1neg1 	+ 3.0 / 8.0 * sqrt(5.0/2.0) * SH2neg1) * radianceIn; 
-				irradianceInHBasis[2] += (1.0 / (2.0*sqrt(2)) * SH10 	+ 1.0 / 4.0 * sqrt(15.0/2.0) * SH20) * radianceIn; 
-				irradianceInHBasis[3] += (1.0 / sqrt(2) * SH1pos1 	+ 3.0 / 8.0 * sqrt(5.0/2.0) * SH2pos1) * radianceIn;
+				irradianceHBasis[0] += (1.0 / sqrt(2) * SH00 		+ 0.5 * sqrt(3.0/2.0) * SH10) * radianceIn; 
+				irradianceHBasis[1] += (1.0 / sqrt(2) * SH1neg1 	+ 3.0 / 8.0 * sqrt(5.0/2.0) * SH2neg1) * radianceIn; 
+				irradianceHBasis[2] += (1.0 / (2.0*sqrt(2)) * SH10 	+ 1.0 / 4.0 * sqrt(15.0/2.0) * SH20) * radianceIn; 
+				irradianceHBasis[3] += (1.0 / sqrt(2) * SH1pos1 	+ 3.0 / 8.0 * sqrt(5.0/2.0) * SH2pos1) * radianceIn;
 				#if INDDIFFUSE_VIA_H > 4
-				irradianceInHBasis[4] += (1.0 / sqrt(2) * SH2neg2) * radianceIn; 
-				irradianceInHBasis[5] += (1.0 / sqrt(2) * SH2pos2) * radianceIn; 
+				irradianceHBasis[4] += (1.0 / sqrt(2) * SH2neg2) * radianceIn; 
+				irradianceHBasis[5] += (1.0 / sqrt(2) * SH2pos2) * radianceIn; 
 				#endif
 			#endif
 
 
-				#ifdef INDIRECT_SPECULAR
-					// Cache local half vector - in cache local 0,0,1 is the direction to the camera!
-					// Result is definitively z positive now.
-					vec3 halfVecCacheLocal = normalize(toValCacheLocal + vec3(0,0,1));
-					ivec2 cacheSpecEnvmapTexelCoord = ivec2(HemisphericalProjection(halfVecCacheLocal) * SPECULARENVMAP_PERCACHESIZE + 0.5);	
+			#ifdef INDIRECT_SPECULAR
+				// Cache local half vector - in cache local 0,0,1 is the direction to the camera!
+				// Result is definitively z positive now.
+				vec3 halfVecCacheLocal = normalize(toValCacheLocal + vec3(0,0,1));
+				ivec2 cacheSpecEnvmapTexelCoord = ivec2(HemisphericalProjection(halfVecCacheLocal) * SPECULARENVMAP_PERCACHESIZE + 0.5);	
 
-					// We want to save reflected radianceIn!
-					// Lout = BlinnNormalization * (n dot h)^BlinnExp * (n dot l) * Lin
-					// Assumption: As we save only the lowest mip level, the Blinn exponent is so high, that all normals != h are not affected.
-					// -> n = h
-					// -> Lout = BlinnNormalization * (h dot l) * Lin
-					vec3 radianceOut = radianceIn * saturate(dot(halfVecCacheLocal, toValCacheLocal));
+				// We want to save reflected radianceIn!
+				// Lout = BlinnNormalization * (n dot h)^BlinnExp * (n dot l) * Lin
+				// Assumption: As we save only the lowest mip level, the Blinn exponent is so high, that all normals != h are not affected.
+				// -> n = h
+				// -> Lout = BlinnNormalization * (h dot l) * Lin
+				vec3 radianceOut = radianceIn * saturate(dot(halfVecCacheLocal, toValCacheLocal));
 
-					#ifdef DIRECT_SPECULAR_MAP_WRITE
-						// Normalization is applied right away.
-						radianceOut *= specularEnvMapBaseNormalization;
-						cacheSpecEnvmapTexelCoord += cacheSpecularEnvmapOffset;
-						memoryBarrierImage();
-						vec3 oldradianceIn = imageLoad(CacheSpecularEnvmap, cacheSpecEnvmapTexelCoord).rgb;
-						imageStore(CacheSpecularEnvmap, cacheSpecEnvmapTexelCoord, vec4(oldradianceIn + radianceOut, 0.0));
-					#else
-						// Normalization is applied deferred.
-						int idx = cacheSpecEnvmapTexelCoord.x + cacheSpecEnvmapTexelCoord.y * SPECULARENVMAP_PERCACHESIZE;
-						localSpecularEnvmap[idx] = EncoderadianceIn(radianceOut + DecoderadianceIn(localSpecularEnvmap[idx]));
-					#endif
+				#ifdef DIRECT_SPECULAR_MAP_WRITE
+					// Normalization is applied right away.
+					radianceOut *= specularEnvMapBaseNormalization;
+					cacheSpecEnvmapTexelCoord += cacheSpecularEnvmapOffset;
+					memoryBarrierImage();
+					vec3 oldradianceIn = imageLoad(CacheSpecularEnvmap, cacheSpecEnvmapTexelCoord).rgb;
+					imageStore(CacheSpecularEnvmap, cacheSpecEnvmapTexelCoord, vec4(oldradianceIn + radianceOut, 0.0));
+				#else
+					// Normalization is applied deferred.
+					int idx = cacheSpecEnvmapTexelCoord.x + cacheSpecEnvmapTexelCoord.y * SPECULARENVMAP_PERCACHESIZE;
+					localSpecularEnvmap[idx] = EndcodeRadiance(radianceOut + DecodeRadiance(localSpecularEnvmap[idx]));
 				#endif
+			#endif
 			}
 		}
 	}
@@ -381,12 +377,12 @@ void main()
 		for(int x=0; x<SPECULARENVMAP_PERCACHESIZE; ++x)
 			for(int y=0; y<SPECULARENVMAP_PERCACHESIZE; ++y)
 			{
-				vec3 radianceIn = DecoderadianceIn(localSpecularEnvmap[x + y * SPECULARENVMAP_PERCACHESIZE]) * specularEnvMapBaseNormalization;
+				vec3 radianceIn = DecodeRadiance(localSpecularEnvmap[x + y * SPECULARENVMAP_PERCACHESIZE]) * specularEnvMapBaseNormalization;
 				imageStore(CacheSpecularEnvmap, cacheSpecularEnvmapOffset + ivec2(x,y), vec4(radianceIn, 0.0));
 			}
 
 //		for(int i=0; i< SPECULARENVMAP_PERCACHESIZE*SPECULARENVMAP_PERCACHESIZE; ++i)
-//			imageStore(CacheSpecularEnvmap, ivec2(cacheSpecularEnvmapOffset + Morton_2D_Decode_16bit(i)), vec4(DecoderadianceIn(localSpecularEnvmap[i]), 0.0));
+//			imageStore(CacheSpecularEnvmap, ivec2(cacheSpecularEnvmapOffset + Morton_2D_Decode_16bit(i)), vec4(DecodeRadiance(localSpecularEnvmap[i]), 0.0));
 				
 	#endif
 	#endif
