@@ -28,10 +28,6 @@ public:
 	void DrawVoxelRepresentation();
 
 	/// Voxelizes given scene into current voxel grid.
-	/// 
-	/// Caches are created on previously marked voxels (no clear happens here!)
-	/// Grid world size settings are currently handled via the global "Constant" ubo.
-	/// Changed renderstates: Viewport, VAO, depth write/read off, culling off.
 	void VoxelizeScene(Renderer& renderer);
 
 	void GenMipMap();

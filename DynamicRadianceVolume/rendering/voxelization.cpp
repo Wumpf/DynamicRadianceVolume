@@ -62,7 +62,7 @@ void Voxelization::DrawVoxelRepresentation()
 
 void Voxelization::VoxelizeScene(Renderer& renderer)
 {
-	PROFILE_GPU_EVENT_SCOPED(VoxelizeScene);
+	PROFILE_GPU_SCOPED(VoxelizeScene);
 
 	m_voxelSceneTexture->ClearToZero();
 
@@ -105,6 +105,6 @@ void Voxelization::VoxelizeScene(Renderer& renderer)
 
 void Voxelization::GenMipMap()
 {
-	PROFILE_GPU_EVENT_SCOPED(VoxelMipMap);
+	PROFILE_GPU_SCOPED(VoxelMipMap);
 	m_voxelSceneTexture->GenMipMaps();
 }
