@@ -237,7 +237,7 @@ std::shared_ptr<Model> Model::LoadViaAssimp(const std::string& filename, const s
 		aiProcess_Triangulate |
 		aiProcess_GenSmoothNormals |
 		aiProcess_CalcTangentSpace |
-		aiProcess_GenUVCoords |
+		//aiProcess_GenUVCoords |
 
 		// Pretransform
 		aiProcess_TransformUVCoords |
@@ -285,11 +285,24 @@ std::shared_ptr<Model> Model::LoadViaAssimp(const std::string& filename, const s
 			{
 				memcpy(&currentVertex->position, &mesh.mVertices[v], sizeof(float) * 3);
 				memcpy(&currentVertex->normal, &mesh.mNormals[v], sizeof(float) * 3);
-				memcpy(&currentVertex->tangent, &mesh.mTangents[v], sizeof(float) * 3);
-				
-				// Retrieve bitangent handedness - see also http://www.terathon.com/code/tangent.html
-				ei::Vec3 bitangent(mesh.mBitangents[v].x, mesh.mBitangents[v].y, mesh.mBitangents[v].z);
-				currentVertex->tangent.w = (ei::dot(ei::cross(currentVertex->normal, ei::Vec3(currentVertex->tangent.x, currentVertex->tangent.x, currentVertex->tangent.x)), bitangent) < 0.0f) ? -1.0f : 1.0f;
+
+				if (mesh.mBitangents && mesh.mTangents)
+				{
+					memcpy(&currentVertex->tangent, &mesh.mTangents[v], sizeof(float) * 3);
+
+					// Retrieve bitangent handedness - see also http://www.terathon.com/code/tangent.html
+					ei::Vec3 bitangent(mesh.mBitangents[v].x, mesh.mBitangents[v].y, mesh.mBitangents[v].z);
+					currentVertex->tangent.w = (ei::dot(ei::cross(currentVertex->normal, ei::Vec3(currentVertex->tangent.x, currentVertex->tangent.x, currentVertex->tangent.x)), bitangent) < 0.0f) ? -1.0f : 1.0f;
+				}
+				else
+				{
+					ei::Vec3 tangent;
+					if (fabs(currentVertex->normal.y) < 0.95)
+						tangent = ei::normalize(ei::cross(ei::Vec3(0, 1, 0), currentVertex->normal));
+					else
+						tangent = ei::normalize(ei::cross(ei::Vec3(0, 0, 1), currentVertex->normal));
+					currentVertex->tangent = ei::Vec4(tangent, 1.0);
+				}
 				
 				output->m_boundingBox.min = ei::min(output->m_boundingBox.min, currentVertex->position);
 				output->m_boundingBox.max = ei::max(output->m_boundingBox.max, currentVertex->position);
