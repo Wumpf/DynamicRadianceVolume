@@ -195,8 +195,8 @@ float GetHemisphereLodForBlinnPhongExponent(float blinnPhongExponent, float base
 {
 	// See GetBlinnPhongExponentForHemispherePixel but resolved to mip level
 #ifdef HEMIPROJECTION_LAMBERT
-	return log2(PI * baseLevelResolution * baseLevelResolution / (4.0 + 4.0 * blinnPhongExponent))  * 0.5;
+	return max(0.0, log2(PI * baseLevelResolution * baseLevelResolution / (4.0 + 4.0 * blinnPhongExponent)) * 0.5);
 #else
-	return log2(baseLevelResolution * baseLevelResolution / (1.0 + blinnPhongExponent)) * 0.5;
+	return max(0.0, log2(baseLevelResolution * baseLevelResolution / (1.0 + blinnPhongExponent)) * 0.5);
 #endif
 }
