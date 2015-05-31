@@ -102,11 +102,13 @@ bool IsOnScreen(vec4 clipspaceCoordinate)
 // Projects a direction in the z+ hemisphere to the 0-1 square
 vec2 HemisphericalProjection(vec3 hemisphereDirection)
 {
+#ifdef HEMIPROJECTION_LAMBERT
 	// Equal area hemisphere map, ranging from -1 to 1 - http://en.wikipedia.org/wiki/User:Mgnbar/Hemispherical_projection
 	vec2 projectedHalfVec = sqrt((1.0 - hemisphereDirection.z) / dot(hemisphereDirection.xy, hemisphereDirection.xy)) * hemisphereDirection.xy;
-#ifdef HEMIPROJECTION_LAMBERT
 	return saturate(projectedHalfVec * 0.5 + 0.5);
 #else
+/*	vec2 projectedHalfVec = sqrt((1.0 - hemisphereDirection.z) / dot(hemisphereDirection.xy, hemisphereDirection.xy)) * hemisphereDirection.xy;
+
 	// Original implementation of concentric disc map - https://mediatech.aalto.fi/~jaakko/T111-5310/K2013/JGT-97.pdf
 	float r = length(projectedHalfVec);
 	float phi = atan(projectedHalfVec.y, projectedHalfVec.x);
@@ -135,7 +137,44 @@ vec2 HemisphericalProjection(vec3 hemisphereDirection)
 		a = -(phi - 3*PI/2) * b / (PI/4);
 	}
 
-	return vec2(a*0.5 + 0.5, b*0.5 + 0.5);
+	return vec2(a*0.5 + 0.5, b*0.5 + 0.5); */
+
+	// Better Perf:
+	float r = sqrt(1.0 - hemisphereDirection.z) * 0.5;
+	float phi = atan(hemisphereDirection.y, hemisphereDirection.x) * (4.0/PI);
+
+	if(phi < -1.0) phi += 8.0;
+
+	vec2 projected;
+	
+	if(phi < 3.0)
+	{
+		if(phi < 1.0)
+		{
+			projected.x = r;
+			projected.y = phi * r;
+		}
+		else
+		{
+			projected.x = -(phi - 2.0) * r;
+			projected.y = r;
+		}
+	}
+	else
+	{
+		if(phi < 5.0)
+		{
+			projected.x = -r;
+			projected.y = -(phi - 4.0) * r;
+		}
+		else
+		{
+			projected.x = (phi - 6.0) * r;
+			projected.y = -r;
+		}
+	}
+
+	return projected + 0.5;
 #endif
 }
 float GetBlinnPhongExponentForHemispherePixel(float hemisphereResolution)
