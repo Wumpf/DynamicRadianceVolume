@@ -221,14 +221,16 @@ std::shared_ptr<gl::Texture2D> TextureManager::GetRoughnessMetallic(float roughn
 		std::shared_ptr<gl::Texture2D> newTexture(new gl::Texture2D(1, 1, gl::TextureFormat::RG8, values, gl::TextureSetDataFormat::RG, gl::TextureSetDataType::UNSIGNED_BYTE));
 		if (newTexture)
 		{
-			m_diffuseTextures.insert(std::make_pair(name, newTexture));
+			m_roughnessMetallicTextures.insert(std::make_pair(name, newTexture));
 			LOG_INFO("Loaded single value roughness/metallic texture \"" << std::to_string(roughnessValue) + "/" + std::to_string(metallicValue));
 		}
 		else
 		{
 			LOG_ERROR("Failed to create roughness/metallic texture from values.");
 		}
+		
 		return newTexture;
 	}
+
 	return textureEntry->second;
 }
