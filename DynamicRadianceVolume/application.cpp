@@ -19,7 +19,7 @@
 
 
 Application::Application(int argc, char** argv) :
-	m_tweakBarStatisticGroupName(" group=\"Timer Statistics\"")
+	m_tweakBarStatisticGroupSetting(" group=\"TimerStatistics\"")
 {
 	// Logger init.
 	Logger::g_logger.Initialize(new Logger::FilePolicy("log.txt"));
@@ -194,7 +194,7 @@ void Application::Update()
 						return std::to_string(it->second.back().duration);
 					else
 						return std::string("");
-				}, m_tweakBarStatisticGroupName);
+				}, m_tweakBarStatisticGroupSetting);
 			m_tweakBarStatisticEntries.push_back(name);
 		}
 	}

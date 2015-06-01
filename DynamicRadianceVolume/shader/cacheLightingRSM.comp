@@ -20,7 +20,7 @@ layout(binding=2) uniform isampler2D RSM_Normal;
 	// Needs to be defined:
 	//#define SPECULARENVMAP_PERCACHESIZE
 
-	//#define DIRECT_SPECULAR_MAP_WRITE
+	#define DIRECT_SPECULAR_MAP_WRITE
 
 	#ifdef DIRECT_SPECULAR_MAP_WRITE
 	layout(binding = 0, r11f_g11f_b10f) restrict uniform image2D CacheSpecularEnvmap;
@@ -101,7 +101,7 @@ void main()
 #ifdef INDIRECT_SHADOW
 	ivec3 volumeSize = textureSize(VoxelVolume, 0);
 	vec3 voxelPos = (worldPosition - VolumeWorldMin) / (VoxelSizeInWorld * volumeSize);
-	float startOffset = sqrt(2.0) * AddressVolumeVoxelSize / VoxelSizeInWorld + 0.5;
+	float startOffset = sqrt(2.0) * AddressVolumeCascades[0].WorldVoxelSize / VoxelSizeInWorld + 0.5;
 #endif
 
 
@@ -127,8 +127,6 @@ void main()
 	for(int i=0; i<INDDIFFUSE_VIA_H; ++i)
 		irradianceHBasis[i] = vec3(0);
 #endif
-
-	float distThreshholdSq = dot(AddressVolumeVoxelSize, AddressVolumeVoxelSize);
 
 	int totalNumRSMPixels = ShadowMapResolution * ShadowMapResolution;
 	for(uint rsmPixelIndex = 0; rsmPixelIndex < totalNumRSMPixels; rsmPixelIndex += LIGHTING_THREADS_PER_GROUP)
@@ -252,10 +250,6 @@ void main()
 				float fluxToIntensity = saturate(dot(valNormal, -toVal)) / PI;
 
 				fluxToIntensity *= shadowing;
-
-				// Ignore too close light sources due to 
-				//if(lightDistanceSq < distThreshholdSq)
-				//	fluxToIntensity = 0; // continue; // Continue, even is placed as early as possible, is slower.
 
 				// Note that this is not yet irradianceIn - multiplication with dot(N,L) is missing.
 				vec3 radianceIn = valTotalExitantFlux * (fluxToIntensity / (lightDistanceSq + RSMCache[i].DiscArea));

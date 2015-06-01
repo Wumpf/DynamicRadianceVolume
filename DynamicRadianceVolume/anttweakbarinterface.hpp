@@ -57,8 +57,11 @@ public:
 
 	void AddSeperator(const std::string& name, const std::string& twDefines = "");
 
+	/// Hides or shows an element.
+	void SetVisible(const std::string& name, bool enable);
+
 	/// Helper for defining various group properties.
-	void SetGroupProperties(const std::string& groupName, const std::string& parentGroup, const std::string& subgroupDisplayName, bool opened = false);
+	void SetGroupProperties(const std::string& groupName, const std::string& parentGroup, const std::string& groupDisplayName, bool opened = false);
 
 	/// Removes an element from AntTweakBar
 	void Remove(const std::string& name);

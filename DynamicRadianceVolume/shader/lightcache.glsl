@@ -4,23 +4,20 @@
 
 #if LIGHTCACHEMODE == LIGHTCACHEMODE_CREATE
 	#define LIGHTCACHE_BUFFER_MODIFIER restrict writeonly
-	#define LIGHTCACHE_HASHMAP_MODIFIER restrict
 	#define LIGHTCACHE_COUNTER_MODIFIER restrict coherent
 #elif LIGHTCACHEMODE == LIGHTCACHEMODE_LIGHT
 	#define LIGHTCACHE_BUFFER_MODIFIER restrict
-	#define LIGHTCACHE_HASHMAP_MODIFIER restrict readonly
 	#define LIGHTCACHE_COUNTER_MODIFIER restrict readonly
 #elif LIGHTCACHEMODE == LIGHTCACHEMODE_APPLY
 	#define LIGHTCACHE_BUFFER_MODIFIER restrict readonly
-	#define LIGHTCACHE_HASHMAP_MODIFIER restrict readonly
 	#define LIGHTCACHE_COUNTER_MODIFIER restrict readonly
 #else
 	#error "Please specify LIGHTCACHEMODE!"
 #endif
 
 
-#define INDDIFFUSE_VIA_SH1
-//#define INDDIFFUSE_VIA_SH2
+//#define INDDIFFUSE_VIA_SH1
+#define INDDIFFUSE_VIA_SH2
 //#define INDDIFFUSE_VIA_H 4 // 6
 
 struct LightCacheEntry
@@ -89,29 +86,20 @@ mat3 ComputeLocalViewSpace(vec3 worldPosition)
 	localViewSpace[0] = normalize(vec3(localViewSpace[2].z, 0.0, -localViewSpace[2].x)); // X
 	localViewSpace[1] = cross(localViewSpace[2], localViewSpace[0]); // Y
 
-
 	return localViewSpace;
 }
 
-// Alternative adress storing
-/*struct LightCacheHashEntry
-{
-	uint Identifier;
-	uint Address;
-};
-
-layout(std430, binding = 2) LIGHTCACHE_HASHMAP_MODIFIER buffer LightCacheHashMap
-{
-	LightCacheHashEntry[] LightCacheHashEntries;
-};*/
-
-// Grid address storage
-#if LIGHTCACHEMODE == LIGHTCACHEMODE_CREATE
-	layout(binding = 0, r32ui) restrict coherent uniform uimage3D VoxelAddressVolume;
-#endif
-
-
 #define LIGHTING_THREADS_PER_GROUP 512
 
-// Infos encoded in 8bit voxel grid
-#define SOLID_BIT uint(2)
+// Computes address volume cascade for a given worldPosition. If none fits, returns NumAddressVolumeCascades
+int ComputeAddressVolumeCascade(vec3 worldPosition)
+{
+	int addressVolumeCascade = 0;
+	for(; addressVolumeCascade<NumAddressVolumeCascades; ++addressVolumeCascade)
+	{
+		if(all(lessThanEqual(worldPosition, AddressVolumeCascades[addressVolumeCascade].Max - AddressVolumeCascades[addressVolumeCascade].WorldVoxelSize) &&
+			   greaterThanEqual(worldPosition, AddressVolumeCascades[addressVolumeCascade].Min + AddressVolumeCascades[addressVolumeCascade].WorldVoxelSize)))
+			break;
+	}
+	return addressVolumeCascade;
+}

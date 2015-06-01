@@ -64,6 +64,7 @@ void Application::ChangeEntityCount(unsigned int entityCount)
 
 		m_tweakBar->SetGroupProperties(entityGroup, "Entities", entityGroup, false);
 	}
+	m_tweakBar->SetGroupProperties("Entities", "", "Entities", false);
 }
 
 void Application::ChangeLightCount(unsigned int lightCount)
@@ -128,6 +129,7 @@ void Application::ChangeLightCount(unsigned int lightCount)
 
 		m_tweakBar->SetGroupProperties(lightGroup, "Lights", lightGroup, false);
 	}
+	m_tweakBar->SetGroupProperties("Lights", "", "Lights", false);
 }
 
 void Application::SetupTweakBarBinding()
@@ -140,17 +142,6 @@ void Application::SetupTweakBarBinding()
 		m_tweakBar->AddButton("Load Settings", [&](){ m_tweakBar->LoadReadWriteValuesToJSON(OpenFileDialog()); });
 		m_tweakBar->AddButton("Save HDR Image", [&](){ std::string filename = SaveFileDialog("image.pfm", ".pfm"); if (!filename.empty()) m_renderer->SaveToPFM(filename); });
 		m_tweakBar->AddSeperator("main save/load");
-	}
-
-	// Statistics
-	{
-		m_tweakBar->AddButton("Clear stats", [](){ FrameProfiler::GetInstance().WaitForQueryResults();  FrameProfiler::GetInstance().Clear(); }, m_tweakBarStatisticGroupName);
-		m_tweakBar->AddButton("Save CSV", [&](){ std::string filename = SaveFileDialog("timestats.csv", ".csv"); if (!filename.empty()) FrameProfiler::GetInstance().SaveToCSV(filename); }, m_tweakBarStatisticGroupName);
-		m_tweakBar->AddReadWrite<bool>("GPU Queries Active", []{ return FrameProfiler::GetInstance().GetGPUProfilingActive(); }, [](bool active){ FrameProfiler::GetInstance().SetGPUProfilingActive(active); }, m_tweakBarStatisticGroupName);
-
-		m_tweakBar->AddReadOnly("TotalFrame", []{ return FrameProfiler::GetInstance().GetFrameDurations().empty() ? "" : std::to_string(FrameProfiler::GetInstance().GetFrameDurations().back() / 1000.0); }, m_tweakBarStatisticGroupName);
-		m_tweakBar->AddReadOnly("#Recorded", []{ return std::to_string(FrameProfiler::GetInstance().GetFrameDurations().size()); }, m_tweakBarStatisticGroupName);
-		m_tweakBar->AddSeperator("GPU Queries:", m_tweakBarStatisticGroupName);
 	}
 
 	// Render mode settings
@@ -170,25 +161,55 @@ void Application::SetupTweakBarBinding()
 		m_tweakBar->AddReadWrite<bool>("IndirectShadow", [&](){ return m_renderer->GetIndirectShadow(); }, [&](bool b){ return m_renderer->SetIndirectShadow(b); }, " label=\"Indirect Shadow\"");
 		m_tweakBar->AddReadWrite<bool>("IndirectSpecular", [&](){ return m_renderer->GetIndirectSpecular(); }, [&](bool b){ return m_renderer->SetIndirectSpecular(b); }, " label=\"Indirect Specular\"");
 
-		// Cache Settings
-		m_tweakBar->AddReadWrite<int>("Address Volume Size", [&](){ return m_renderer->GetCacheAddressVolumeSize(); },
-			[&](int i){ return m_renderer->SetCacheAdressVolumeSize(i); }, " min=16 max=256 step=16");
 		m_tweakBar->AddReadWrite<int>("Max Total Cache Count", [&](){ return m_renderer->GetMaxCacheCount(); },
 			[&](int i){ return m_renderer->SetMaxCacheCount(i); }, " min=2048 max=1048576 step=2048");
 
+		// Address Volume
+		std::string groupSetting = " group=AddressVolume";
+		m_tweakBar->AddReadWrite<int>("Resolution", [&](){ return m_renderer->GetAddressVolumeResolution(); },
+			[&](int i){ return m_renderer->SetAddressVolumeCascades(m_renderer->GetAddressVolumeCascadeCount(), i); }, " min=16 max=256 step=16" + groupSetting);
+		m_tweakBar->AddReadWrite<int>("#Cascades", [&](){ return m_renderer->GetAddressVolumeCascadeCount(); },
+			[&](int numCascades)
+			{
+				for (int i = 0; i < Renderer::s_maxNumAddressVolumeCascades; ++i)
+					m_tweakBar->SetVisible("CellSize_" + std::to_string(i), i < numCascades);
+				return m_renderer->SetAddressVolumeCascades(numCascades, m_renderer->GetAddressVolumeResolution());
+			}, " min=1 max=4 step=1" + groupSetting);
+		for (int i = 0; i < Renderer::s_maxNumAddressVolumeCascades; ++i)
+		{
+			std::string elementSettings = " min=0.01 max=64 step=0.01" + groupSetting + " label=\"Voxel Size " + std::to_string(i) + "\"";
+			if (i != 0) elementSettings += " visible=false";
+			m_tweakBar->AddReadWrite<float>("CellSize_"+std::to_string(i), [&, i](){ return m_renderer->GetAddressVolumeCascadeVoxelWorldSize(i); },
+				[&, i](float size){ return m_renderer->SetAddressVolumeCascadeVoxelWorldSize(i, size); }, elementSettings);
+		}
+		m_tweakBar->SetGroupProperties("AddressVolume", "", "Address Volume", false);
+
+		
 		std::vector<TwEnumVal> specEnvMapRes = { { 4, "4x4" }, { 8, "8x8" }, { 16, "16x16" }, { 32, "32x32" }, { 64, "64x64" } };
 		m_tweakBar->AddEnumType("SpecEnvMapRes", specEnvMapRes);
 		m_tweakBar->AddEnum("SpecEnvMap Size", "SpecEnvMapRes", [&](){ return m_renderer->GetPerCacheSpecularEnvMapSize(); }, [&](int i){ return m_renderer->SetPerCacheSpecularEnvMapSize(i); });
 		m_tweakBar->AddReadWrite<int>("SpecEnvMap Hole Fill Level", [&](){ return m_renderer->GetSpecularEnvMapHoleFillLevel(); }, [&](int i){ return m_renderer->SetSpecularEnvMapHoleFillLevel(i); }, " min=0 max=5 step=1");
-		m_tweakBar->AddSeperator("Render Settings");
 
 		// Statistics
 		m_tweakBar->AddReadWrite<bool>("Track Light Cache Count", [&](){ return m_renderer->GetReadLightCacheCount(); },
-			[&](bool b){ return m_renderer->SetReadLightCacheCount(b); }, " group=Statistics");
-		m_tweakBar->AddReadOnly("#Active Caches", [&](){ return std::to_string(m_renderer->GetLightCacheActiveCount()); }, " group=Statistics");
-
-		m_tweakBar->AddSeperator("Rendering settings");
+			[&](bool b){ return m_renderer->SetReadLightCacheCount(b); });
+		m_tweakBar->AddReadOnly("#Active Caches", [&](){ return std::to_string(m_renderer->GetLightCacheActiveCount()); });
 	}
+
+	// Timer Statistics
+	{
+		m_tweakBar->AddButton("Clear stats", [](){ FrameProfiler::GetInstance().WaitForQueryResults();  FrameProfiler::GetInstance().Clear(); }, m_tweakBarStatisticGroupSetting);
+		m_tweakBar->AddButton("Save CSV", [&](){ std::string filename = SaveFileDialog("timestats.csv", ".csv"); if (!filename.empty()) FrameProfiler::GetInstance().SaveToCSV(filename); }, m_tweakBarStatisticGroupSetting);
+		m_tweakBar->AddReadWrite<bool>("GPU Queries Active", []{ return FrameProfiler::GetInstance().GetGPUProfilingActive(); }, [](bool active){ FrameProfiler::GetInstance().SetGPUProfilingActive(active); }, m_tweakBarStatisticGroupSetting);
+
+		m_tweakBar->AddReadOnly("TotalFrame", []{ return FrameProfiler::GetInstance().GetFrameDurations().empty() ? "" : std::to_string(FrameProfiler::GetInstance().GetFrameDurations().back() / 1000.0); }, m_tweakBarStatisticGroupSetting);
+		m_tweakBar->AddReadOnly("#Recorded", []{ return std::to_string(FrameProfiler::GetInstance().GetFrameDurations().size()); }, m_tweakBarStatisticGroupSetting);
+		m_tweakBar->AddSeperator("GPU Queries:", m_tweakBarStatisticGroupSetting);
+
+		m_tweakBar->SetGroupProperties(m_tweakBarStatisticGroupSetting.substr(m_tweakBarStatisticGroupSetting.find('=')+1), "", "Timer Stats", false);
+	}
+
+	m_tweakBar->AddSeperator("General Render Mode Settings");
 
 	{
 		// Camera

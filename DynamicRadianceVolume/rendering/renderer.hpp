@@ -74,7 +74,7 @@ public:
 	unsigned int GetSpecularEnvMapHoleFillLevel() const { return m_specularEnvmapMaxFillHolesLevel; }
 
 	/// Sets maximum cache count. Will print warning to log if given value can not be achieved.
-	void SetMaxCacheCount(unsigned int maxCacheCount)	{ m_maxNumLightCaches = maxCacheCount; ReallocateCacheData(); UpdateConstantUBO(); }
+	void SetMaxCacheCount(unsigned int maxCacheCount)	{ m_maxNumLightCaches = maxCacheCount; AllocateCacheData(); UpdateConstantUBO(); }
 	unsigned int GetMaxCacheCount() const				{ return m_maxNumLightCaches; }
 
 
@@ -95,13 +95,20 @@ public:
 	bool GetReadLightCacheCount() const;
 	unsigned int GetLightCacheActiveCount() const;
 
-	unsigned int GetCacheAddressVolumeSize();
-	void SetCacheAdressVolumeSize(unsigned int size);
+	// Address volume setup
+	unsigned int GetAddressVolumeCascadeCount() const { return static_cast<unsigned int>(m_addressVolumeCascadeWorldVoxelSize.size()); }
+	unsigned int GetAddressVolumeResolution() const;
+	float GetAddressVolumeCascadeVoxelWorldSize(unsigned int cascade) const { return cascade >= m_addressVolumeCascadeWorldVoxelSize.size() ? std::numeric_limits<float>().quiet_NaN() : m_addressVolumeCascadeWorldVoxelSize[cascade]; }
+	void SetAddressVolumeCascades(unsigned int numCascades, unsigned int resolutionPerCascade);
+	void SetAddressVolumeCascadeVoxelWorldSize(unsigned int cascade, float voxelWorldSize);
 
 	void BindObjectUBO(unsigned int objectIndex);
 
 	void SetExposure(float exposure);
 	float GetExposure() const { return m_exposure; }
+
+
+	static const unsigned int s_maxNumAddressVolumeCascades = 4; ///< see globalubos.glsl
 
 private:
 	std::shared_ptr<const Scene> m_scene;
@@ -110,13 +117,16 @@ private:
 	/// Reloads several cache related shaders that have macros depending on the current configuration.
 	void ReloadSettingDependentCacheShader();
 
-	/// Reallocates cache buffer and cache specular envmap according to the current configuration.
+	/// Allocates cache buffer and cache specular envmap according to the current configuration.
 	///
 	/// If cache specular envmap would exceed maximum size, number of caches will be reduced.
 	/// \attention You might also want to call UpdateConstantUBO()
-	void ReallocateCacheData();
+	void AllocateCacheData();
 
-	unsigned int RoundSizeToUBOAlignment(unsigned int size) { return size + (m_UBOAlignment - size % m_UBOAlignment) % m_UBOAlignment; }
+	/// Creates given number of caches volume cascades with given resolution.
+	void CreateAdressVolumeCascades(unsigned int numCascades, unsigned int resolution);
+
+	unsigned int RoundSizeToUBOAlignment(unsigned int size) const  { return size + (m_UBOAlignment - size % m_UBOAlignment) % m_UBOAlignment; }
 
 	void UpdateConstantUBO(); 
 	void UpdatePerFrameUBO(const Camera& camera);
@@ -164,11 +174,14 @@ private:
 	// ------------------------------------------------------------
 	// Indirect lighting
 
-	std::unique_ptr<gl::Texture3D> m_lightCacheAddressVolume;
-
 	unsigned int m_maxNumLightCaches;
 	bool m_readLightCacheCount;
 	unsigned int m_lastNumLightCaches;
+
+	/// For simplicity all cascades are in one texture. Its depth/height gives the resolution, its width divided by depth/height is the number of cascades.
+	std::unique_ptr<gl::Texture3D> m_addressVolumeAtlas;
+	std::vector<float> m_addressVolumeCascadeWorldVoxelSize; ///< Voxel sizes of the address cascades in world units.
+
 	BufferPtr m_lightCacheBuffer;
 	BufferPtr m_lightCacheCounter;
 

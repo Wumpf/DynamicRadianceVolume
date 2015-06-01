@@ -1,7 +1,5 @@
 #version 450 core
 
-#define CONTACT_SHADOW_FIX
-
 #include "gbuffer.glsl"
 #include "utils.glsl"
 #include "globalubos.glsl"
@@ -12,9 +10,11 @@
 
 layout(binding=4) uniform usampler3D VoxelAddressVolume;
 
-#ifdef CONTACT_SHADOW_FIX
+/*#ifdef CONTACT_SHADOW_FIX
 layout(binding=5) uniform sampler3D VoxelVolume;
-#endif
+#endif*/
+
+//#define SHOW_ADDRESSVOL_CASCADES
 
 layout(binding=6) uniform sampler2D CacheSpecularEnvmap;
 
@@ -39,8 +39,19 @@ void main()
 	{
 		discard;
 	}
-	vec4 worldPosition4D = vec4(Texcoord * 2.0 - vec2(1.0), depthBufferDepth, 1.0) * InverseViewProjection;
+	// The cacheGather is performed by a compute shader - Texcoord leads sometimes to slightly different results than its computation
+	// Therefore, this "gl_FragCoord.xy / BackbufferResolution" instead of Texcoord is used to ensure same results.
+	vec4 worldPosition4D = vec4(gl_FragCoord.xy / BackbufferResolution * 2.0 - vec2(1.0), depthBufferDepth, 1.0) * InverseViewProjection;
 	vec3 worldPosition = worldPosition4D.xyz / worldPosition4D.w;
+
+
+
+
+
+	// Select address volume cascade
+	int addressVolumeCascade = ComputeAddressVolumeCascade(worldPosition);
+	if(addressVolumeCascade == NumAddressVolumeCascades)
+		return;
 
 	// Get normal.
 	vec3 worldNormal = UnpackNormal16I(textureLod(GBuffer_Normal, Texcoord, 0.0).rg);
@@ -59,10 +70,9 @@ void main()
 	//return;
 #endif
 
-	//vec3 addressCoord = (worldPosition - VolumeWorldMin) / AddressVolumeVoxelSize;
-	vec3 addressCoord = clamp((worldPosition - VolumeWorldMin) / AddressVolumeVoxelSize, vec3(0), vec3(AddressVolumeResolution-0.999));
-	ivec3 addressCoord00 = ivec3(addressCoord);
 
+	vec3 addressCoord = (worldPosition - AddressVolumeCascades[addressVolumeCascade].Min) / AddressVolumeCascades[addressVolumeCascade].WorldVoxelSize;
+	ivec3 addressCoord00 = ivec3(addressCoord);
 	ivec3 offsets[8] =
 	{
 		ivec3(0,0,0),
@@ -91,26 +101,23 @@ void main()
 
 		for(int i=0; i<8; ++i)
 		{
-			ivec3 cacheSamplePos = addressCoord00 + offsets[i];
+			ivec3 cacheSamplePos = addressCoord00 + offsets[i]; //, ivec3(0), ivec3(AddressVolumeResolution-1));
+			cacheSamplePos.x += AddressVolumeResolution * addressVolumeCascade;
+
+			//OutputColor = vec3(cacheSamplePos.xxx) * 0.0001;
+			//return;
+
 			uint cacheAddress = texelFetch(VoxelAddressVolume, cacheSamplePos, 0).r;
 
 			// Check if address is valid. (debug code!)
-			/*if(cacheAddress == 0 || cacheAddress == 0xFFFFFFFF)
+			if(cacheAddress == 0 || cacheAddress == 0xFFFFFFFF || 
+				any(lessThan(cacheSamplePos, ivec3(addressVolumeCascade * AddressVolumeResolution, 0, 0))) ||
+				any(greaterThanEqual(cacheSamplePos, ivec3(addressVolumeCascade * AddressVolumeResolution + AddressVolumeResolution, AddressVolumeResolution, AddressVolumeResolution))))
 			{
 				OutputColor = vec3(1,0,1);
 				return;
-			}*/
+			}
 			cacheAddress -= 1;
-
-			/*
-			#if defined(INDDIFFUSE_VIA_H) || defined(INDIRECT_SPECULAR)
-				vec3 cacheWorldPosition = cacheSamplePos * AddressVolumeVoxelSize + VolumeWorldMin;
-				vec3 cacheViewNormal = worldNormal * ComputeLocalViewSpace(cacheWorldPosition);
-
-				//cacheViewNormal.z = saturate(cacheViewNormal.z);
-				//cacheViewNormal = normalize(cacheViewNormal);
-			#endif
-			*/
 
 		#ifdef INDIRECT_SPECULAR
 			vec2 cacheSpecularEnvmapOffset = vec2(cacheAddress % SpecularEnvmapNumCachesPerDimension, cacheAddress / SpecularEnvmapNumCachesPerDimension);
@@ -135,12 +142,12 @@ void main()
 
 			// Band 2
 			#ifdef INDDIFFUSE_VIA_SH2
-			irradiance[i] += LightCacheEntries[cacheAddress].SH2neg2 * (ShEvaFactor2n2 * worldNormal.x * worldNormal.y);
-			irradiance[i] += LightCacheEntries[cacheAddress].SH2neg1 * (ShEvaFactor2n1 * worldNormal.y * worldNormal.z);
+			irradiance[i] -= LightCacheEntries[cacheAddress].SH2neg2 * (ShEvaFactor2n2_p1_n1 * worldNormal.x * worldNormal.y);
+			irradiance[i] += LightCacheEntries[cacheAddress].SH2neg1 * (ShEvaFactor2n2_p1_n1 * worldNormal.y * worldNormal.z);
 			irradiance[i] += vec3(LightCacheEntries[cacheAddress].SH20_r,
 									LightCacheEntries[cacheAddress].SH20_g,
 									LightCacheEntries[cacheAddress].SH20_b) * (ShEvaFactor20 * (worldNormal.z * worldNormal.z * 3.0 - 1.0));
-			irradiance[i] += LightCacheEntries[cacheAddress].SH2pos1 * (ShEvaFactor2p1 * worldNormal.x * worldNormal.z);
+			irradiance[i] += LightCacheEntries[cacheAddress].SH2pos1 * (ShEvaFactor2n2_p1_n1 * worldNormal.x * worldNormal.z);
 			irradiance[i] += LightCacheEntries[cacheAddress].SH2pos2 * (ShEvaFactor2p2 * (worldNormal.x * worldNormal.x - worldNormal.y * worldNormal.y));	
 
 			#endif
@@ -196,6 +203,8 @@ void main()
 		OutputColor = cacheViewNormal * 0.5 + 0.5; // Display
 	}*/
 
-	//uint cacheAddress = texelFetch(VoxelAddressVolume, addressCoord00, 0).r;
-	//OutputColor = LightCacheEntries[cacheAddress+1].AverageNormal * 0.5 + 0.5; // Display
+#ifdef SHOW_ADDRESSVOL_CASCADES
+	const vec3 cascadeColors[] = { vec3(1, 0, 0), vec3(0, 0, 1), vec3(0, 1, 0), vec3(1, 1, 0), vec3(0, 1, 1)};
+	OutputColor += cascadeColors[addressVolumeCascade] * (mod(length(addressCoord00) / AddressVolumeResolution*5, 1.0) * 0.5 + 0.5);
+#endif
 } 

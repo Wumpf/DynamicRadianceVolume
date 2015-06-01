@@ -73,9 +73,8 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	m_voxelization = std::make_unique<Voxelization>(128);
 
 	// Allocate light cache buffer
-	SetMaxCacheCount(32768);
-
-	SetCacheAdressVolumeSize(64);
+	SetMaxCacheCount(16384);
+	SetAddressVolumeCascades(3, 32);
 
 	// Basic settings.
 	SetScene(scene);
@@ -193,7 +192,7 @@ void Renderer::ReloadSettingDependentCacheShader()
 	m_shaderCacheApply->CreateProgram();
 }
 
-void Renderer::ReallocateCacheData()
+void Renderer::AllocateCacheData()
 {
 	int maxTextureSize;
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTextureSize);
@@ -254,8 +253,11 @@ void Renderer::UpdateConstantUBO()
 	mappedMemory["ShEvaFactor2p2"].Set(sqrtf(15.0f / (16.0f * ei::PI)));
 
 	mappedMemory["BackbufferResolution"].Set(ei::IVec2(m_HDRBackbufferTexture->GetWidth(), m_HDRBackbufferTexture->GetHeight()));
+
 	mappedMemory["VoxelResolution"].Set(m_voxelization->GetVoxelTexture().GetWidth());
-	mappedMemory["AddressVolumeResolution"].Set(m_lightCacheAddressVolume->GetWidth());
+	mappedMemory["AddressVolumeResolution"].Set(static_cast<int>(GetAddressVolumeResolution()));
+	mappedMemory["NumAddressVolumeCascades"].Set(static_cast<int>(GetAddressVolumeCascadeCount()));
+
 	mappedMemory["MaxNumLightCaches"].Set(m_maxNumLightCaches);
 	
 	mappedMemory["SpecularEnvmapTotalSize"].Set(m_specularCacheEnvmap->GetWidth());
@@ -293,7 +295,19 @@ void Renderer::UpdatePerFrameUBO(const Camera& camera)
 	mappedMemory["VolumeWorldMin"].Set(VolumeWorldMin);
 	mappedMemory["VolumeWorldMax"].Set(VolumeWorldMax);
 	mappedMemory["VoxelSizeInWorld"].Set((VolumeWorldMax.x - VolumeWorldMin.x) / m_voxelization->GetVoxelTexture().GetWidth());
-	mappedMemory["AddressVolumeVoxelSize"].Set((VolumeWorldMax.x - VolumeWorldMin.x) / m_lightCacheAddressVolume->GetWidth());
+	
+	for (int i = 0; i < m_addressVolumeCascadeWorldVoxelSize.size(); ++i)
+	{
+		// Centered around camera
+		ei::Vec3 snappedCamera = ei::round(camera.GetPosition() / m_addressVolumeCascadeWorldVoxelSize[i]) * m_addressVolumeCascadeWorldVoxelSize[i];
+		ei::Vec3 min = snappedCamera - m_addressVolumeCascadeWorldVoxelSize[i] * m_addressVolumeAtlas->GetHeight() * 0.5f;
+		ei::Vec3 max = snappedCamera + m_addressVolumeCascadeWorldVoxelSize[i] * m_addressVolumeAtlas->GetHeight() * 0.5f;
+
+		std::string num = std::to_string(i);
+		mappedMemory["AddressVolumeCascades[" + num + "].Min"].Set(min);
+		mappedMemory["AddressVolumeCascades[" + num + "].WorldVoxelSize"].Set(m_addressVolumeCascadeWorldVoxelSize[i]);
+		mappedMemory["AddressVolumeCascades[" + num + "].Max"].Set(max);
+	}
 
 	m_uboPerFrame->Unmap();
 }
@@ -305,7 +319,7 @@ void Renderer::SetPerCacheSpecularEnvMapSize(unsigned int specularEnvmapPerCache
 	m_specularEnvmapPerCacheSize = specularEnvmapPerCacheSize;
 	m_specularEnvmapMaxFillHolesLevel = std::min(m_specularEnvmapMaxFillHolesLevel, static_cast<unsigned int>(log2(m_specularEnvmapPerCacheSize)));
 
-	ReallocateCacheData();
+	AllocateCacheData();
 	ReloadSettingDependentCacheShader();
 	UpdateConstantUBO();
 }
@@ -771,17 +785,16 @@ void Renderer::AllocateCaches()
 		m_lightCacheCounter->Unmap();
 	}
 
+	// Clear cache counter and atlas. No need to clear the cache buffer itself!
 	m_lightCacheCounter->ClearToZero();
-	m_lightCacheBuffer->ClearToZero();
-	//m_lightCacheHashMap->GetBuffer()->ClearToZero();
-	m_lightCacheAddressVolume->ClearToZero();
+	m_addressVolumeAtlas->ClearToZero(); // TODO: Consider making it int and clearing with -1, simplifying the shaders
 
 	BindGBuffer();
 
 	m_shaderCacheGather->BindSSBO(*m_lightCacheCounter, "LightCacheCounter");
 	m_shaderCacheGather->BindSSBO(*m_lightCacheBuffer, "LightCacheBuffer");
 	//m_shaderCacheGather->BindSSBO(*m_lightCacheHashMap);
-	m_lightCacheAddressVolume->BindImage(0, gl::Texture::ImageAccess::READ_WRITE);
+	m_addressVolumeAtlas->BindImage(0, gl::Texture::ImageAccess::READ_WRITE);
 
 	m_shaderCacheGather->Activate();
 
@@ -865,14 +878,14 @@ void Renderer::ApplyCaches()
 	//m_shaderCacheApply->BindSSBO(*m_lightCacheHashMap);
 	m_shaderCacheApply->BindSSBO(*m_lightCacheBuffer, "LightCacheBuffer");
 
-	m_lightCacheAddressVolume->Bind(4);
+	m_addressVolumeAtlas->Bind(4);
 	m_samplerNearest.BindSampler(4);
 
-	if (m_indirectShadow)
+	/*if (m_indirectShadow)
 	{
 		m_voxelization->GetVoxelTexture().Bind(5);
 		m_samplerLinearClamp.BindSampler(5);
-	}
+	}*/
 
 	m_samplerLinearClamp.BindSampler(6);
 	m_specularCacheEnvmap->Bind(6);
@@ -942,15 +955,47 @@ unsigned int Renderer::GetLightCacheActiveCount() const
 	return m_lastNumLightCaches;
 }
 
-unsigned int Renderer::GetCacheAddressVolumeSize()
+
+unsigned int Renderer::GetAddressVolumeResolution() const
 {
-	return m_lightCacheAddressVolume->GetWidth();
+	if (m_addressVolumeAtlas)
+		return m_addressVolumeAtlas->GetHeight();
+	else
+		return 0;
 }
 
-void Renderer::SetCacheAdressVolumeSize(unsigned int size)
+void Renderer::SetAddressVolumeCascades(unsigned int numCascades, unsigned int resolutionPerCascade)
 {
-	m_lightCacheAddressVolume = std::make_unique<gl::Texture3D>(size, size, size, gl::TextureFormat::R32UI, 1);
+	Assert(numCascades > 0 && resolutionPerCascade > 0, "Invalid address volume cascade settings!");
+	Assert(numCascades <= s_maxNumAddressVolumeCascades, "Maximum number of cascades exceeded!");
+
+	m_addressVolumeAtlas = std::make_unique<gl::Texture3D>(numCascades * resolutionPerCascade, resolutionPerCascade, resolutionPerCascade, gl::TextureFormat::R32UI);
+	
+	// Fill in new voxel sizes if necessary.
+	size_t previousSize = m_addressVolumeCascadeWorldVoxelSize.size();
+	m_addressVolumeCascadeWorldVoxelSize.resize(numCascades);
+	if (previousSize == 0)
+		m_addressVolumeCascadeWorldVoxelSize[0] = 0.2f;
+	for (size_t i = std::max<size_t>(1, previousSize); i < m_addressVolumeCascadeWorldVoxelSize.size(); ++i)
+		m_addressVolumeCascadeWorldVoxelSize[i] = m_addressVolumeCascadeWorldVoxelSize[i - 1] * 2.0f;
+
+	LOG_INFO("Address volume atlas texture resolution " << m_addressVolumeAtlas->GetWidth() << "x" << m_addressVolumeAtlas->GetHeight() << "x" << m_addressVolumeAtlas->GetDepth() <<
+		" using " << (m_addressVolumeAtlas->GetWidth()* m_addressVolumeAtlas->GetHeight() * m_addressVolumeAtlas->GetDepth() * 4 / 1024) << "kb memory.");
+
 	UpdateConstantUBO();
+}
+
+void Renderer::SetAddressVolumeCascadeVoxelWorldSize(unsigned int cascade, float voxelWorldSize)
+{
+	Assert(cascade < m_addressVolumeCascadeWorldVoxelSize.size(), "Given address volume cascade does not exist!");
+	Assert(voxelWorldSize > 0.0f, "Voxel world size can not be negative!");
+
+	/*if (cascade > 0 && m_lightCacheAddressCascadeWorldVoxelSize[cascade - 1] > m_lightCacheAddressCascadeWorldVoxelSize[cascade])
+	{
+		LOG_WARNING("Cascade voxel size of higher order cascades should be higher than lower ones");
+	}*/
+
+	m_addressVolumeCascadeWorldVoxelSize[cascade] = voxelWorldSize;
 }
 
 void Renderer::SetExposure(float exposure)

@@ -45,6 +45,6 @@ private:
 
 	ezTime m_timeSinceLastUpdate;
 
-	std::string m_tweakBarStatisticGroupName;
+	std::string m_tweakBarStatisticGroupSetting;	
 	std::vector<std::string> m_tweakBarStatisticEntries;
 };

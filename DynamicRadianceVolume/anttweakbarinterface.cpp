@@ -199,10 +199,17 @@ void AntTweakBarInterface::AddSeperator(const std::string& name, const std::stri
 		CheckTwError();
 }
 
-void AntTweakBarInterface::SetGroupProperties(const std::string& groupName, const std::string& parentGroup, const std::string& subgroupDisplayName, bool opened)
+void AntTweakBarInterface::SetVisible(const std::string& name, bool enable)
+{
+	std::string define = " TweakBar/" + name + " visible=" + (enable ? "true" : "false");
+	if (!TwDefine(define.c_str()))
+		CheckTwError();
+}
+
+void AntTweakBarInterface::SetGroupProperties(const std::string& groupName, const std::string& parentGroup, const std::string& groupDisplayName, bool opened)
 {
 	std::string define = " TweakBar/" + groupName + " group='" + parentGroup + "' ";
-	define += " label= '" + subgroupDisplayName + "' ";
+	define += " label= '" + groupDisplayName + "' ";
 	define = define + " opened=" + (opened ? "true" : "false");
 
 	if (!TwDefine(define.c_str()))
