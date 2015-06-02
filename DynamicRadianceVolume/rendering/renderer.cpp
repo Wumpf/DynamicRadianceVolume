@@ -38,6 +38,8 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 
 	m_specularEnvmapPerCacheSize(16),
 	m_specularEnvmapMaxFillHolesLevel(2),
+	m_showAddressVolumeCascades(false),
+	m_smoothAddressVolumeCascadeTransition(true),
 	m_indirectShadow(true),
 	m_indirectSpecular(false)
 {
@@ -135,10 +137,6 @@ void Renderer::LoadAllShaders()
 	m_shaderTonemap->Activate();
 	GL_CALL(glUniform1f, 0, m_exposure);
 
-	m_shaderCacheGather = new gl::ShaderObject("cache gather");
-	m_shaderCacheGather->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cacheGather.comp");
-	m_shaderCacheGather->CreateProgram();
-
 	m_shaderLightCachesDirect = new gl::ShaderObject("cache lighting direct");
 	m_shaderLightCachesDirect->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cacheLightingDirect.comp");
 	m_shaderLightCachesDirect->CreateProgram();
@@ -172,23 +170,30 @@ void Renderer::LoadAllShaders()
 
 void Renderer::ReloadSettingDependentCacheShader()
 {
-	std::string indirectSpecularSetting;
-	if(m_indirectSpecular)
-		indirectSpecularSetting = "#define INDIRECT_SPECULAR\n"
-								 "#define SPECULARENVMAP_PERCACHESIZE " + std::to_string(m_specularEnvmapPerCacheSize) + "\n";
-
-	std::string indirectShadowSetting;
+	std::string settings;
+	if (m_indirectSpecular)
+	{
+		settings = "#define INDIRECT_SPECULAR\n"
+			"#define SPECULARENVMAP_PERCACHESIZE " + std::to_string(m_specularEnvmapPerCacheSize) + "\n";
+	}
 	if (m_indirectShadow)
-		indirectShadowSetting += "#define INDIRECT_SHADOW\n";
+		settings += "#define INDIRECT_SHADOW\n";
+	if (m_showAddressVolumeCascades)
+		settings += "#define SHOW_ADDRESSVOL_CASCADES\n";
+	if (m_smoothAddressVolumeCascadeTransition)
+		settings += "#define ADDRESSVOL_CASCADE_TRANSITIONS\n";
 
+	m_shaderCacheGather = new gl::ShaderObject("cache gather");
+	m_shaderCacheGather->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cacheGather.comp", settings);
+	m_shaderCacheGather->CreateProgram();
 
 	m_shaderLightCachesRSM = new gl::ShaderObject("cache lighting rsm");
-	m_shaderLightCachesRSM->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cacheLightingRSM.comp", indirectShadowSetting + indirectSpecularSetting);
+	m_shaderLightCachesRSM->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cacheLightingRSM.comp", settings);
 	m_shaderLightCachesRSM->CreateProgram();
 
 	m_shaderCacheApply = new gl::ShaderObject("apply caches");
 	m_shaderCacheApply->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
-	m_shaderCacheApply->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/cacheApply.frag", indirectSpecularSetting);
+	m_shaderCacheApply->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/cacheApply.frag", settings);
 	m_shaderCacheApply->CreateProgram();
 }
 

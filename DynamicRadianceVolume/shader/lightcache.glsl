@@ -1,3 +1,17 @@
+// Options with effects on multiple shaders - most are wired as compile option into the program.
+
+// Diffuse lighting mode.
+//#define INDDIFFUSE_VIA_SH1
+#define INDDIFFUSE_VIA_SH2
+//#define INDDIFFUSE_VIA_H 4 // 6
+
+// Enable cascade transitions.
+//#define ADDRESSVOL_CASCADE_TRANSITIONS
+
+// Enable specular lighting.
+//#define INDIRECT_SPECULAR
+
+
 #define LIGHTCACHEMODE_CREATE 0
 #define LIGHTCACHEMODE_LIGHT 1
 #define LIGHTCACHEMODE_APPLY 2
@@ -15,10 +29,6 @@
 	#error "Please specify LIGHTCACHEMODE!"
 #endif
 
-
-//#define INDDIFFUSE_VIA_SH1
-#define INDDIFFUSE_VIA_SH2
-//#define INDDIFFUSE_VIA_H 4 // 6
 
 struct LightCacheEntry
 {
@@ -79,6 +89,12 @@ layout(std430, binding = 1) LIGHTCACHE_COUNTER_MODIFIER buffer LightCacheCounter
     int TotalLightCacheCount;
 };
 
+
+
+
+#define LIGHTING_THREADS_PER_GROUP 512
+
+
 mat3 ComputeLocalViewSpace(vec3 worldPosition)
 {
 	mat3 localViewSpace;
@@ -89,17 +105,30 @@ mat3 ComputeLocalViewSpace(vec3 worldPosition)
 	return localViewSpace;
 }
 
-#define LIGHTING_THREADS_PER_GROUP 512
-
-// Computes address volume cascade for a given worldPosition. If none fits, returns NumAddressVolumeCascades
+// Computes address volume cascade for a given worldPosition. If none fits, returns highest cascade (NumAddressVolumeCascades-1)
 int ComputeAddressVolumeCascade(vec3 worldPosition)
 {
 	int addressVolumeCascade = 0;
-	for(; addressVolumeCascade<NumAddressVolumeCascades; ++addressVolumeCascade)
+	for(; addressVolumeCascade<NumAddressVolumeCascades-1; ++addressVolumeCascade)
 	{
 		if(all(lessThanEqual(worldPosition, AddressVolumeCascades[addressVolumeCascade].DecisionMax) &&
-			   greaterThanEqual(worldPosition, AddressVolumeCascades[addressVolumeCascade].DecisionMin)))
+			greaterThanEqual(worldPosition, AddressVolumeCascades[addressVolumeCascade].DecisionMin)))
+		{
 			break;
+		}
 	}
+
 	return addressVolumeCascade;
+}
+
+/// Returns 0.0 if its not in transition area. 1.0 max transition to NEXT cascade.
+float ComputeAddressVolumeCascadeTransition(vec3 worldPosition, int addressVolumeCascade)
+{
+	vec3 distToMax = AddressVolumeCascades[addressVolumeCascade].DecisionMax - worldPosition;
+	vec3 distToMin = worldPosition - AddressVolumeCascades[addressVolumeCascade].DecisionMin;
+
+	float minDist = min(min(min(distToMax.x, distToMax.y), distToMax.z),
+						min(min(distToMin.x, distToMin.y), distToMin.z));
+
+	return clamp(1.0 - minDist / AddressVolumeCascades[addressVolumeCascade].WorldVoxelSize, 0.0, 1.0);
 }

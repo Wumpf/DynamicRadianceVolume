@@ -166,6 +166,8 @@ void Application::SetupTweakBarBinding()
 
 		// Address Volume
 		std::string groupSetting = " group=AddressVolume";
+		m_tweakBar->AddReadWrite<bool>("Smooth Transitions", [&](){ return m_renderer->GetSmoothAddressVolumeCascadeTransition(); }, [&](bool b){ return m_renderer->SetSmoothAddressVolumeCascadeTransition(b); }, groupSetting);
+		m_tweakBar->AddReadWrite<bool>("Display Cascades", [&](){ return m_renderer->GetShowAddressVolumeCascades(); }, [&](bool b){ return m_renderer->SetShowAddressVolumeCascades(b); }, groupSetting);
 		m_tweakBar->AddReadWrite<int>("Resolution", [&](){ return m_renderer->GetAddressVolumeResolution(); },
 			[&](int i){ return m_renderer->SetAddressVolumeCascades(m_renderer->GetAddressVolumeCascadeCount(), i); }, " min=16 max=256 step=16" + groupSetting);
 		m_tweakBar->AddReadWrite<int>("#Cascades", [&](){ return m_renderer->GetAddressVolumeCascadeCount(); },

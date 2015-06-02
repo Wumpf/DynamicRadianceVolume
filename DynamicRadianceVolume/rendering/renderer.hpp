@@ -102,6 +102,12 @@ public:
 	void SetAddressVolumeCascades(unsigned int numCascades, unsigned int resolutionPerCascade);
 	void SetAddressVolumeCascadeVoxelWorldSize(unsigned int cascade, float voxelWorldSize);
 
+	// Address volume usage
+	bool GetShowAddressVolumeCascades() const								{ return m_showAddressVolumeCascades; }
+	void SetShowAddressVolumeCascades(bool show)							{ m_showAddressVolumeCascades = show; ReloadSettingDependentCacheShader(); }
+	bool GetSmoothAddressVolumeCascadeTransition() const					{ return m_smoothAddressVolumeCascadeTransition; }
+	void SetSmoothAddressVolumeCascadeTransition(bool transitionEnabled)	{ m_smoothAddressVolumeCascadeTransition = transitionEnabled; ReloadSettingDependentCacheShader(); }
+
 	void BindObjectUBO(unsigned int objectIndex);
 
 	void SetExposure(float exposure);
@@ -181,6 +187,8 @@ private:
 	/// For simplicity all cascades are in one texture. Its depth/height gives the resolution, its width divided by depth/height is the number of cascades.
 	std::unique_ptr<gl::Texture3D> m_addressVolumeAtlas;
 	std::vector<float> m_addressVolumeCascadeWorldVoxelSize; ///< Voxel sizes of the address cascades in world units.
+	bool m_showAddressVolumeCascades;
+	bool m_smoothAddressVolumeCascadeTransition;
 
 	BufferPtr m_lightCacheBuffer;
 	BufferPtr m_lightCacheCounter;

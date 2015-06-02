@@ -16,6 +16,43 @@ shared uint cacheListSize;
 shared int cacheList[LOCAL_SIZE*LOCAL_SIZE * 4]; // Should be LOCAL_SIZE * LOCAL_SIZE * 8. Super unlikely to use full list
 
 
+// Quasi constants, derived from AddressVolumeResolution at the start of the shader.
+int AddressVolumeResolutionSq;
+int AddressVolumeResolutionCubic;
+
+void RegisterCaches(vec3 worldPosition, int addressVolumeCascade)
+{
+	// Cache only "main pixel address".
+	// This still leads to a lot of redundant writes in the address volume, but is clearly faster than performing the lookup for all addressCoord
+	// Need clamp for pixels that may lie outside of any address volume.
+	ivec3 addressGridPos = clamp(ivec3((worldPosition - AddressVolumeCascades[addressVolumeCascade].Min) / AddressVolumeCascades[addressVolumeCascade].WorldVoxelSize),
+									ivec3(0), ivec3(AddressVolumeResolution-1));
+
+	int cacheLookup = addressGridPos.x + 
+						addressGridPos.y * AddressVolumeResolution + 
+						addressGridPos.z * AddressVolumeResolutionSq + 
+						addressVolumeCascade * AddressVolumeResolutionCubic;
+	int cacheAddress = cacheLookup % ADDRESS_COORD_CACHE_SIZE;
+
+	int oldVal = atomicCompSwap(addressCoordCache[cacheAddress], -1, cacheLookup);
+	if(oldVal != cacheLookup)
+	{
+		uint oldCacheSize = atomicAdd(cacheListSize, uint(8));
+
+		// Add caches to hashlist/cache
+		int cacheLookup_Y = cacheLookup + AddressVolumeResolution;
+		int cacheLookup_Z = cacheLookup + AddressVolumeResolutionSq;
+		cacheList[oldCacheSize + 0] = cacheLookup;
+		cacheList[oldCacheSize + 1] = cacheLookup + 1;
+		cacheList[oldCacheSize + 2] = cacheLookup_Y;
+		cacheList[oldCacheSize + 3] = cacheLookup_Y + 1;
+		cacheList[oldCacheSize + 4] = cacheLookup_Z;
+		cacheList[oldCacheSize + 5] = cacheLookup_Z + 1;
+		cacheList[oldCacheSize + 6] = cacheLookup_Z + AddressVolumeResolution;
+		cacheList[oldCacheSize + 7] = cacheLookup_Z + AddressVolumeResolution + 1;
+	}
+}
+
 layout (local_size_x = LOCAL_SIZE, local_size_y = LOCAL_SIZE, local_size_z = 1) in;
 void main()
 {
@@ -30,10 +67,11 @@ void main()
 	{
 		cacheListSize = 0;
 	}
-	barrier();
 
-	int addressVolumeResolutionSq = AddressVolumeResolution*AddressVolumeResolution;
-	int addressVolumeResolutionCubic = addressVolumeResolutionSq * AddressVolumeResolution;
+	AddressVolumeResolutionSq = AddressVolumeResolution * AddressVolumeResolution;
+	AddressVolumeResolutionCubic = AddressVolumeResolutionSq * AddressVolumeResolution;
+
+	barrier();
 
 	if(!any(greaterThanEqual(gl_GlobalInvocationID.xy, BackbufferResolution)))
 	{
@@ -46,41 +84,21 @@ void main()
 		vec4 worldPosition4D = vec4(screenCor, depthBufferDepth, 1.0) * InverseViewProjection;
 		vec3 worldPosition = worldPosition4D.xyz / worldPosition4D.w;
 
-		// 
+		// Register caches for given cascade.
 		int addressVolumeCascade = ComputeAddressVolumeCascade(worldPosition);
-		if(addressVolumeCascade != NumAddressVolumeCascades)
-		{	
-			// Cache only "main pixel address".
-			// This still leads to a lot of redundant writes in the address volume, but is clearly faster than performing the lookup for all addressCoord
-			ivec3 addressGridPos = ivec3((worldPosition - AddressVolumeCascades[addressVolumeCascade].Min) / AddressVolumeCascades[addressVolumeCascade].WorldVoxelSize); 
-										//	ivec3(0), ivec3(AddressVolumeResolution-1));
+		RegisterCaches(worldPosition, addressVolumeCascade);
 
-			int cacheLookup = addressGridPos.x + 
-								addressGridPos.y * AddressVolumeResolution + 
-								addressGridPos.z * addressVolumeResolutionSq + 
-								addressVolumeCascade * addressVolumeResolutionCubic;
-			int cacheAddress = cacheLookup % ADDRESS_COORD_CACHE_SIZE;
-
-			int oldVal = atomicCompSwap(addressCoordCache[cacheAddress], -1, cacheLookup);
-			if(oldVal != cacheLookup)
-			{
-				uint oldCacheSize = atomicAdd(cacheListSize, uint(8));
-
-				// Add caches to hashlist/cache
-				int cacheLookup_Y = cacheLookup + AddressVolumeResolution;
-				int cacheLookup_Z = cacheLookup + addressVolumeResolutionSq;
-				cacheList[oldCacheSize + 0] = cacheLookup;
-				cacheList[oldCacheSize + 1] = cacheLookup + 1;
-				cacheList[oldCacheSize + 2] = cacheLookup_Y;
-				cacheList[oldCacheSize + 3] = cacheLookup_Y + 1;
-				cacheList[oldCacheSize + 4] = cacheLookup_Z;
-				cacheList[oldCacheSize + 5] = cacheLookup_Z + 1;
-				cacheList[oldCacheSize + 6] = cacheLookup_Z + AddressVolumeResolution;
-				cacheList[oldCacheSize + 7] = cacheLookup_Z + AddressVolumeResolution + 1;
-			}
+		// Additional register pass for smooth cascade transitions?
+	#ifdef ADDRESSVOL_CASCADE_TRANSITIONS
+		float cascadeTransition = ComputeAddressVolumeCascadeTransition(worldPosition, addressVolumeCascade);
+		if(cascadeTransition > 0.0 && addressVolumeCascade < NumAddressVolumeCascades-1)
+		{
+			RegisterCaches(worldPosition, addressVolumeCascade+1);
 		}
+	#endif
 	}
 
+	// All done with registering in cache.
 	barrier();
 
 	// Now allocate caches.
@@ -89,12 +107,12 @@ void main()
 	{
 		int cacheCoordToWrite = cacheList[i];
 
-		int addressVolumeCascade = cacheCoordToWrite / addressVolumeResolutionCubic;
-		cacheCoordToWrite -= addressVolumeResolutionCubic * addressVolumeCascade;
+		int addressVolumeCascade = cacheCoordToWrite / AddressVolumeResolutionCubic;
+		cacheCoordToWrite -= AddressVolumeResolutionCubic * addressVolumeCascade;
 
 		ivec3 unpackedAddressCoord_CascadeLocal;
-		unpackedAddressCoord_CascadeLocal.z = cacheCoordToWrite / addressVolumeResolutionSq;
-		unpackedAddressCoord_CascadeLocal.y = (cacheCoordToWrite - unpackedAddressCoord_CascadeLocal.z * addressVolumeResolutionSq) / AddressVolumeResolution;
+		unpackedAddressCoord_CascadeLocal.z = cacheCoordToWrite / AddressVolumeResolutionSq;
+		unpackedAddressCoord_CascadeLocal.y = (cacheCoordToWrite - unpackedAddressCoord_CascadeLocal.z * AddressVolumeResolutionSq) / AddressVolumeResolution;
 		unpackedAddressCoord_CascadeLocal.x = cacheCoordToWrite % AddressVolumeResolution;
 
 		ivec3 unpackedAddressCoord = unpackedAddressCoord_CascadeLocal;
