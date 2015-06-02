@@ -26,7 +26,7 @@ void main()
 	float cosTheta = saturate(dot(toLight, worldNormal));
 
 	// Check if shadowed - Using normal offset shadow bias http://www.dissidentlogic.com/old/#Normal%20Offset%20Shadows
-	//float shadowMapTexelSize = 1.0 / ShadowMapResolution; // Could be scaled with distance. Recheck if there are problems with distant objects.
+	//float shadowMapTexelSize = 1.0 / RSMResolution; // Could be scaled with distance. Recheck if there are problems with distant objects.
 	float normalOffsetScale = ShadowNormalOffset * (1.0 - cosTheta);// * shadowMapTexelSize;
 	vec4 shadowProjection;
 	shadowProjection.xy = (vec4(worldPosition + normalOffsetScale * worldNormal, 1.0) * LightViewProjection).xy;

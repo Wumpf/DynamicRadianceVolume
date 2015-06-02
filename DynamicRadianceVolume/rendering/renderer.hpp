@@ -235,6 +235,7 @@ private:
 	AutoReloadShaderPtr m_shaderDebugGBuffer;
 	AutoReloadShaderPtr m_shaderFillGBuffer;
 	AutoReloadShaderPtr m_shaderFillRSM;
+	AutoReloadShaderPtr m_shaderFillHighResSM;
 
 	AutoReloadShaderPtr m_shaderDeferredDirectLighting_Spot;
 
@@ -257,13 +258,17 @@ private:
 
 		/// Initializes all textures and the fbo with the given resolution (square)
 		/// Will recreate if already initialized.
-		void Init(unsigned int resolution);
+		/// If rsmResolution == shadowMapResolution, depthHighRes will point to the same texture as depthBuffer and highresShadowMapFBO will be nullptr.
+		void Init(unsigned int rsmResolution, unsigned int shadowMapResolution);
 
 		gl::Texture2D* flux;
 		gl::Texture2D* normal;
 		gl::Texture2D* depthLinSq;
 		gl::Texture2D* depthBuffer;
-		gl::FramebufferObject* fbo;
+		gl::Texture2D* depthHighRes;
+
+		gl::FramebufferObject* rsmFBO;
+		gl::FramebufferObject* highresShadowMapFBO;
 
 	private:
 		void DeInit();

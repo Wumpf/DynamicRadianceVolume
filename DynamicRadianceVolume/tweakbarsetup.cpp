@@ -97,7 +97,7 @@ void Application::ChangeLightCount(unsigned int lightCount)
 		std::string lightGroup = "Light" + std::to_string(i);
 		std::string groupSetting = " group=" + lightGroup + " ";
 		m_tweakBar->AddEnum(namePrefix + "Type", "LightType", [=](){ return static_cast<int>(m_scene->GetLights()[i].type); },
-			[=](const int& i){ m_scene->GetLights()[i].type = static_cast<Light::Type>(i); }, groupSetting + "label=Type");
+			[=](int i){ m_scene->GetLights()[i].type = static_cast<Light::Type>(i); }, groupSetting + "label=Type");
 
 		m_tweakBar->AddReadWrite<ei::Vec3>(namePrefix + "Intensity", [=](){ return m_scene->GetLights()[i].intensity; },
 			[=](const ei::Vec3& v){ m_scene->GetLights()[i].intensity = v; }, groupSetting + " label=Intensity", AntTweakBarInterface::TypeHint::HDRCOLOR);
@@ -109,24 +109,27 @@ void Application::ChangeLightCount(unsigned int lightCount)
 			[=](const ei::Vec3& v){ m_scene->GetLights()[i].direction = v; }, groupSetting + " label=Direction");
 
 		m_tweakBar->AddReadWrite<float>(namePrefix + "SpotAngle", [=](){ return m_scene->GetLights()[i].halfAngle / (ei::PI / 180.0f); },
-			[=](const float& f){ m_scene->GetLights()[i].halfAngle = f  * (ei::PI / 180.0f); }, groupSetting + " label=\"Half Spot Angle\" min=1.0 max=89 step=1.0");
+			[=](float f){ m_scene->GetLights()[i].halfAngle = f  * (ei::PI / 180.0f); }, groupSetting + " label=\"Half Spot Angle\" min=1.0 max=89 step=1.0");
 
 		m_tweakBar->AddSeperator(namePrefix + "shadowseparator", groupSetting);
 
-		m_tweakBar->AddEnum(namePrefix + "ShadowMapRes", "RSMResolution", [=](){ return m_scene->GetLights()[i].shadowMapResolution; },
-			[=](const int& res){ m_scene->GetLights()[i].shadowMapResolution = res; }, groupSetting + " label=\"Shadow Map Resolution\"");
+		m_tweakBar->AddEnum(namePrefix + "RSMRes", "RSMResolution", [=](){ return m_scene->GetLights()[i].rsmResolution; },
+			[=](int res){ m_scene->GetLights()[i].rsmResolution = res; }, groupSetting + " label=\"Reflective Shadow Map Resolution\"");
+
+		m_tweakBar->AddReadWrite<int>(namePrefix + "ShadowMapRes", [=](){ return m_scene->GetLights()[i].shadowMapResolution; },
+			[=](int res){ m_scene->GetLights()[i].shadowMapResolution = res; }, groupSetting + " label=\"Shadow Map Resolution\" min=16 max=4096 step=16");
 
 		m_tweakBar->AddReadWrite<float>(namePrefix + "NormalBias", [=](){ return m_scene->GetLights()[i].normalOffsetShadowBias; },
-			[=](const float& f){ m_scene->GetLights()[i].normalOffsetShadowBias = f; }, groupSetting + " label=\"NormalOffset Shadow Bias\" min=0.00 max=100.0 step=0.001");
+			[=](float f){ m_scene->GetLights()[i].normalOffsetShadowBias = f; }, groupSetting + " label=\"NormalOffset Shadow Bias\" min=0.00 max=100.0 step=0.001");
 
 		m_tweakBar->AddReadWrite<float>(namePrefix + "Bias", [=](){ return m_scene->GetLights()[i].shadowBias; },
-			[=](const float& f){ m_scene->GetLights()[i].shadowBias = f; }, groupSetting + " label=\"Shadow Bias\" min=0.00 max=1.0 step=0.00001");
+			[=](float f){ m_scene->GetLights()[i].shadowBias = f; }, groupSetting + " label=\"Shadow Bias\" min=0.00 max=1.0 step=0.00001");
 
 		m_tweakBar->AddReadWrite<int>(namePrefix + "IndirectShadowLod", [=](){ return m_scene->GetLights()[i].indirectShadowComputationLod; },
-			[=](const int& j){ m_scene->GetLights()[i].indirectShadowComputationLod = j; }, groupSetting + " label=\"Ind. Shadow Lod\" min=0 max=4 step=1");
+			[=](int j){ m_scene->GetLights()[i].indirectShadowComputationLod = j; }, groupSetting + " label=\"Ind. Shadow Lod\" min=0 max=4 step=1");
 
 		m_tweakBar->AddReadWrite<float>(namePrefix + "IndirectShadowMinConeAngle", [=](){ return m_scene->GetLights()[i].indirectShadowMinHalfConeAngle / (ei::PI / 180.0f); },
-			[=](const float& f){ m_scene->GetLights()[i].indirectShadowMinHalfConeAngle = f  * (ei::PI / 180.0f); }, groupSetting + " label=\"Ind. Shadow Min. Half Angle\" min=0 max=30 step=0.1");
+			[=](float f){ m_scene->GetLights()[i].indirectShadowMinHalfConeAngle = f  * (ei::PI / 180.0f); }, groupSetting + " label=\"Ind. Shadow Min. Half Angle\" min=0 max=30 step=0.1");
 
 		m_tweakBar->SetGroupProperties(lightGroup, "Lights", lightGroup, false);
 	}

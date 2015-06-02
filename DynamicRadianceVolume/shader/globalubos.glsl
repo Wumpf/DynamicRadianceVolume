@@ -96,7 +96,7 @@ layout(binding = 4, shared) uniform SpotLight
 	mat4 LightViewProjection;
 	mat4 InverseLightViewProjection;
 
-	int ShadowMapResolution;
+	int RSMResolution;
 	float ValAreaFactor; // NearClipWidth * NearClipHeight / (NearClipPlaneDepth² * RSMResolution * RSMResolution)
 
 	float IndirectShadowComputationLod; 			// SHADOW_COMPUTATION_LOD 2

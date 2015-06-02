@@ -5,7 +5,8 @@
 struct Light
 {
 public:
-	Light() : type(Type::SPOT), intensity(10.0f), position(0.0f), direction(0.0f, 0.0f, 1.0f), halfAngle(0.5f), shadowMapResolution(32), 
+	Light() : type(Type::SPOT), intensity(10.0f), position(0.0f), direction(0.0f, 0.0f, 1.0f), halfAngle(0.5f),
+		rsmResolution(32), shadowMapResolution(1024),
 		normalOffsetShadowBias(0.1f), shadowBias(0.008f),
 		indirectShadowComputationLod(2), 
 		indirectShadowMinHalfConeAngle(0.05f) // about 2.9 degree half angle (~5.7 full cone)
@@ -24,7 +25,8 @@ public:
 
 	float halfAngle;
 
-	unsigned int shadowMapResolution; // Only Pow2 resolutions are allowed
+	unsigned int rsmResolution; // Only Pow2 resolutions are allowed
+	unsigned int shadowMapResolution;
 	float normalOffsetShadowBias;
 	float shadowBias;
 

@@ -33,13 +33,13 @@ void main()
 	OutputColor = vec3(0.0);
 
 	ivec2 rsmSamplePos = ivec2(0);
-	for(; rsmSamplePos.x<ShadowMapResolution; ++rsmSamplePos.x)
+	for(; rsmSamplePos.x<RSMResolution; ++rsmSamplePos.x)
 	{
 		rsmSamplePos.y = 0;
-		for(; rsmSamplePos.y<ShadowMapResolution; ++rsmSamplePos.y)
+		for(; rsmSamplePos.y<RSMResolution; ++rsmSamplePos.y)
 		{
 			float lightDepth = texelFetch(RSM_Depth, rsmSamplePos, 0).r;
-			vec4 valPosition = vec4((rsmSamplePos + vec2(0.5)) / ShadowMapResolution * 2.0 - vec2(1.0), lightDepth, 1.0) * InverseLightViewProjection;
+			vec4 valPosition = vec4((rsmSamplePos + vec2(0.5)) / RSMResolution * 2.0 - vec2(1.0), lightDepth, 1.0) * InverseLightViewProjection;
 			valPosition.xyz /= valPosition.w;
 
 			// Direction and distance to light.
