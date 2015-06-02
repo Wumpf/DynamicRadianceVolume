@@ -305,20 +305,22 @@ void Renderer::UpdatePerFrameUBO(const Camera& camera)
 	mappedMemory["VolumeWorldMax"].Set(VolumeWorldMax);
 	mappedMemory["VoxelSizeInWorld"].Set((VolumeWorldMax.x - VolumeWorldMin.x) / m_voxelization->GetVoxelTexture().GetWidth());
 	
-	for (int i = 0; i < m_CAVCascadeWorldVoxelSize.size(); ++i)
+	for (int i = 0; i < m_CAVCascadeWorldSize.size(); ++i)
 	{
+		float cascadeVoxelSize = m_CAVCascadeWorldSize[i] / GetCAVResolution();
+
 		// Centered around camera
-		ei::Vec3 snappedCamera = ei::round(camera.GetPosition() / m_CAVCascadeWorldVoxelSize[i]) * m_CAVCascadeWorldVoxelSize[i];
-		ei::Vec3 min = snappedCamera - m_CAVCascadeWorldVoxelSize[i] * m_CAVAtlas->GetHeight() * 0.5f;
-		ei::Vec3 max = snappedCamera + m_CAVCascadeWorldVoxelSize[i] * m_CAVAtlas->GetHeight() * 0.5f;
+		ei::Vec3 snappedCamera = ei::round(camera.GetPosition() / cascadeVoxelSize) * cascadeVoxelSize;
+		ei::Vec3 min = snappedCamera - m_CAVCascadeWorldSize[i] * 0.5f;
+		ei::Vec3 max = snappedCamera + m_CAVCascadeWorldSize[i] * 0.5f;
 
 		// Two offsets: 0.5 for assure that there will always be 8 voxels, 1.0 to assure that area is still within the actual min/max above.
-		ei::Vec3 decisionMin = camera.GetPosition() - m_CAVCascadeWorldVoxelSize[i] * m_CAVAtlas->GetHeight() * 0.5f + m_CAVCascadeWorldVoxelSize[i] * 1.5f;
-		ei::Vec3 decisionMax = camera.GetPosition() + m_CAVCascadeWorldVoxelSize[i] * m_CAVAtlas->GetHeight() * 0.5f - m_CAVCascadeWorldVoxelSize[i] * 1.5f;
+		ei::Vec3 decisionMin = camera.GetPosition() - m_CAVCascadeWorldSize[i] * 0.5f + cascadeVoxelSize * 1.5f;
+		ei::Vec3 decisionMax = camera.GetPosition() + m_CAVCascadeWorldSize[i] * 0.5f - cascadeVoxelSize * 1.5f;
 
 		std::string num = std::to_string(i);
 		mappedMemory["AddressVolumeCascades[" + num + "].Min"].Set(min);
-		mappedMemory["AddressVolumeCascades[" + num + "].WorldVoxelSize"].Set(m_CAVCascadeWorldVoxelSize[i]);
+		mappedMemory["AddressVolumeCascades[" + num + "].WorldVoxelSize"].Set(cascadeVoxelSize);
 		mappedMemory["AddressVolumeCascades[" + num + "].Max"].Set(max);
 		mappedMemory["AddressVolumeCascades[" + num + "].DecisionMin"].Set(decisionMin);
 		mappedMemory["AddressVolumeCascades[" + num + "].DecisionMax"].Set(decisionMax);
@@ -987,12 +989,12 @@ void Renderer::SetCAVCascades(unsigned int numCascades, unsigned int resolutionP
 	m_CAVAtlas = std::make_unique<gl::Texture3D>(numCascades * resolutionPerCascade, resolutionPerCascade, resolutionPerCascade, gl::TextureFormat::R32UI);
 	
 	// Fill in new voxel sizes if necessary.
-	size_t previousSize = m_CAVCascadeWorldVoxelSize.size();
-	m_CAVCascadeWorldVoxelSize.resize(numCascades);
+	size_t previousSize = m_CAVCascadeWorldSize.size();
+	m_CAVCascadeWorldSize.resize(numCascades);
 	if (previousSize == 0)
-		m_CAVCascadeWorldVoxelSize[0] = 0.2f;
-	for (size_t i = std::max<size_t>(1, previousSize); i < m_CAVCascadeWorldVoxelSize.size(); ++i)
-		m_CAVCascadeWorldVoxelSize[i] = m_CAVCascadeWorldVoxelSize[i - 1] * 2.0f;
+		m_CAVCascadeWorldSize[0] = 4.0f;
+	for (size_t i = std::max<size_t>(1, previousSize); i < m_CAVCascadeWorldSize.size(); ++i)
+		m_CAVCascadeWorldSize[i] = m_CAVCascadeWorldSize[i - 1] * 2.0f;
 
 	LOG_INFO("Address volume atlas texture resolution " << m_CAVAtlas->GetWidth() << "x" << m_CAVAtlas->GetHeight() << "x" << m_CAVAtlas->GetDepth() <<
 		" using " << (m_CAVAtlas->GetWidth()* m_CAVAtlas->GetHeight() * m_CAVAtlas->GetDepth() * 4 / 1024) << "kb memory.");
@@ -1000,9 +1002,9 @@ void Renderer::SetCAVCascades(unsigned int numCascades, unsigned int resolutionP
 	UpdateConstantUBO();
 }
 
-void Renderer::SetCAVCascadeVoxelWorldSize(unsigned int cascade, float voxelWorldSize)
+void Renderer::SetCAVCascadeWorldSize(unsigned int cascade, float voxelWorldSize)
 {
-	Assert(cascade < m_CAVCascadeWorldVoxelSize.size(), "Given address volume cascade does not exist!");
+	Assert(cascade < m_CAVCascadeWorldSize.size(), "Given address volume cascade does not exist!");
 	Assert(voxelWorldSize > 0.0f, "Voxel world size can not be negative!");
 
 	/*if (cascade > 0 && m_lightCacheAddressCascadeWorldVoxelSize[cascade - 1] > m_lightCacheAddressCascadeWorldVoxelSize[cascade])
@@ -1010,7 +1012,7 @@ void Renderer::SetCAVCascadeVoxelWorldSize(unsigned int cascade, float voxelWorl
 		LOG_WARNING("Cascade voxel size of higher order cascades should be higher than lower ones");
 	}*/
 
-	m_CAVCascadeWorldVoxelSize[cascade] = voxelWorldSize;
+	m_CAVCascadeWorldSize[cascade] = voxelWorldSize;
 }
 
 void Renderer::SetExposure(float exposure)

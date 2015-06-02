@@ -104,11 +104,11 @@ public:
 	unsigned int GetLightCacheActiveCount() const;
 
 	// Address volume setup
-	unsigned int GetCAVCascadeCount() const { return static_cast<unsigned int>(m_CAVCascadeWorldVoxelSize.size()); }
+	unsigned int GetCAVCascadeCount() const { return static_cast<unsigned int>(m_CAVCascadeWorldSize.size()); }
 	unsigned int GetCAVResolution() const;
-	float GetCAVCascadeVoxelWorldSize(unsigned int cascade) const { return cascade >= m_CAVCascadeWorldVoxelSize.size() ? std::numeric_limits<float>().quiet_NaN() : m_CAVCascadeWorldVoxelSize[cascade]; }
+	float GetCAVCascadeWorldSize(unsigned int cascade) const { return cascade >= m_CAVCascadeWorldSize.size() ? std::numeric_limits<float>().quiet_NaN() : m_CAVCascadeWorldSize[cascade]; }
 	void SetCAVCascades(unsigned int numCascades, unsigned int resolutionPerCascade);
-	void SetCAVCascadeVoxelWorldSize(unsigned int cascade, float voxelWorldSize);
+	void SetCAVCascadeWorldSize(unsigned int cascade, float cascadeWorldSize);
 
 	// Address volume usage
 	bool GetShowCAVCascades() const								{ return m_showCAVCascades; }
@@ -194,7 +194,7 @@ private:
 
 	/// For simplicity all cascades are in one texture. Its depth/height gives the resolution, its width divided by depth/height is the number of cascades.
 	std::unique_ptr<gl::Texture3D> m_CAVAtlas;
-	std::vector<float> m_CAVCascadeWorldVoxelSize; ///< Voxel sizes of the address cascades in world units.
+	std::vector<float> m_CAVCascadeWorldSize; ///< World size of the cascade cubes.
 	bool m_showCAVCascades;
 	bool m_smoothCAVCascadeTransition;
 

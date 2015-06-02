@@ -177,15 +177,15 @@ void Application::SetupTweakBarBinding()
 			[&](int numCascades)
 			{
 				for (int i = 0; i < Renderer::s_maxNumCAVCascades; ++i)
-					m_tweakBar->SetVisible("CellSize_" + std::to_string(i), i < numCascades);
+					m_tweakBar->SetVisible("CascadeSize_" + std::to_string(i), i < numCascades);
 				return m_renderer->SetCAVCascades(numCascades, m_renderer->GetCAVResolution());
 			}, " min=1 max=4 step=1" + groupSetting);
-		for (int i = 0; i < Renderer::s_maxNumCAVCascades; ++i)
+		for (unsigned int i = 0; i < Renderer::s_maxNumCAVCascades; ++i)
 		{
-			std::string elementSettings = " min=0.01 max=64 step=0.01" + groupSetting + " label=\"Voxel Size " + std::to_string(i) + "\"";
-			if (i != 0) elementSettings += " visible=false";
-			m_tweakBar->AddReadWrite<float>("CellSize_"+std::to_string(i), [&, i](){ return m_renderer->GetCAVCascadeVoxelWorldSize(i); },
-				[&, i](float size){ return m_renderer->SetCAVCascadeVoxelWorldSize(i, size); }, elementSettings);
+			std::string elementSettings = " min=1.0 max=10000 step=0.5" + groupSetting + " label=\"Cascade Size " + std::to_string(i) + "\"";
+			if (i < m_renderer->GetCAVCascadeCount()) elementSettings += " visible=false";
+			m_tweakBar->AddReadWrite<float>("CascadeSize_" + std::to_string(i), [&, i](){ return m_renderer->GetCAVCascadeWorldSize(i); },
+				[&, i](float size){ m_renderer->SetCAVCascadeWorldSize(i, size); }, elementSettings);
 		}
 		m_tweakBar->SetGroupProperties("AddressVolume", "", "Light Cache Address Volume (CAV)", false);
 
