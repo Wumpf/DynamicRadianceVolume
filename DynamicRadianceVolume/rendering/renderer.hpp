@@ -73,6 +73,10 @@ public:
 	void SetSpecularEnvMapHoleFillLevel(unsigned int holeFillLevel) { m_specularEnvmapMaxFillHolesLevel = std::min(holeFillLevel, static_cast<unsigned int>(log2(m_specularEnvmapPerCacheSize))); }
 	unsigned int GetSpecularEnvMapHoleFillLevel() const { return m_specularEnvmapMaxFillHolesLevel; }
 
+
+	void SetSpecularEnvMapDirectWrite(bool directWrite) { m_specularEnvmapDirectWrite = directWrite; ReloadSettingDependentCacheShader(); }
+	bool GetSpecularEnvMapDirectWrite() const { return m_specularEnvmapDirectWrite; }
+
 	/// Sets maximum cache count. Will print warning to log if given value can not be achieved.
 	void SetMaxCacheCount(unsigned int maxCacheCount)	{ m_maxNumLightCaches = maxCacheCount; AllocateCacheData(); UpdateConstantUBO(); }
 	unsigned int GetMaxCacheCount() const				{ return m_maxNumLightCaches; }
@@ -198,6 +202,7 @@ private:
 	std::vector<std::shared_ptr<gl::FramebufferObject>> m_specularCacheEnvmapFBOs;
 	unsigned int m_specularEnvmapPerCacheSize; ///< Resolution of specular map per cache
 	unsigned int m_specularEnvmapMaxFillHolesLevel; ///< Zero means no push pull
+	bool m_specularEnvmapDirectWrite; ///< During cacheLighting, writes to the specular environment map directly, instead of trying to keep results compress in registers.
 
 	bool m_indirectShadow;
 

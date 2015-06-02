@@ -163,6 +163,9 @@ void Application::SetupTweakBarBinding()
 
 		m_tweakBar->AddReadWrite<int>("Max Total Cache Count", [&](){ return m_renderer->GetMaxCacheCount(); },
 			[&](int i){ return m_renderer->SetMaxCacheCount(i); }, " min=2048 max=1048576 step=2048");
+		m_tweakBar->AddReadWrite<bool>("Track Light Cache Count", [&](){ return m_renderer->GetReadLightCacheCount(); },
+			[&](bool b){ return m_renderer->SetReadLightCacheCount(b); });
+		m_tweakBar->AddReadOnly("#Active Caches", [&](){ return std::to_string(m_renderer->GetLightCacheActiveCount()); });
 
 		// Address Volume
 		std::string groupSetting = " group=AddressVolume";
@@ -187,15 +190,13 @@ void Application::SetupTweakBarBinding()
 		m_tweakBar->SetGroupProperties("AddressVolume", "", "Address Volume", false);
 
 		
+		// Address Volume
+		groupSetting = " group=SpecEnvMap";
 		std::vector<TwEnumVal> specEnvMapRes = { { 4, "4x4" }, { 8, "8x8" }, { 16, "16x16" }, { 32, "32x32" }, { 64, "64x64" } };
 		m_tweakBar->AddEnumType("SpecEnvMapRes", specEnvMapRes);
-		m_tweakBar->AddEnum("SpecEnvMap Size", "SpecEnvMapRes", [&](){ return m_renderer->GetPerCacheSpecularEnvMapSize(); }, [&](int i){ return m_renderer->SetPerCacheSpecularEnvMapSize(i); });
-		m_tweakBar->AddReadWrite<int>("SpecEnvMap Hole Fill Level", [&](){ return m_renderer->GetSpecularEnvMapHoleFillLevel(); }, [&](int i){ return m_renderer->SetSpecularEnvMapHoleFillLevel(i); }, " min=0 max=5 step=1");
-
-		// Statistics
-		m_tweakBar->AddReadWrite<bool>("Track Light Cache Count", [&](){ return m_renderer->GetReadLightCacheCount(); },
-			[&](bool b){ return m_renderer->SetReadLightCacheCount(b); });
-		m_tweakBar->AddReadOnly("#Active Caches", [&](){ return std::to_string(m_renderer->GetLightCacheActiveCount()); });
+		m_tweakBar->AddEnum("SpecEnvMap Size", "SpecEnvMapRes", [&](){ return m_renderer->GetPerCacheSpecularEnvMapSize(); }, [&](int i){ return m_renderer->SetPerCacheSpecularEnvMapSize(i); }, " label=Resolution" + groupSetting);
+		m_tweakBar->AddReadWrite<int>("Hole Fill Level", [&](){ return m_renderer->GetSpecularEnvMapHoleFillLevel(); }, [&](int i){ return m_renderer->SetSpecularEnvMapHoleFillLevel(i); }, " min=0 max=5 step=1" + groupSetting);
+		m_tweakBar->AddReadWrite<bool>("Direct Write", [&](){ return m_renderer->GetSpecularEnvMapDirectWrite(); }, [&](bool b){ return m_renderer->SetSpecularEnvMapDirectWrite(b); }, groupSetting);
 	}
 
 	// Timer Statistics

@@ -38,6 +38,7 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 
 	m_specularEnvmapPerCacheSize(16),
 	m_specularEnvmapMaxFillHolesLevel(2),
+	m_specularEnvmapDirectWrite(false),
 	m_showAddressVolumeCascades(false),
 	m_smoothAddressVolumeCascadeTransition(true),
 	m_indirectShadow(true),
@@ -175,6 +176,9 @@ void Renderer::ReloadSettingDependentCacheShader()
 	{
 		settings = "#define INDIRECT_SPECULAR\n"
 			"#define SPECULARENVMAP_PERCACHESIZE " + std::to_string(m_specularEnvmapPerCacheSize) + "\n";
+
+		if (m_specularEnvmapDirectWrite)
+			settings += "#define DIRECT_SPECULAR_MAP_WRITE\n";
 	}
 	if (m_indirectShadow)
 		settings += "#define INDIRECT_SHADOW\n";
