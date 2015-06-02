@@ -2,7 +2,7 @@
 
 // Diffuse lighting mode.
 //#define INDDIFFUSE_VIA_SH1
-#define INDDIFFUSE_VIA_SH2
+//#define INDDIFFUSE_VIA_SH2
 //#define INDDIFFUSE_VIA_H 4 // 6
 
 // Enable cascade transitions.

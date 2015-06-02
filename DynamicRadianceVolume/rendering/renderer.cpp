@@ -37,10 +37,11 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	m_lastNumLightCaches(0),
 	m_exposure(1.0f),
 	m_mode(Renderer::Mode::DYN_RADIANCE_VOLUME),
+	m_indirectDiffuseMode(IndirectDiffuseMode::SH1),
 
 	m_specularEnvmapPerCacheSize(16),
-	m_specularEnvmapMaxFillHolesLevel(2),
-	m_specularEnvmapDirectWrite(false),
+	m_specularEnvmapMaxFillHolesLevel(0),
+	m_specularEnvmapDirectWrite(true),
 	m_showCAVCascades(false),
 	m_smoothCAVCascadeTransition(true),
 	m_indirectShadow(true),
@@ -203,6 +204,19 @@ void Renderer::ReloadSettingDependentCacheShader()
 		settings += "#define SHOW_ADDRESSVOL_CASCADES\n";
 	if (m_smoothCAVCascadeTransition)
 		settings += "#define ADDRESSVOL_CASCADE_TRANSITIONS\n";
+	
+	switch (m_indirectDiffuseMode)
+	{
+	case IndirectDiffuseMode::SH1:
+		settings += "#define INDDIFFUSE_VIA_SH1\n";
+		break;
+	case IndirectDiffuseMode::SH2:
+		settings += "#define INDDIFFUSE_VIA_SH2\n";
+		break;
+	default:
+		LOG_ERROR("Given indirect diffuse mode not implemented yet!");
+	}
+
 
 	m_shaderCacheGather = new gl::ShaderObject("cache gather");
 	m_shaderCacheGather->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cacheGather.comp", settings);

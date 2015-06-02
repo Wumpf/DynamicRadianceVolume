@@ -161,9 +161,17 @@ void Application::SetupTweakBarBinding()
 			TwEnumVal{ (int)Renderer::Mode::AMBIENTOCCLUSION, "VCT AO" },
 		};
 		m_tweakBar->AddEnumType("RenderModeType", renderModeVals);
-		m_tweakBar->AddEnum("RenderMode", "RenderModeType", [&](){ return (int)m_renderer->GetMode(); }, [&](int mode){ return m_renderer->SetMode(static_cast<Renderer::Mode>(mode)); });
+		m_tweakBar->AddEnum("Render Mode", "RenderModeType", [&](){ return (int)m_renderer->GetMode(); }, [&](int mode){ return m_renderer->SetMode(static_cast<Renderer::Mode>(mode)); });
 		m_tweakBar->AddReadWrite<bool>("IndirectShadow", [&](){ return m_renderer->GetIndirectShadow(); }, [&](bool b){ return m_renderer->SetIndirectShadow(b); }, " label=\"Indirect Shadow\"");
 		m_tweakBar->AddReadWrite<bool>("IndirectSpecular", [&](){ return m_renderer->GetIndirectSpecular(); }, [&](bool b){ return m_renderer->SetIndirectSpecular(b); }, " label=\"Indirect Specular\"");
+
+		std::vector<TwEnumVal> indirectDiffuseModeVals =
+		{
+			TwEnumVal{ (int)Renderer::IndirectDiffuseMode::SH1, "0/1 Band SH" },
+			TwEnumVal{ (int)Renderer::IndirectDiffuseMode::SH2, "0/1/2 Band SH" },
+		};
+		m_tweakBar->AddEnumType("IndirectDiffuseModeType", indirectDiffuseModeVals);
+		m_tweakBar->AddEnum("Indirect Diffuse Mode", "IndirectDiffuseModeType", [&](){ return (int)m_renderer->GetIndirectDiffuseMode(); }, [&](int mode){ return m_renderer->SetIndirectDiffuseMode(static_cast<Renderer::IndirectDiffuseMode>(mode)); });
 
 		m_tweakBar->AddReadWrite<int>("Max Total Cache Count", [&](){ return m_renderer->GetMaxCacheCount(); },
 			[&](int i){ return m_renderer->SetMaxCacheCount(i); }, " min=2048 max=1048576 step=2048");

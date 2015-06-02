@@ -38,6 +38,14 @@ class Renderer
 public:
 	Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& resolution);
 	~Renderer();
+	
+	/// Performs all drawing operations.
+	/// \param detachViewFromCameraUpdate
+	///		If true, all camera update related state will not be updated. Only view matrices etc. change so that the previous view can be watched from a different camera.
+	void Draw(const Camera& camera, bool detachViewFromCameraUpdate);
+
+	/// Saves HDR buffer to a pfm file.
+	void SaveToPFM(const std::string& filename) const;
 
 	enum class Mode
 	{
@@ -50,10 +58,18 @@ public:
 		VOXELVIS = 5,
 		AMBIENTOCCLUSION
 	};
-
 	void SetMode(Mode mode) { m_mode = mode; }
 	Mode GetMode() const { return m_mode; }
 
+
+	enum class IndirectDiffuseMode
+	{
+		SH1,
+		SH2
+	};
+
+	IndirectDiffuseMode GetIndirectDiffuseMode() const { return m_indirectDiffuseMode; }
+	void SetIndirectDiffuseMode(IndirectDiffuseMode mode) { m_indirectDiffuseMode = mode; ReloadSettingDependentCacheShader(); }
 
 	/// Activate/deactivates casting of indirect shadows.
 	void SetIndirectShadow(bool active)		{ m_indirectShadow = active; ReloadSettingDependentCacheShader(); }
@@ -91,14 +107,6 @@ public:
 
 	void SetScene(const std::shared_ptr<const Scene>& scene);
 	const std::shared_ptr<const Scene>& GetScene() const { return m_scene; }
-
-	/// Performs all drawing operations.
-	/// \param detachViewFromCameraUpdate
-	///		If true, all camera update related state will not be updated. Only view matrices etc. change so that the previous view can be watched from a different camera.
-	void Draw(const Camera& camera, bool detachViewFromCameraUpdate);
-
-	/// Saves HDR buffer to a pfm file.
-	void SaveToPFM(const std::string& filename) const;
 
 	/// Enables/Disables tracking of current light cache count.
 	/// \attention Tracking can seriously hurt the overall performance! 
@@ -225,6 +233,8 @@ private:
 	bool m_specularEnvmapDirectWrite; ///< During cacheLighting, writes to the specular environment map directly, instead of trying to keep results compress in registers.
 
 	bool m_indirectShadow;
+
+	IndirectDiffuseMode m_indirectDiffuseMode;
 
 	AutoReloadShaderPtr m_shaderCacheGather;
 	AutoReloadShaderPtr m_shaderCacheApply;
