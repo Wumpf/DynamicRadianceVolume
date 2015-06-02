@@ -80,7 +80,7 @@ public:
 	};
 	typedef std::pair<std::string, std::vector<FrameProfiler::Event>> EventList;
 
-	const std::vector<std::uint32_t>& GetFrameDurations() const										{ return m_recordedFrameDurations; }
+	const std::vector<std::uint32_t>& GetFrameDurations() const		{ return m_recordedFrameDurations; }
 
 	/// Retrieves event list for all event types.
 	///

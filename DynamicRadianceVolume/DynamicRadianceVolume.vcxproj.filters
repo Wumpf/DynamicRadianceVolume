@@ -384,22 +384,19 @@
     <None Include="..\dependencies\glhelper\glhelper\buffer.inl">
       <Filter>dependencies\glhelper</Filter>
     </None>
-    <None Include="shader\gbuffer.glsl">
-      <Filter>shader</Filter>
-    </None>
-    <None Include="shader\globalubos.glsl">
-      <Filter>shader</Filter>
-    </None>
-    <None Include="shader\lightcache.glsl">
-      <Filter>shader</Filter>
-    </None>
     <None Include="shader\random.glsl">
       <Filter>shader</Filter>
     </None>
-    <None Include="shader\requestlightcaches.frag">
+    <None Include="shader\screenTri.vert">
       <Filter>shader</Filter>
     </None>
-    <None Include="shader\screenTri.vert">
+    <None Include="shader\specularenvmap.vert">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\specularenvmap_fillholes.frag">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\specularenvmap_mipmap.frag">
       <Filter>shader</Filter>
     </None>
     <None Include="shader\tonemapping.frag">
@@ -420,6 +417,12 @@
     <None Include="shader\voxelize.vert">
       <Filter>shader</Filter>
     </None>
+    <None Include="shader\ambientocclusion.frag">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\bruteforcersm.frag">
+      <Filter>shader</Filter>
+    </None>
     <None Include="shader\cacheApply.frag">
       <Filter>shader</Filter>
     </None>
@@ -429,10 +432,19 @@
     <None Include="shader\cacheLightingDirect.comp">
       <Filter>shader</Filter>
     </None>
+    <None Include="shader\cacheLightingRSM.comp">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\cachePrepareLighting.comp">
+      <Filter>shader</Filter>
+    </None>
     <None Include="shader\debuggbuffer.frag">
       <Filter>shader</Filter>
     </None>
-    <None Include="shader\defaultmodel_noskinning.vert">
+    <None Include="shader\defaultmodel.vert">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\defaultmodel_rsm.vert">
       <Filter>shader</Filter>
     </None>
     <None Include="shader\directdeferredlighting.frag">
@@ -441,7 +453,19 @@
     <None Include="shader\fillgbuffer.frag">
       <Filter>shader</Filter>
     </None>
-    <None Include="shader\cacheLightingRSM.comp">
+    <None Include="shader\fillrsm.frag">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\gbuffer.glsl">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\globalubos.glsl">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\lightcache.glsl">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\lightingfunctions.glsl">
       <Filter>shader</Filter>
     </None>
   </ItemGroup>

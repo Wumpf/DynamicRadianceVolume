@@ -148,11 +148,11 @@ void Application::SetupTweakBarBinding()
 	{
 		std::vector<TwEnumVal> renderModeVals =
 		{
-			TwEnumVal{ (int)Renderer::Mode::RSM_BRUTEFORCE, "RSM Bruteforce" },
+			TwEnumVal{ (int)Renderer::Mode::RSM_BRUTEFORCE, "RSM Bruteforce (slow!)" },
 			TwEnumVal{ (int)Renderer::Mode::DYN_RADIANCE_VOLUME, "Dyn. Cache Volume" },
 			TwEnumVal{ (int)Renderer::Mode::GBUFFER_DEBUG, "GBuffer Debug" },
 			TwEnumVal{ (int)Renderer::Mode::DIRECTONLY, "DirectLight only" },
-			TwEnumVal{ (int)Renderer::Mode::DIRECTONLY_CACHE, "DirectLight only - via Cache" },
+			//TwEnumVal{ (int)Renderer::Mode::DIRECTONLY_CACHE, "DirectLight only - via Cache" },
 			TwEnumVal{ (int)Renderer::Mode::VOXELVIS, "Voxelization Display" },
 			TwEnumVal{ (int)Renderer::Mode::AMBIENTOCCLUSION, "VCT AO" },
 		};
@@ -169,25 +169,25 @@ void Application::SetupTweakBarBinding()
 
 		// Address Volume
 		std::string groupSetting = " group=AddressVolume";
-		m_tweakBar->AddReadWrite<bool>("Smooth Transitions", [&](){ return m_renderer->GetSmoothAddressVolumeCascadeTransition(); }, [&](bool b){ return m_renderer->SetSmoothAddressVolumeCascadeTransition(b); }, groupSetting);
-		m_tweakBar->AddReadWrite<bool>("Display Cascades", [&](){ return m_renderer->GetShowAddressVolumeCascades(); }, [&](bool b){ return m_renderer->SetShowAddressVolumeCascades(b); }, groupSetting);
-		m_tweakBar->AddReadWrite<int>("Resolution", [&](){ return m_renderer->GetAddressVolumeResolution(); },
-			[&](int i){ return m_renderer->SetAddressVolumeCascades(m_renderer->GetAddressVolumeCascadeCount(), i); }, " min=16 max=256 step=16" + groupSetting);
-		m_tweakBar->AddReadWrite<int>("#Cascades", [&](){ return m_renderer->GetAddressVolumeCascadeCount(); },
+		m_tweakBar->AddReadWrite<bool>("Smooth Transitions", [&](){ return m_renderer->GetSmoothCAVCascadeTransition(); }, [&](bool b){ return m_renderer->SetSmoothCAVCascadeTransition(b); }, groupSetting);
+		m_tweakBar->AddReadWrite<bool>("Display Cascades", [&](){ return m_renderer->GetShowCAVCascades(); }, [&](bool b){ return m_renderer->SetShowCAVCascades(b); }, groupSetting);
+		m_tweakBar->AddReadWrite<int>("Resolution", [&](){ return m_renderer->GetCAVResolution(); },
+			[&](int i){ return m_renderer->SetCAVCascades(m_renderer->GetCAVCascadeCount(), i); }, " min=16 max=256 step=16" + groupSetting);
+		m_tweakBar->AddReadWrite<int>("#Cascades", [&](){ return m_renderer->GetCAVCascadeCount(); },
 			[&](int numCascades)
 			{
-				for (int i = 0; i < Renderer::s_maxNumAddressVolumeCascades; ++i)
+				for (int i = 0; i < Renderer::s_maxNumCAVCascades; ++i)
 					m_tweakBar->SetVisible("CellSize_" + std::to_string(i), i < numCascades);
-				return m_renderer->SetAddressVolumeCascades(numCascades, m_renderer->GetAddressVolumeResolution());
+				return m_renderer->SetCAVCascades(numCascades, m_renderer->GetCAVResolution());
 			}, " min=1 max=4 step=1" + groupSetting);
-		for (int i = 0; i < Renderer::s_maxNumAddressVolumeCascades; ++i)
+		for (int i = 0; i < Renderer::s_maxNumCAVCascades; ++i)
 		{
 			std::string elementSettings = " min=0.01 max=64 step=0.01" + groupSetting + " label=\"Voxel Size " + std::to_string(i) + "\"";
 			if (i != 0) elementSettings += " visible=false";
-			m_tweakBar->AddReadWrite<float>("CellSize_"+std::to_string(i), [&, i](){ return m_renderer->GetAddressVolumeCascadeVoxelWorldSize(i); },
-				[&, i](float size){ return m_renderer->SetAddressVolumeCascadeVoxelWorldSize(i, size); }, elementSettings);
+			m_tweakBar->AddReadWrite<float>("CellSize_"+std::to_string(i), [&, i](){ return m_renderer->GetCAVCascadeVoxelWorldSize(i); },
+				[&, i](float size){ return m_renderer->SetCAVCascadeVoxelWorldSize(i, size); }, elementSettings);
 		}
-		m_tweakBar->SetGroupProperties("AddressVolume", "", "Address Volume", false);
+		m_tweakBar->SetGroupProperties("AddressVolume", "", "Light Cache Address Volume (CAV)", false);
 
 		
 		// Address Volume
@@ -197,6 +197,7 @@ void Application::SetupTweakBarBinding()
 		m_tweakBar->AddEnum("SpecEnvMap Size", "SpecEnvMapRes", [&](){ return m_renderer->GetPerCacheSpecularEnvMapSize(); }, [&](int i){ return m_renderer->SetPerCacheSpecularEnvMapSize(i); }, " label=Resolution" + groupSetting);
 		m_tweakBar->AddReadWrite<int>("Hole Fill Level", [&](){ return m_renderer->GetSpecularEnvMapHoleFillLevel(); }, [&](int i){ return m_renderer->SetSpecularEnvMapHoleFillLevel(i); }, " min=0 max=5 step=1" + groupSetting);
 		m_tweakBar->AddReadWrite<bool>("Direct Write", [&](){ return m_renderer->GetSpecularEnvMapDirectWrite(); }, [&](bool b){ return m_renderer->SetSpecularEnvMapDirectWrite(b); }, groupSetting);
+		m_tweakBar->SetGroupProperties("SpecEnvMap", "", "Indirect Specular Settings", false);
 	}
 
 	// Timer Statistics
@@ -205,7 +206,7 @@ void Application::SetupTweakBarBinding()
 		m_tweakBar->AddButton("Save CSV", [&](){ std::string filename = SaveFileDialog("timestats.csv", ".csv"); if (!filename.empty()) FrameProfiler::GetInstance().SaveToCSV(filename); }, m_tweakBarStatisticGroupSetting);
 		m_tweakBar->AddReadWrite<bool>("GPU Queries Active", []{ return FrameProfiler::GetInstance().GetGPUProfilingActive(); }, [](bool active){ FrameProfiler::GetInstance().SetGPUProfilingActive(active); }, m_tweakBarStatisticGroupSetting);
 
-		m_tweakBar->AddReadOnly("TotalFrame", []{ return FrameProfiler::GetInstance().GetFrameDurations().empty() ? "" : std::to_string(FrameProfiler::GetInstance().GetFrameDurations().back() / 1000.0); }, m_tweakBarStatisticGroupSetting);
+		m_tweakBar->AddReadOnly("Total Frame (µs)", []{ return FrameProfiler::GetInstance().GetFrameDurations().empty() ? "" : std::to_string(FrameProfiler::GetInstance().GetFrameDurations().back() / 1000.0); }, m_tweakBarStatisticGroupSetting);
 		m_tweakBar->AddReadOnly("#Recorded", []{ return std::to_string(FrameProfiler::GetInstance().GetFrameDurations().size()); }, m_tweakBarStatisticGroupSetting);
 		m_tweakBar->AddSeperator("GPU Queries:", m_tweakBarStatisticGroupSetting);
 

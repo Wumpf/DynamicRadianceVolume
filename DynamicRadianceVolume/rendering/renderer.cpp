@@ -39,8 +39,8 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	m_specularEnvmapPerCacheSize(16),
 	m_specularEnvmapMaxFillHolesLevel(2),
 	m_specularEnvmapDirectWrite(false),
-	m_showAddressVolumeCascades(false),
-	m_smoothAddressVolumeCascadeTransition(true),
+	m_showCAVCascades(false),
+	m_smoothCAVCascadeTransition(true),
 	m_indirectShadow(true),
 	m_indirectSpecular(false)
 {
@@ -77,7 +77,7 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 
 	// Allocate light cache buffer
 	SetMaxCacheCount(16384);
-	SetAddressVolumeCascades(3, 32);
+	SetCAVCascades(3, 32);
 
 	// Basic settings.
 	SetScene(scene);
@@ -138,9 +138,9 @@ void Renderer::LoadAllShaders()
 	m_shaderTonemap->Activate();
 	GL_CALL(glUniform1f, 0, m_exposure);
 
-	m_shaderLightCachesDirect = new gl::ShaderObject("cache lighting direct");
+	/*m_shaderLightCachesDirect = new gl::ShaderObject("cache lighting direct");
 	m_shaderLightCachesDirect->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cacheLightingDirect.comp");
-	m_shaderLightCachesDirect->CreateProgram();
+	m_shaderLightCachesDirect->CreateProgram();*/
 
 	m_shaderIndirectLightingBruteForceRSM = new gl::ShaderObject("brute force rsm");
 	m_shaderIndirectLightingBruteForceRSM->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
@@ -182,9 +182,9 @@ void Renderer::ReloadSettingDependentCacheShader()
 	}
 	if (m_indirectShadow)
 		settings += "#define INDIRECT_SHADOW\n";
-	if (m_showAddressVolumeCascades)
+	if (m_showCAVCascades)
 		settings += "#define SHOW_ADDRESSVOL_CASCADES\n";
-	if (m_smoothAddressVolumeCascadeTransition)
+	if (m_smoothCAVCascadeTransition)
 		settings += "#define ADDRESSVOL_CASCADE_TRANSITIONS\n";
 
 	m_shaderCacheGather = new gl::ShaderObject("cache gather");
@@ -232,12 +232,12 @@ void Renderer::AllocateCacheData()
 	}
 
 	// Allocate specular cache envmap
-	if (!m_specularCacheEnvmap || m_specularCacheEnvmapFBOs.empty() || m_specularCacheEnvmap->GetWidth() != demandedSpecularEnvMapSize)
+	if (!m_specularEnvmap || m_specularEnvmapFBOs.empty() || m_specularEnvmap->GetWidth() != demandedSpecularEnvMapSize)
 	{
-		m_specularCacheEnvmapFBOs.clear();
-		m_specularCacheEnvmap = std::make_unique<gl::Texture2D>(demandedSpecularEnvMapSize, demandedSpecularEnvMapSize, gl::TextureFormat::R11F_G11F_B10F, static_cast<int>(log2(m_specularEnvmapPerCacheSize) + 1));
-		for (int i = 0; i < m_specularCacheEnvmap->GetNumMipLevels(); ++i)
-			m_specularCacheEnvmapFBOs.push_back(std::make_shared<gl::FramebufferObject>(gl::FramebufferObject::Attachment(m_specularCacheEnvmap.get(), i)));
+		m_specularEnvmapFBOs.clear();
+		m_specularEnvmap = std::make_unique<gl::Texture2D>(demandedSpecularEnvMapSize, demandedSpecularEnvMapSize, gl::TextureFormat::R11F_G11F_B10F, static_cast<int>(log2(m_specularEnvmapPerCacheSize) + 1));
+		for (int i = 0; i < m_specularEnvmap->GetNumMipLevels(); ++i)
+			m_specularEnvmapFBOs.push_back(std::make_shared<gl::FramebufferObject>(gl::FramebufferObject::Attachment(m_specularEnvmap.get(), i)));
 
 		LOG_INFO("Allocated specular envmap with total size " << demandedSpecularEnvMapSize << "x" << demandedSpecularEnvMapSize << " (" << (demandedSpecularEnvMapSize * demandedSpecularEnvMapSize * 4) / 1024 << " kb)");
 	}
@@ -264,15 +264,15 @@ void Renderer::UpdateConstantUBO()
 	mappedMemory["BackbufferResolution"].Set(ei::IVec2(m_HDRBackbufferTexture->GetWidth(), m_HDRBackbufferTexture->GetHeight()));
 
 	mappedMemory["VoxelResolution"].Set(m_voxelization->GetVoxelTexture().GetWidth());
-	mappedMemory["AddressVolumeResolution"].Set(static_cast<int>(GetAddressVolumeResolution()));
-	mappedMemory["NumAddressVolumeCascades"].Set(static_cast<int>(GetAddressVolumeCascadeCount()));
+	mappedMemory["AddressVolumeResolution"].Set(static_cast<int>(GetCAVResolution()));
+	mappedMemory["NumAddressVolumeCascades"].Set(static_cast<int>(GetCAVCascadeCount()));
 
 	mappedMemory["MaxNumLightCaches"].Set(m_maxNumLightCaches);
 	
-	mappedMemory["SpecularEnvmapTotalSize"].Set(m_specularCacheEnvmap->GetWidth());
+	mappedMemory["SpecularEnvmapTotalSize"].Set(m_specularEnvmap->GetWidth());
 	mappedMemory["SpecularEnvmapPerCacheSize_Texel"].Set(static_cast<int>(m_specularEnvmapPerCacheSize));
-	mappedMemory["SpecularEnvmapPerCacheSize_Texcoord"].Set(static_cast<float>(m_specularEnvmapPerCacheSize) / m_specularCacheEnvmap->GetWidth());
-	mappedMemory["SpecularEnvmapNumCachesPerDimension"].Set(static_cast<int>(m_specularCacheEnvmap->GetWidth() / m_specularEnvmapPerCacheSize));
+	mappedMemory["SpecularEnvmapPerCacheSize_Texcoord"].Set(static_cast<float>(m_specularEnvmapPerCacheSize) / m_specularEnvmap->GetWidth());
+	mappedMemory["SpecularEnvmapNumCachesPerDimension"].Set(static_cast<int>(m_specularEnvmap->GetWidth() / m_specularEnvmapPerCacheSize));
 
 	m_uboConstant->Unmap();
 }
@@ -305,20 +305,20 @@ void Renderer::UpdatePerFrameUBO(const Camera& camera)
 	mappedMemory["VolumeWorldMax"].Set(VolumeWorldMax);
 	mappedMemory["VoxelSizeInWorld"].Set((VolumeWorldMax.x - VolumeWorldMin.x) / m_voxelization->GetVoxelTexture().GetWidth());
 	
-	for (int i = 0; i < m_addressVolumeCascadeWorldVoxelSize.size(); ++i)
+	for (int i = 0; i < m_CAVCascadeWorldVoxelSize.size(); ++i)
 	{
 		// Centered around camera
-		ei::Vec3 snappedCamera = ei::round(camera.GetPosition() / m_addressVolumeCascadeWorldVoxelSize[i]) * m_addressVolumeCascadeWorldVoxelSize[i];
-		ei::Vec3 min = snappedCamera - m_addressVolumeCascadeWorldVoxelSize[i] * m_addressVolumeAtlas->GetHeight() * 0.5f;
-		ei::Vec3 max = snappedCamera + m_addressVolumeCascadeWorldVoxelSize[i] * m_addressVolumeAtlas->GetHeight() * 0.5f;
+		ei::Vec3 snappedCamera = ei::round(camera.GetPosition() / m_CAVCascadeWorldVoxelSize[i]) * m_CAVCascadeWorldVoxelSize[i];
+		ei::Vec3 min = snappedCamera - m_CAVCascadeWorldVoxelSize[i] * m_CAVAtlas->GetHeight() * 0.5f;
+		ei::Vec3 max = snappedCamera + m_CAVCascadeWorldVoxelSize[i] * m_CAVAtlas->GetHeight() * 0.5f;
 
 		// Two offsets: 0.5 for assure that there will always be 8 voxels, 1.0 to assure that area is still within the actual min/max above.
-		ei::Vec3 decisionMin = camera.GetPosition() - m_addressVolumeCascadeWorldVoxelSize[i] * m_addressVolumeAtlas->GetHeight() * 0.5f + m_addressVolumeCascadeWorldVoxelSize[i] * 1.5f;
-		ei::Vec3 decisionMax = camera.GetPosition() + m_addressVolumeCascadeWorldVoxelSize[i] * m_addressVolumeAtlas->GetHeight() * 0.5f - m_addressVolumeCascadeWorldVoxelSize[i] * 1.5f;
+		ei::Vec3 decisionMin = camera.GetPosition() - m_CAVCascadeWorldVoxelSize[i] * m_CAVAtlas->GetHeight() * 0.5f + m_CAVCascadeWorldVoxelSize[i] * 1.5f;
+		ei::Vec3 decisionMax = camera.GetPosition() + m_CAVCascadeWorldVoxelSize[i] * m_CAVAtlas->GetHeight() * 0.5f - m_CAVCascadeWorldVoxelSize[i] * 1.5f;
 
 		std::string num = std::to_string(i);
 		mappedMemory["AddressVolumeCascades[" + num + "].Min"].Set(min);
-		mappedMemory["AddressVolumeCascades[" + num + "].WorldVoxelSize"].Set(m_addressVolumeCascadeWorldVoxelSize[i]);
+		mappedMemory["AddressVolumeCascades[" + num + "].WorldVoxelSize"].Set(m_CAVCascadeWorldVoxelSize[i]);
 		mappedMemory["AddressVolumeCascades[" + num + "].Max"].Set(max);
 		mappedMemory["AddressVolumeCascades[" + num + "].DecisionMin"].Set(decisionMin);
 		mappedMemory["AddressVolumeCascades[" + num + "].DecisionMax"].Set(decisionMax);
@@ -407,7 +407,7 @@ void Renderer::Draw(const Camera& camera)
 		OutputHDRTextureToBackbuffer();
 		break;
 
-	case Mode::DIRECTONLY_CACHE:
+	//case Mode::DIRECTONLY_CACHE:
 	case Mode::DYN_RADIANCE_VOLUME:
 		if (m_indirectShadow)
 			m_voxelization->VoxelizeScene(*this);
@@ -419,19 +419,19 @@ void Renderer::Draw(const Camera& camera)
 
 		AllocateCaches();
 
-		if (m_mode == Mode::DIRECTONLY_CACHE)
+	/*	if (m_mode == Mode::DIRECTONLY_CACHE)
 			LightCachesDirect();
-		else
+		else */
 		{
 			LightCachesRSM();
 			if (m_indirectSpecular)
-				PrepareSpecularCacheEnvmaps();
+				PrepareSpecularEnvmaps();
 		}
 
 		m_HDRBackbuffer->Bind(true);
 		GL_CALL(glClear, GL_COLOR_BUFFER_BIT);
 
-		if (m_mode != Mode::DIRECTONLY_CACHE)
+		//if (m_mode != Mode::DIRECTONLY_CACHE)
 			ApplyDirectLighting();
 
 		m_uboRing_SpotLight->CompleteFrame();
@@ -707,7 +707,7 @@ void Renderer::ApplyRSMsBruteForce()
 	gl::Disable(gl::Cap::BLEND);
 }
 
-void Renderer::LightCachesDirect()
+/*void Renderer::LightCachesDirect()
 {
 	PROFILE_GPU_SCOPED(LightCaches);
 
@@ -728,14 +728,14 @@ void Renderer::LightCachesDirect()
 		m_uboRing_SpotLight->BindBlockAsUBO(m_uboInfoSpotLight.bufferBinding, lightIndex);
 		GL_CALL(glDispatchComputeIndirect, 0);
 	}
-}
+}*/
 
 void Renderer::LightCachesRSM()
 {
 	PROFILE_GPU_SCOPED(LightCaches);
 
-	m_specularCacheEnvmap->ClearToZero();
-	m_specularCacheEnvmap->BindImage(0, gl::Texture::ImageAccess::WRITE);
+	m_specularEnvmap->ClearToZero();
+	m_specularEnvmap->BindImage(0, gl::Texture::ImageAccess::WRITE);
 
 	m_lightCacheCounter->BindIndirectDispatchBuffer();
 	m_shaderLightCachesRSM->BindSSBO(*m_lightCacheBuffer, "LightCacheBuffer");
@@ -802,14 +802,14 @@ void Renderer::AllocateCaches()
 
 	// Clear cache counter and atlas. No need to clear the cache buffer itself!
 	m_lightCacheCounter->ClearToZero();
-	m_addressVolumeAtlas->ClearToZero(); // TODO: Consider making it int and clearing with -1, simplifying the shaders
+	m_CAVAtlas->ClearToZero(); // TODO: Consider making it int and clearing with -1, simplifying the shaders
 
 	BindGBuffer();
 
 	m_shaderCacheGather->BindSSBO(*m_lightCacheCounter, "LightCacheCounter");
 	m_shaderCacheGather->BindSSBO(*m_lightCacheBuffer, "LightCacheBuffer");
 	//m_shaderCacheGather->BindSSBO(*m_lightCacheHashMap);
-	m_addressVolumeAtlas->BindImage(0, gl::Texture::ImageAccess::READ_WRITE);
+	m_CAVAtlas->BindImage(0, gl::Texture::ImageAccess::READ_WRITE);
 
 	m_shaderCacheGather->Activate();
 
@@ -826,7 +826,7 @@ void Renderer::AllocateCaches()
 	GL_CALL(glDispatchCompute, 1, 1, 1);
 }
 
-void Renderer::PrepareSpecularCacheEnvmaps()
+void Renderer::PrepareSpecularEnvmaps()
 {
 	PROFILE_GPU_SCOPED(ProcessSpecularEnvmap);
 
@@ -842,17 +842,17 @@ void Renderer::PrepareSpecularCacheEnvmaps()
 
 
 	// MipMap remaining levels.
-	m_specularCacheEnvmap->Bind(0);
+	m_specularEnvmap->Bind(0);
 	m_samplerLinearClamp.BindSampler(0);
 	m_shaderSpecularEnvmapMipMap->Activate();
-	for (int i = 1; i < m_specularCacheEnvmapFBOs.size(); ++i)
+	for (int i = 1; i < m_specularEnvmapFBOs.size(); ++i)
 	{
-		GL_CALL(glTextureParameteri, m_specularCacheEnvmap->GetInternHandle(), GL_TEXTURE_BASE_LEVEL, i - 1);
-		m_specularCacheEnvmapFBOs[i]->Bind(true);
+		GL_CALL(glTextureParameteri, m_specularEnvmap->GetInternHandle(), GL_TEXTURE_BASE_LEVEL, i - 1);
+		m_specularEnvmapFBOs[i]->Bind(true);
 		m_screenTriangle->Draw();
 	}
 
-	GL_CALL(glTextureParameteri, m_specularCacheEnvmap->GetInternHandle(), GL_TEXTURE_BASE_LEVEL, 0);
+	GL_CALL(glTextureParameteri, m_specularEnvmap->GetInternHandle(), GL_TEXTURE_BASE_LEVEL, 0);
 
 
 	// Push down for each pulled layer.
@@ -860,7 +860,7 @@ void Renderer::PrepareSpecularCacheEnvmaps()
 
 	// Need to bind a target that is large enough, otherwise Nvidia driver clamps the viewport down!
 	// On the other hand it apparently does not mind writing to the same texture as currently bound as target.
-	m_specularCacheEnvmapFBOs[0]->Bind(false); 
+	m_specularEnvmapFBOs[0]->Bind(false); 
 	GL_CALL(glColorMask, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 
 	m_shaderSpecularEnvmapFillHoles->Activate();
@@ -868,10 +868,10 @@ void Renderer::PrepareSpecularCacheEnvmaps()
 	{
 		GL_CALL(glMemoryBarrier, GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); // Need to access previous results via imageLoad.
 
-		m_specularCacheEnvmap->BindImage(0, gl::Texture::ImageAccess::READ, i);
-		m_specularCacheEnvmap->BindImage(1, gl::Texture::ImageAccess::READ_WRITE, i - 1);
+		m_specularEnvmap->BindImage(0, gl::Texture::ImageAccess::READ, i);
+		m_specularEnvmap->BindImage(1, gl::Texture::ImageAccess::READ_WRITE, i - 1);
 		
-		unsigned int readTextureSize = static_cast<unsigned int>(m_specularCacheEnvmap->GetWidth() * pow(2, -i));
+		unsigned int readTextureSize = static_cast<unsigned int>(m_specularEnvmap->GetWidth() * pow(2, -i));
 		GL_CALL(glViewport, 0, 0, readTextureSize, readTextureSize);
 		m_screenTriangle->Draw();
 	}
@@ -893,7 +893,7 @@ void Renderer::ApplyCaches()
 	//m_shaderCacheApply->BindSSBO(*m_lightCacheHashMap);
 	m_shaderCacheApply->BindSSBO(*m_lightCacheBuffer, "LightCacheBuffer");
 
-	m_addressVolumeAtlas->Bind(4);
+	m_CAVAtlas->Bind(4);
 	m_samplerNearest.BindSampler(4);
 
 	/*if (m_indirectShadow)
@@ -903,7 +903,7 @@ void Renderer::ApplyCaches()
 	}*/
 
 	m_samplerLinearClamp.BindSampler(6);
-	m_specularCacheEnvmap->Bind(6);
+	m_specularEnvmap->Bind(6);
 
 	m_shaderCacheApply->Activate();
 
@@ -971,38 +971,38 @@ unsigned int Renderer::GetLightCacheActiveCount() const
 }
 
 
-unsigned int Renderer::GetAddressVolumeResolution() const
+unsigned int Renderer::GetCAVResolution() const
 {
-	if (m_addressVolumeAtlas)
-		return m_addressVolumeAtlas->GetHeight();
+	if (m_CAVAtlas)
+		return m_CAVAtlas->GetHeight();
 	else
 		return 0;
 }
 
-void Renderer::SetAddressVolumeCascades(unsigned int numCascades, unsigned int resolutionPerCascade)
+void Renderer::SetCAVCascades(unsigned int numCascades, unsigned int resolutionPerCascade)
 {
 	Assert(numCascades > 0 && resolutionPerCascade > 0, "Invalid address volume cascade settings!");
-	Assert(numCascades <= s_maxNumAddressVolumeCascades, "Maximum number of cascades exceeded!");
+	Assert(numCascades <= s_maxNumCAVCascades, "Maximum number of cascades exceeded!");
 
-	m_addressVolumeAtlas = std::make_unique<gl::Texture3D>(numCascades * resolutionPerCascade, resolutionPerCascade, resolutionPerCascade, gl::TextureFormat::R32UI);
+	m_CAVAtlas = std::make_unique<gl::Texture3D>(numCascades * resolutionPerCascade, resolutionPerCascade, resolutionPerCascade, gl::TextureFormat::R32UI);
 	
 	// Fill in new voxel sizes if necessary.
-	size_t previousSize = m_addressVolumeCascadeWorldVoxelSize.size();
-	m_addressVolumeCascadeWorldVoxelSize.resize(numCascades);
+	size_t previousSize = m_CAVCascadeWorldVoxelSize.size();
+	m_CAVCascadeWorldVoxelSize.resize(numCascades);
 	if (previousSize == 0)
-		m_addressVolumeCascadeWorldVoxelSize[0] = 0.2f;
-	for (size_t i = std::max<size_t>(1, previousSize); i < m_addressVolumeCascadeWorldVoxelSize.size(); ++i)
-		m_addressVolumeCascadeWorldVoxelSize[i] = m_addressVolumeCascadeWorldVoxelSize[i - 1] * 2.0f;
+		m_CAVCascadeWorldVoxelSize[0] = 0.2f;
+	for (size_t i = std::max<size_t>(1, previousSize); i < m_CAVCascadeWorldVoxelSize.size(); ++i)
+		m_CAVCascadeWorldVoxelSize[i] = m_CAVCascadeWorldVoxelSize[i - 1] * 2.0f;
 
-	LOG_INFO("Address volume atlas texture resolution " << m_addressVolumeAtlas->GetWidth() << "x" << m_addressVolumeAtlas->GetHeight() << "x" << m_addressVolumeAtlas->GetDepth() <<
-		" using " << (m_addressVolumeAtlas->GetWidth()* m_addressVolumeAtlas->GetHeight() * m_addressVolumeAtlas->GetDepth() * 4 / 1024) << "kb memory.");
+	LOG_INFO("Address volume atlas texture resolution " << m_CAVAtlas->GetWidth() << "x" << m_CAVAtlas->GetHeight() << "x" << m_CAVAtlas->GetDepth() <<
+		" using " << (m_CAVAtlas->GetWidth()* m_CAVAtlas->GetHeight() * m_CAVAtlas->GetDepth() * 4 / 1024) << "kb memory.");
 
 	UpdateConstantUBO();
 }
 
-void Renderer::SetAddressVolumeCascadeVoxelWorldSize(unsigned int cascade, float voxelWorldSize)
+void Renderer::SetCAVCascadeVoxelWorldSize(unsigned int cascade, float voxelWorldSize)
 {
-	Assert(cascade < m_addressVolumeCascadeWorldVoxelSize.size(), "Given address volume cascade does not exist!");
+	Assert(cascade < m_CAVCascadeWorldVoxelSize.size(), "Given address volume cascade does not exist!");
 	Assert(voxelWorldSize > 0.0f, "Voxel world size can not be negative!");
 
 	/*if (cascade > 0 && m_lightCacheAddressCascadeWorldVoxelSize[cascade - 1] > m_lightCacheAddressCascadeWorldVoxelSize[cascade])
@@ -1010,7 +1010,7 @@ void Renderer::SetAddressVolumeCascadeVoxelWorldSize(unsigned int cascade, float
 		LOG_WARNING("Cascade voxel size of higher order cascades should be higher than lower ones");
 	}*/
 
-	m_addressVolumeCascadeWorldVoxelSize[cascade] = voxelWorldSize;
+	m_CAVCascadeWorldVoxelSize[cascade] = voxelWorldSize;
 }
 
 void Renderer::SetExposure(float exposure)

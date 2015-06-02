@@ -191,7 +191,7 @@ void Application::Update()
 					auto it = std::find_if(FrameProfiler::GetInstance().GetAllRecordedEvents().begin(), FrameProfiler::GetInstance().GetAllRecordedEvents().end(),
 											[name](const FrameProfiler::EventList& v){ return v.first == name; });
 					if (it != FrameProfiler::GetInstance().GetAllRecordedEvents().end() && !it->second.empty())
-						return std::to_string(it->second.back().duration);
+						return std::to_string(it->second.back().duration / 1000.0);
 					else
 						return std::string("");
 				}, m_tweakBarStatisticGroupSetting);

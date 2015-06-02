@@ -29,6 +29,10 @@ typedef std::unique_ptr<gl::Texture2D> Texture2DPtr;
 typedef std::unique_ptr<gl::Buffer> BufferPtr;
 typedef std::unique_ptr<gl::FramebufferObject> FramebufferObjectPtr;
 
+
+// Abbreviations:
+// - CAV: Light Cache Address Volume
+
 class Renderer
 {
 public:
@@ -42,8 +46,8 @@ public:
 
 		GBUFFER_DEBUG = 3,
 		DIRECTONLY,
-		DIRECTONLY_CACHE,
-		VOXELVIS,
+	//	DIRECTONLY_CACHE,
+		VOXELVIS = 5,
 		AMBIENTOCCLUSION
 	};
 
@@ -100,17 +104,17 @@ public:
 	unsigned int GetLightCacheActiveCount() const;
 
 	// Address volume setup
-	unsigned int GetAddressVolumeCascadeCount() const { return static_cast<unsigned int>(m_addressVolumeCascadeWorldVoxelSize.size()); }
-	unsigned int GetAddressVolumeResolution() const;
-	float GetAddressVolumeCascadeVoxelWorldSize(unsigned int cascade) const { return cascade >= m_addressVolumeCascadeWorldVoxelSize.size() ? std::numeric_limits<float>().quiet_NaN() : m_addressVolumeCascadeWorldVoxelSize[cascade]; }
-	void SetAddressVolumeCascades(unsigned int numCascades, unsigned int resolutionPerCascade);
-	void SetAddressVolumeCascadeVoxelWorldSize(unsigned int cascade, float voxelWorldSize);
+	unsigned int GetCAVCascadeCount() const { return static_cast<unsigned int>(m_CAVCascadeWorldVoxelSize.size()); }
+	unsigned int GetCAVResolution() const;
+	float GetCAVCascadeVoxelWorldSize(unsigned int cascade) const { return cascade >= m_CAVCascadeWorldVoxelSize.size() ? std::numeric_limits<float>().quiet_NaN() : m_CAVCascadeWorldVoxelSize[cascade]; }
+	void SetCAVCascades(unsigned int numCascades, unsigned int resolutionPerCascade);
+	void SetCAVCascadeVoxelWorldSize(unsigned int cascade, float voxelWorldSize);
 
 	// Address volume usage
-	bool GetShowAddressVolumeCascades() const								{ return m_showAddressVolumeCascades; }
-	void SetShowAddressVolumeCascades(bool show)							{ m_showAddressVolumeCascades = show; ReloadSettingDependentCacheShader(); }
-	bool GetSmoothAddressVolumeCascadeTransition() const					{ return m_smoothAddressVolumeCascadeTransition; }
-	void SetSmoothAddressVolumeCascadeTransition(bool transitionEnabled)	{ m_smoothAddressVolumeCascadeTransition = transitionEnabled; ReloadSettingDependentCacheShader(); }
+	bool GetShowCAVCascades() const								{ return m_showCAVCascades; }
+	void SetShowCAVCascades(bool show)							{ m_showCAVCascades = show; ReloadSettingDependentCacheShader(); }
+	bool GetSmoothCAVCascadeTransition() const					{ return m_smoothCAVCascadeTransition; }
+	void SetSmoothCAVCascadeTransition(bool transitionEnabled)	{ m_smoothCAVCascadeTransition = transitionEnabled; ReloadSettingDependentCacheShader(); }
 
 	void BindObjectUBO(unsigned int objectIndex);
 
@@ -118,7 +122,7 @@ public:
 	float GetExposure() const { return m_exposure; }
 
 
-	static const unsigned int s_maxNumAddressVolumeCascades = 4; ///< see globalubos.glsl
+	static const unsigned int s_maxNumCAVCascades = 4; ///< see globalubos.glsl
 
 private:
 	std::shared_ptr<const Scene> m_scene;
@@ -144,7 +148,7 @@ private:
 	void UpdatePerObjectUBORingBuffer();
 	void PrepareLights();
 
-	void PrepareSpecularCacheEnvmaps();
+	void PrepareSpecularEnvmaps();
 
 	/// Binds gbuffer with nearest sampler with bindings according to 
 	void BindGBuffer();
@@ -189,17 +193,17 @@ private:
 	unsigned int m_lastNumLightCaches;
 
 	/// For simplicity all cascades are in one texture. Its depth/height gives the resolution, its width divided by depth/height is the number of cascades.
-	std::unique_ptr<gl::Texture3D> m_addressVolumeAtlas;
-	std::vector<float> m_addressVolumeCascadeWorldVoxelSize; ///< Voxel sizes of the address cascades in world units.
-	bool m_showAddressVolumeCascades;
-	bool m_smoothAddressVolumeCascadeTransition;
+	std::unique_ptr<gl::Texture3D> m_CAVAtlas;
+	std::vector<float> m_CAVCascadeWorldVoxelSize; ///< Voxel sizes of the address cascades in world units.
+	bool m_showCAVCascades;
+	bool m_smoothCAVCascadeTransition;
 
 	BufferPtr m_lightCacheBuffer;
 	BufferPtr m_lightCacheCounter;
 
 	bool m_indirectSpecular;
-	Texture2DPtr m_specularCacheEnvmap;
-	std::vector<std::shared_ptr<gl::FramebufferObject>> m_specularCacheEnvmapFBOs;
+	Texture2DPtr m_specularEnvmap;
+	std::vector<std::shared_ptr<gl::FramebufferObject>> m_specularEnvmapFBOs;
 	unsigned int m_specularEnvmapPerCacheSize; ///< Resolution of specular map per cache
 	unsigned int m_specularEnvmapMaxFillHolesLevel; ///< Zero means no push pull
 	bool m_specularEnvmapDirectWrite; ///< During cacheLighting, writes to the specular environment map directly, instead of trying to keep results compress in registers.
@@ -209,7 +213,7 @@ private:
 	AutoReloadShaderPtr m_shaderCacheGather;
 	AutoReloadShaderPtr m_shaderCacheApply;
 	AutoReloadShaderPtr m_shaderLightCachePrepare;
-	AutoReloadShaderPtr m_shaderLightCachesDirect;
+//	AutoReloadShaderPtr m_shaderLightCachesDirect;
 	AutoReloadShaderPtr m_shaderLightCachesRSM;
 
 	AutoReloadShaderPtr m_shaderSpecularEnvmapMipMap;
