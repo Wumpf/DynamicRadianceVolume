@@ -303,10 +303,16 @@ void Renderer::UpdatePerFrameUBO(const Camera& camera)
 		ei::Vec3 min = snappedCamera - m_addressVolumeCascadeWorldVoxelSize[i] * m_addressVolumeAtlas->GetHeight() * 0.5f;
 		ei::Vec3 max = snappedCamera + m_addressVolumeCascadeWorldVoxelSize[i] * m_addressVolumeAtlas->GetHeight() * 0.5f;
 
+		// Two offsets: 0.5 for assure that there will always be 8 voxels, 1.0 to assure that area is still within the actual min/max above.
+		ei::Vec3 decisionMin = camera.GetPosition() - m_addressVolumeCascadeWorldVoxelSize[i] * m_addressVolumeAtlas->GetHeight() * 0.5f + m_addressVolumeCascadeWorldVoxelSize[i] * 1.5f;
+		ei::Vec3 decisionMax = camera.GetPosition() + m_addressVolumeCascadeWorldVoxelSize[i] * m_addressVolumeAtlas->GetHeight() * 0.5f - m_addressVolumeCascadeWorldVoxelSize[i] * 1.5f;
+
 		std::string num = std::to_string(i);
 		mappedMemory["AddressVolumeCascades[" + num + "].Min"].Set(min);
 		mappedMemory["AddressVolumeCascades[" + num + "].WorldVoxelSize"].Set(m_addressVolumeCascadeWorldVoxelSize[i]);
 		mappedMemory["AddressVolumeCascades[" + num + "].Max"].Set(max);
+		mappedMemory["AddressVolumeCascades[" + num + "].DecisionMin"].Set(decisionMin);
+		mappedMemory["AddressVolumeCascades[" + num + "].DecisionMax"].Set(decisionMax);
 	}
 
 	m_uboPerFrame->Unmap();

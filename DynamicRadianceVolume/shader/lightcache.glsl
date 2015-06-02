@@ -97,8 +97,8 @@ int ComputeAddressVolumeCascade(vec3 worldPosition)
 	int addressVolumeCascade = 0;
 	for(; addressVolumeCascade<NumAddressVolumeCascades; ++addressVolumeCascade)
 	{
-		if(all(lessThanEqual(worldPosition, AddressVolumeCascades[addressVolumeCascade].Max - AddressVolumeCascades[addressVolumeCascade].WorldVoxelSize) &&
-			   greaterThanEqual(worldPosition, AddressVolumeCascades[addressVolumeCascade].Min + AddressVolumeCascades[addressVolumeCascade].WorldVoxelSize)))
+		if(all(lessThanEqual(worldPosition, AddressVolumeCascades[addressVolumeCascade].DecisionMax) &&
+			   greaterThanEqual(worldPosition, AddressVolumeCascades[addressVolumeCascade].DecisionMin)))
 			break;
 	}
 	return addressVolumeCascade;

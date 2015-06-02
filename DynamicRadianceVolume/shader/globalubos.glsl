@@ -33,10 +33,17 @@ layout(binding = 0, shared) uniform Constant
 
 struct NumAddressVolumeCascade
 {
+	// World min/max of the cache grid (snapped)
 	vec3 Min;
 	float WorldVoxelSize; // (worldMax.x - worldMin.x) / AddressVolumeResolution
 	vec3 Max;
-	float _padding;
+	float _padding0;
+
+	// Floating version. If point lies within, there will be always 8 voxels available. Not snapped.
+	vec3 DecisionMin;
+	float _padding1;
+	vec3 DecisionMax;
+	float _padding2;
 };
 
 // UBO for values that change once every frame.
