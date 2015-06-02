@@ -127,7 +127,7 @@ namespace FW
 	/// Starts monitoring a directory.
 	WatchStruct* CreateWatch(LPCTSTR szDirectory, DWORD mNotifyFilter)
 	{
-		WatchStruct* pWatch;
+		WatchStruct* pWatch = nullptr;
 		size_t ptrsize = sizeof(*pWatch);
 		pWatch = static_cast<WatchStruct*>(HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, ptrsize));
 

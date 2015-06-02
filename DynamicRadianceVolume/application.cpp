@@ -85,7 +85,7 @@ Application::~Application()
 std::string Application::OpenFileDialog()
 {
 	// Openfiledialog changes relative paths. Save current directory to restore it later.
-	char oldCurrentPath[MAX_PATH];
+	char oldCurrentPath[MAX_PATH] = "";
 	GetCurrentDirectoryA(MAX_PATH, oldCurrentPath);
 
 	char filename[MAX_PATH] = "";

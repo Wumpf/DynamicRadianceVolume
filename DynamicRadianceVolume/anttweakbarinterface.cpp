@@ -292,7 +292,7 @@ void AntTweakBarInterface::SaveReadWriteValuesToJSON(const std::string& jsonFile
 		auto rwEntry = dynamic_cast<AntTweakBarInterface::EntryReadWrite*>(entry);
 		if (rwEntry)
 		{
-			char groupname[256];
+			char groupname[256] = "";
 			TwGetParam(m_tweakBar, rwEntry->name.c_str(), "group", TW_PARAM_CSTRING, 256, groupname);
 
 			Json::Value* value;
