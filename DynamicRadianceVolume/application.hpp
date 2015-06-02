@@ -10,6 +10,7 @@ class Scene;
 class InteractiveCamera;
 class Renderer;
 class AntTweakBarInterface;
+class FrustumOutlines;
 
 class Application
 {
@@ -43,7 +44,12 @@ private:
 	std::unique_ptr<InteractiveCamera> m_camera;
 	std::unique_ptr<AntTweakBarInterface> m_tweakBar;
 
+	std::unique_ptr<FrustumOutlines> m_frustumOutlineRenderer;
+	bool m_detachViewFromCameraUpdate;
+
 	ezTime m_timeSinceLastUpdate;
+
+	
 
 	std::string m_tweakBarStatisticGroupSetting;	
 	std::vector<std::string> m_tweakBarStatisticEntries;

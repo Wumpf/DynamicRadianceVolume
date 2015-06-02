@@ -29,6 +29,19 @@ layout(binding = 0, shared) uniform Constant
 	int SpecularEnvmapNumCachesPerDimension; 	// SpecularEnvmapTotalSize / SpecularEnvmapPerCacheSize_Texel
 };
 
+// UBO for values that change once every frame.
+layout(binding = 1, shared) uniform PerFrame
+{
+	mat4 Projection;
+	//mat4 View;
+	mat4 ViewProjection;
+	mat4 InverseView;
+	mat4 InverseViewProjection;
+	vec3 CameraPosition;
+	vec3 CameraDirection;
+};
+
+
 #define MAX_NUM_ADDRESS_VOLUME_CASCADES 4
 
 struct NumAddressVolumeCascade
@@ -46,18 +59,10 @@ struct NumAddressVolumeCascade
 	float _padding2;
 };
 
-// UBO for values that change once every frame.
-layout(binding = 1, shared) uniform PerFrame
+// UBO with infos about voxel and cache address volume.
+// Usually also updated every frame, but might be ommitted for debug puporses ("step out" of previous camera to view results).
+layout(binding = 2, shared) uniform VolumeInfo
 {
-	// Camera / Projection
-	mat4 Projection;
-	//mat4 View;
-	mat4 ViewProjection;
-	mat4 InverseView;
-	mat4 InverseViewProjection;
-	vec3 CameraPosition;
-	vec3 CameraDirection;
-
 	// Voxel Volume
 	// There parameters are currently quite static, but this should change later on.
 	// TODO: Cascading of multiple volumes.
@@ -66,19 +71,18 @@ layout(binding = 1, shared) uniform PerFrame
 	vec3 VolumeWorldMax; // || max
 	float VoxelSizeInWorld; 		// Voxels are enforced to be cubic (simplifies several computations and improves quality)
 
-
 	// Address Volume
 	NumAddressVolumeCascade AddressVolumeCascades[MAX_NUM_ADDRESS_VOLUME_CASCADES];
 };
 
 // UBO for values that change with each object
-layout(binding = 2, shared) uniform PerObject
+layout(binding = 3, shared) uniform PerObject
 {
 	mat4 World;
 };
 
 // UBO for a single spot light. Likely to be changed in something more general.
-layout(binding = 3, shared) uniform SpotLight
+layout(binding = 4, shared) uniform SpotLight
 {
 	vec3 LightIntensity;
 	float ShadowNormalOffset;

@@ -201,6 +201,9 @@
     <ClCompile Include="frameprofiler.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="rendering\frustumoutlines.cpp">
+      <Filter>source\rendering</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="outputwindow.hpp">
@@ -358,6 +361,9 @@
     </ClInclude>
     <ClInclude Include="frameprofiler.hpp">
       <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="rendering\frustumoutlines.hpp">
+      <Filter>source\rendering</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

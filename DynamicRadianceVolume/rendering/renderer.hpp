@@ -92,7 +92,10 @@ public:
 	void SetScene(const std::shared_ptr<const Scene>& scene);
 	const std::shared_ptr<const Scene>& GetScene() const { return m_scene; }
 
-	void Draw(const Camera& camera);
+	/// Performs all drawing operations.
+	/// \param detachViewFromCameraUpdate
+	///		If true, all camera update related state will not be updated. Only view matrices etc. change so that the previous view can be watched from a different camera.
+	void Draw(const Camera& camera, bool detachViewFromCameraUpdate);
 
 	/// Saves HDR buffer to a pfm file.
 	void SaveToPFM(const std::string& filename) const;
@@ -143,7 +146,11 @@ private:
 	unsigned int RoundSizeToUBOAlignment(unsigned int size) const  { return size + (m_UBOAlignment - size % m_UBOAlignment) % m_UBOAlignment; }
 
 	void UpdateConstantUBO(); 
+
+	/// Updates general perframe ubo.
 	void UpdatePerFrameUBO(const Camera& camera);
+	/// Updates ubo with Voxel/CAV data.
+	void UpdateVolumeUBO(const Camera& camera);
 
 	void UpdatePerObjectUBORingBuffer();
 	void PrepareLights();
@@ -284,6 +291,8 @@ private:
 	BufferPtr m_uboConstant;
 	gl::UniformBufferMetaInfo m_uboInfoPerFrame;
 	BufferPtr m_uboPerFrame;
+	gl::UniformBufferMetaInfo m_uboInfoVolumeInfo;
+	BufferPtr m_uboVolumeInfo;
 	gl::UniformBufferMetaInfo m_uboInfoPerObject;
 	std::unique_ptr<gl::PersistentRingBuffer> m_uboRing_PerObject;
 

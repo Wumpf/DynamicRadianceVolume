@@ -5,6 +5,7 @@
 #include "outputwindow.hpp"
 
 #include "rendering/renderer.hpp"
+#include "rendering/frustumoutlines.hpp"
 #include "scene/scene.hpp"
 
 #include "camera/interactivecamera.hpp"
@@ -19,6 +20,7 @@
 
 
 Application::Application(int argc, char** argv) :
+	m_detachViewFromCameraUpdate(false),
 	m_tweakBarStatisticGroupSetting(" group=\"TimerStatistics\"")
 {
 	// Logger init.
@@ -40,6 +42,8 @@ Application::Application(int argc, char** argv) :
 	// Renderer.
 	LOG_INFO("\nSetup renderer ...");
 	m_renderer.reset(new Renderer(m_scene, m_window->GetFramebufferSize()));	
+
+	m_frustumOutlineRenderer = std::make_unique<FrustumOutlines>();
 
 	// Watch shader dir.
 	ShaderFileWatcher::Instance().SetShaderWatchDirectory("shader");
@@ -202,7 +206,9 @@ void Application::Update()
 
 void Application::Draw()
 {
-	m_renderer->Draw(*m_camera);
+	m_renderer->Draw(*m_camera, m_detachViewFromCameraUpdate);
+	if (m_detachViewFromCameraUpdate)
+		m_frustumOutlineRenderer->Draw();
 	m_tweakBar->Draw();
 	m_window->Present();
 

@@ -3,8 +3,6 @@
 // Options:
 // Debug address volume cascades.
 //#define SHOW_ADDRESSVOL_CASCADES
-// Enable cascade transitions (see also cacheGather.comp)
-//#define ADDRESSVOL_CASCADE_TRANSITIONS
 
 #include "gbuffer.glsl"
 #include "utils.glsl"
@@ -77,12 +75,12 @@ vec3 ComputeLightingFromCaches(vec3 worldPosition, vec3 worldNormal,  int addres
 		uint cacheAddress = texelFetch(VoxelAddressVolume, cacheSamplePos, 0).r;
 
 		// Check if address is valid. (debug code!)
-		if(cacheAddress == 0 || cacheAddress == 0xFFFFFFFF || 
+		/*if(cacheAddress == 0 || cacheAddress == 0xFFFFFFFF || 
 			any(lessThan(cacheSamplePos, ivec3(addressVolumeCascade * AddressVolumeResolution, 0, 0))) ||
 			any(greaterThanEqual(cacheSamplePos, ivec3(addressVolumeCascade * AddressVolumeResolution + AddressVolumeResolution, AddressVolumeResolution, AddressVolumeResolution))))
 		{
 			return vec3(1,0,1);
-		}
+		}*/
 		cacheAddress -= 1;
 
 	#ifdef INDIRECT_SPECULAR

@@ -3,6 +3,7 @@
 #include "outputwindow.hpp"
 
 #include "rendering/renderer.hpp"
+#include "rendering/frustumoutlines.hpp"
 
 #include "scene/scene.hpp"
 #include "scene/model.hpp"
@@ -217,9 +218,10 @@ void Application::SetupTweakBarBinding()
 
 	{
 		// Camera
-		m_tweakBar->AddReadWrite<float>("Camera Speed", [&](){ return m_camera->GetMoveSpeed(); }, [&](float f){ return m_camera->SetMoveSpeed(f); }, " min=0.01 max=100 step=0.01 label=Speed group=Camera");
-		m_tweakBar->AddReadWrite<ei::Vec3>("Camera Direction", [&](){ return m_camera->GetDirection(); }, [&](const ei::Vec3& v){ return m_camera->SetDirection(v); }, "label=Direction group=Camera");
-		m_tweakBar->AddReadWrite<ei::Vec3>("Camera Position", [&](){ return m_camera->GetPosition(); }, [&](const ei::Vec3& v){ return m_camera->SetPosition(v); }, "label=Position group=Camera", AntTweakBarInterface::TypeHint::POSITION);
+		m_tweakBar->AddReadWrite<bool>("Freeze Dependent Updates", [&](){ return m_detachViewFromCameraUpdate; }, [&](bool b){ m_detachViewFromCameraUpdate = b; if (b) m_frustumOutlineRenderer->Update(*m_camera); }, " group=Camera");
+		m_tweakBar->AddReadWrite<float>("Camera Speed", [&](){ return m_camera->GetMoveSpeed(); }, [&](float f){ m_camera->SetMoveSpeed(f); }, " min=0.01 max=100 step=0.01 label=Speed group=Camera");
+		m_tweakBar->AddReadWrite<ei::Vec3>("Camera Direction", [&](){ return m_camera->GetDirection(); }, [&](const ei::Vec3& v){ m_camera->SetDirection(v); }, "label=Direction group=Camera");
+		m_tweakBar->AddReadWrite<ei::Vec3>("Camera Position", [&](){ return m_camera->GetPosition(); }, [&](const ei::Vec3& v){ m_camera->SetPosition(v); }, "label=Position group=Camera", AntTweakBarInterface::TypeHint::POSITION);
 
 		// Tonemap
 		m_tweakBar->AddReadWrite<float>("Exposure", [&](){ return m_renderer->GetExposure(); }, [&](float f){ return m_renderer->SetExposure(f); }, " min=0.1 max=100 step=0.05 ");

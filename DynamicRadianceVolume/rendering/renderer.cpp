@@ -20,6 +20,8 @@
 #include <glhelper/statemanagement.hpp>
 #include <glhelper/utils/flagoperators.hpp>
 
+#include <limits>
+
 
 Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& resolution) :
 	m_samplerLinearRepeat(gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR,
@@ -61,6 +63,10 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	m_uboInfoPerFrame = uboPrototypeShader->GetUniformBufferInfo()["PerFrame"];
 	m_uboPerFrame = std::make_unique<gl::Buffer>(m_uboInfoPerFrame.bufferDataSizeByte, gl::Buffer::MAP_WRITE);
 	uboPrototypeShader->BindUBO(*m_uboPerFrame, "PerFrame");
+
+	m_uboInfoVolumeInfo = uboPrototypeShader->GetUniformBufferInfo()["VolumeInfo"];
+	m_uboVolumeInfo = std::make_unique<gl::Buffer>(m_uboInfoVolumeInfo.bufferDataSizeByte, gl::Buffer::MAP_WRITE);
+	uboPrototypeShader->BindUBO(*m_uboVolumeInfo, "VolumeInfo");
 
 	// Expecting about 16 objects.
 	const unsigned int maxExpectedObjects = 16;
@@ -283,16 +289,8 @@ void Renderer::UpdatePerFrameUBO(const Camera& camera)
 	auto projection = camera.ComputeProjectionMatrix();
 	auto viewProjection = projection * view;
 
+	gl::MappedUBOView mappedMemory(m_uboInfoPerFrame, m_uboPerFrame->Map(gl::Buffer::MapType::WRITE, gl::Buffer::MapWriteFlag::INVALIDATE_BUFFER));
 
-	ei::Vec3 VolumeWorldMin(m_scene->GetBoundingBox().min - 0.001f);
-	ei::Vec3 VolumeWorldMax(m_scene->GetBoundingBox().max + 0.001f);
-
-	// Make it cubic!
-	ei::Vec3 extent = VolumeWorldMax - VolumeWorldMin;
-	float largestExtent = ei::max(extent);
-	VolumeWorldMax += ei::Vec3(largestExtent) - extent;
-
-	gl::MappedUBOView mappedMemory(m_shaderLightCachesRSM->GetUniformBufferInfo()["PerFrame"], m_uboPerFrame->Map(gl::Buffer::MapType::WRITE, gl::Buffer::MapWriteFlag::INVALIDATE_BUFFER));
 	mappedMemory["Projection"].Set(projection);
 	//mappedMemory["View"].Set(view);
 	mappedMemory["ViewProjection"].Set(viewProjection);
@@ -301,14 +299,32 @@ void Renderer::UpdatePerFrameUBO(const Camera& camera)
 	mappedMemory["CameraPosition"].Set(camera.GetPosition());
 	mappedMemory["CameraDirection"].Set(camera.GetDirection());
 
+	m_uboPerFrame->Unmap();
+}
+
+void Renderer::UpdateVolumeUBO(const Camera& camera)
+{
+	gl::MappedUBOView mappedMemory(m_uboInfoVolumeInfo, m_uboVolumeInfo->Map(gl::Buffer::MapType::WRITE, gl::Buffer::MapWriteFlag::INVALIDATE_BUFFER));
+
+	// Voxel volume
+	ei::Vec3 VolumeWorldMin(m_scene->GetBoundingBox().min - 0.001f);
+	ei::Vec3 VolumeWorldMax(m_scene->GetBoundingBox().max + 0.001f);
+
+	ei::Vec3 extent = VolumeWorldMax - VolumeWorldMin;
+	float largestExtent = ei::max(extent);
+	VolumeWorldMax += ei::Vec3(largestExtent) - extent;
 	mappedMemory["VolumeWorldMin"].Set(VolumeWorldMin);
 	mappedMemory["VolumeWorldMax"].Set(VolumeWorldMax);
 	mappedMemory["VoxelSizeInWorld"].Set((VolumeWorldMax.x - VolumeWorldMin.x) / m_voxelization->GetVoxelTexture().GetWidth());
-	
+
+
+	// Cache address volume cascades.
 	for (int i = 0; i < m_CAVCascadeWorldSize.size(); ++i)
 	{
 		float cascadeVoxelSize = m_CAVCascadeWorldSize[i] / GetCAVResolution();
 
+		// Simple version
+		
 		// Centered around camera
 		ei::Vec3 snappedCamera = ei::round(camera.GetPosition() / cascadeVoxelSize) * cascadeVoxelSize;
 		ei::Vec3 min = snappedCamera - m_CAVCascadeWorldSize[i] * 0.5f;
@@ -318,6 +334,47 @@ void Renderer::UpdatePerFrameUBO(const Camera& camera)
 		ei::Vec3 decisionMin = camera.GetPosition() - m_CAVCascadeWorldSize[i] * 0.5f + cascadeVoxelSize * 1.5f;
 		ei::Vec3 decisionMax = camera.GetPosition() + m_CAVCascadeWorldSize[i] * 0.5f - cascadeVoxelSize * 1.5f;
 
+
+	/*	// Clever version
+		
+		// Box around the entire frustum
+		ei::Vec3 frustumPoints[4];
+		frustumPoints[0] = ei::transform(ei::Vec3(1.0f, 1.0f, 0.0f),	);
+		frustumPoints[1] = ei::transform(ei::Vec3(-1.0f, 1.0f, 0.0f), inverseViewProjection);
+		frustumPoints[2] = ei::transform(ei::Vec3(1.0f, -1.0f, 0.0f), inverseViewProjection);
+		frustumPoints[3] = ei::transform(ei::Vec3(-1.0f, -1.0f, 0.0f), inverseViewProjection);
+		ei::Box frustumBox(camera.GetPosition(), camera.GetPosition());
+		for (int j = 0; j < 4; ++j)
+		{
+			frustumBox.min = ei::min(frustumBox.min, frustumPoints[j]);
+			frustumBox.max = ei::max(frustumBox.max, frustumPoints[j]);
+		}
+
+		// Resize largest extend to axis
+		float largestFrustumBoxExtend = ei::max(frustumBox.max - frustumBox.min);
+		float frustumBoxScale = m_CAVCascadeWorldSize[i] / largestFrustumBoxExtend;
+		frustumBox.min = (frustumBox.min - camera.GetPosition()) * frustumBoxScale + camera.GetPosition();
+		frustumBox.max = (frustumBox.max - camera.GetPosition()) * frustumBoxScale + camera.GetPosition();
+
+		// Extend to cube along allowed axis
+		ei::Vec3 extensionDirs = ei::sign(camera.GetDirection());
+		for (int j = 0; j < 3; ++j)
+		{
+			if (extensionDirs[j] < 0.0)
+				frustumBox.min[j] = frustumBox.max[j] - m_CAVCascadeWorldSize[i];
+			else
+				frustumBox.max[j] = m_CAVCascadeWorldSize[i] - frustumBox.min[j];
+		}
+
+		// Generate snapped version.
+		ei::Vec3 snap = ei::round(camera.GetPosition() / cascadeVoxelSize) * cascadeVoxelSize - camera.GetPosition();
+		ei::Vec3 min = frustumBox.min + snap;
+		ei::Vec3 max = frustumBox.max + snap;
+
+		// Generate decision box.
+		ei::Vec3 decisionMin = frustumBox.min + cascadeVoxelSize * 1.5f;
+		ei::Vec3 decisionMax = frustumBox.max * 1.5f;*/
+
 		std::string num = std::to_string(i);
 		mappedMemory["AddressVolumeCascades[" + num + "].Min"].Set(min);
 		mappedMemory["AddressVolumeCascades[" + num + "].WorldVoxelSize"].Set(cascadeVoxelSize);
@@ -326,7 +383,7 @@ void Renderer::UpdatePerFrameUBO(const Camera& camera)
 		mappedMemory["AddressVolumeCascades[" + num + "].DecisionMax"].Set(decisionMax);
 	}
 
-	m_uboPerFrame->Unmap();
+	m_uboVolumeInfo->Unmap();
 }
 
 void Renderer::SetPerCacheSpecularEnvMapSize(unsigned int specularEnvmapPerCacheSize)
@@ -374,10 +431,8 @@ void Renderer::SetScene(const std::shared_ptr<const Scene>& scene)
 		UpdateConstantUBO();
 }
 
-void Renderer::Draw(const Camera& camera)
+void Renderer::Draw(const Camera& camera, bool detachViewFromCameraUpdate)
 {
-	
-
 	// All SRGB frame buffer textures should be do a conversion on writing to them.
 	// This also applies to the backbuffer.
 	gl::Enable(gl::Cap::FRAMEBUFFER_SRGB);
@@ -385,6 +440,8 @@ void Renderer::Draw(const Camera& camera)
 	// Update data.
 	PROFILE_GPU_START(PrepareUBOs)
 	UpdatePerFrameUBO(camera);
+	if (!detachViewFromCameraUpdate)
+		UpdateVolumeUBO(camera);
 	UpdatePerObjectUBORingBuffer();
 	PrepareLights();
 	PROFILE_GPU_END()
@@ -419,7 +476,8 @@ void Renderer::Draw(const Camera& camera)
 		if (m_indirectShadow)
 			m_voxelization->GenMipMap();
 
-		AllocateCaches();
+		if (!detachViewFromCameraUpdate)
+			AllocateCaches();
 
 	/*	if (m_mode == Mode::DIRECTONLY_CACHE)
 			LightCachesDirect();
