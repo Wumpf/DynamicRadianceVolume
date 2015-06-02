@@ -35,7 +35,7 @@ public:
 
 	struct Mesh
 	{
-		Mesh() : startIndex(0), numIndices(0) {}
+		Mesh() : startIndex(0), numIndices(0), alphaTesting(false) {}
 		
 		/// Loads textures from origin values.
 		/// \param directory
@@ -48,6 +48,8 @@ public:
 		std::shared_ptr<gl::Texture2D> diffuse;
 		std::shared_ptr<gl::Texture2D> normalmap;	// Tangent space normals RGB -> XZY*2.0 - 1.0
 		std::shared_ptr<gl::Texture2D> roughnessMetallic; // Combined texture of roughness (R) and metallic values (G)
+		
+		bool alphaTesting;
 
 		Json::Value diffuseOrigin;
 		Json::Value normalmapOrigin;

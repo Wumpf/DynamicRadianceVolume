@@ -122,20 +122,26 @@ void Renderer::LoadAllShaders()
 	m_shaderDebugGBuffer->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/debuggbuffer.frag");
 	m_shaderDebugGBuffer->CreateProgram();
 
-	m_shaderFillGBuffer = new gl::ShaderObject("fill gbuffer");
-	m_shaderFillGBuffer->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/defaultmodel.vert");
-	m_shaderFillGBuffer->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/fillgbuffer.frag");
-	m_shaderFillGBuffer->CreateProgram();
+	for (int i = 0; i < 2; ++i)
+	{
+		std::string postfix = (i == (int)ShaderAlphaTest::OFF) ? " - no alphatest" : " - alphatest";
+		std::string define = (i == (int)ShaderAlphaTest::OFF) ? "" : "#define ALPHATESTING 0.1";
 
-	m_shaderFillRSM = new gl::ShaderObject("fill rsm");
-	m_shaderFillRSM->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/defaultmodel_rsm.vert");
-	m_shaderFillRSM->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/fillrsm.frag");
-	m_shaderFillRSM->CreateProgram();
+		m_shaderFillGBuffer[i] = new gl::ShaderObject("fill gbuffer" + postfix);
+		m_shaderFillGBuffer[i]->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/defaultmodel.vert", define);
+		m_shaderFillGBuffer[i]->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/fillgbuffer.frag", define);
+		m_shaderFillGBuffer[i]->CreateProgram();
 
-	m_shaderFillHighResSM = new gl::ShaderObject("fill high res sm");
-	m_shaderFillHighResSM->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/defaultmodel_highressm.vert");
-	m_shaderFillHighResSM->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/fillhighressm.frag");
-	m_shaderFillHighResSM->CreateProgram();
+		m_shaderFillRSM[i] = new gl::ShaderObject("fill rsm" + postfix);
+		m_shaderFillRSM[i]->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/defaultmodel_rsm.vert", define);
+		m_shaderFillRSM[i]->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/fillrsm.frag", define);
+		m_shaderFillRSM[i]->CreateProgram();
+
+		m_shaderFillHighResSM[i] = new gl::ShaderObject("fill high res sm" + postfix);
+		m_shaderFillHighResSM[i]->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/defaultmodel_highressm.vert", define);
+		m_shaderFillHighResSM[i]->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/fillhighressm.frag", define);
+		m_shaderFillHighResSM[i]->CreateProgram();
+	}
 
 	m_shaderDeferredDirectLighting_Spot = new gl::ShaderObject("direct lighting - spot");
 	m_shaderDeferredDirectLighting_Spot->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
@@ -679,10 +685,13 @@ void Renderer::DrawSceneToGBuffer()
 
 	m_samplerLinearRepeat.BindSampler(0);
 
-	m_shaderFillGBuffer->Activate();
 	m_GBuffer->Bind(false);
 	GL_CALL(glClear, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	DrawScene(true);
+
+	m_shaderFillGBuffer[(int)ShaderAlphaTest::OFF]->Activate();
+	DrawScene(true, SceneDrawSubset::FULLOPAQUE_ONLY);
+	m_shaderFillGBuffer[(int)ShaderAlphaTest::ON]->Activate();
+	DrawScene(true, SceneDrawSubset::ALPHATESTED_ONLY);
 }
 
 void Renderer::DrawShadowMaps()
@@ -699,10 +708,13 @@ void Renderer::DrawShadowMaps()
 	{
 		m_uboRing_SpotLight->BindBlockAsUBO(m_uboInfoSpotLight.bufferBinding, lightIndex);
 		
-		m_shaderFillRSM->Activate();
 		m_shadowMaps[lightIndex].rsmFBO->Bind(true);
 		GL_CALL(glClear, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		DrawScene(true);
+
+		m_shaderFillRSM[(int)ShaderAlphaTest::OFF]->Activate();
+		DrawScene(true, SceneDrawSubset::FULLOPAQUE_ONLY);
+		m_shaderFillRSM[(int)ShaderAlphaTest::ON]->Activate();
+		DrawScene(true, SceneDrawSubset::ALPHATESTED_ONLY);
 
 		// generate RSM mipmaps
 		m_shadowMaps[lightIndex].depthLinSq->GenMipMaps();
@@ -713,10 +725,14 @@ void Renderer::DrawShadowMaps()
 		{
 			GL_CALL(glColorMask, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 
-			m_shaderFillHighResSM->Activate();
 			m_shadowMaps[lightIndex].highresShadowMapFBO->Bind(true);
+
 			GL_CALL(glClear, GL_DEPTH_BUFFER_BIT);
-			DrawScene(false);
+			
+			m_shaderFillHighResSM[(int)ShaderAlphaTest::OFF]->Activate();
+			DrawScene(true, SceneDrawSubset::FULLOPAQUE_ONLY);
+			m_shaderFillHighResSM[(int)ShaderAlphaTest::ON]->Activate();
+			DrawScene(true, SceneDrawSubset::ALPHATESTED_ONLY);
 
 			GL_CALL(glColorMask, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 		}
@@ -992,11 +1008,14 @@ void Renderer::ApplyCaches()
 	gl::Disable(gl::Cap::BLEND);
 }
 
-void Renderer::DrawScene(bool setTextures)
+void Renderer::DrawScene(bool setTextures, SceneDrawSubset drawSubset)
 {
 	Model::BindVAO();
 
-	gl::Enable(gl::Cap::CULL_FACE); // TODO: Double sided materials.
+	if (drawSubset == SceneDrawSubset::FULLOPAQUE_ONLY)
+		gl::Enable(gl::Cap::CULL_FACE);
+	else if (drawSubset == SceneDrawSubset::ALPHATESTED_ONLY)
+		gl::Disable(gl::Cap::CULL_FACE);
 
 	if (setTextures)
 	{
@@ -1004,6 +1023,8 @@ void Renderer::DrawScene(bool setTextures)
 		m_samplerLinearRepeat.BindSampler(1);
 		m_samplerLinearRepeat.BindSampler(2);
 	}
+	else if (drawSubset == SceneDrawSubset::ALPHATESTED_ONLY)
+		m_samplerLinearRepeat.BindSampler(0);
 
 	for (unsigned int entityIndex =0; entityIndex < m_scene->GetEntities().size(); ++entityIndex)
 	{
@@ -1015,15 +1036,29 @@ void Renderer::DrawScene(bool setTextures)
 		entity.GetModel()->BindBuffers();
 		for (const Model::Mesh& mesh : entity.GetModel()->GetMeshes())
 		{
+			Assert(mesh.diffuse, "Mesh has no diffuse texture. This is not supported by the renderer.");
+			Assert(mesh.normalmap, "Mesh has no normal map. This is not supported by the renderer.");
+			Assert(mesh.roughnessMetallic, "Mesh has no roughnessMetallic map. This is not supported by the renderer.");
+
+			if ((drawSubset == SceneDrawSubset::FULLOPAQUE_ONLY && mesh.alphaTesting) ||
+				(drawSubset == SceneDrawSubset::ALPHATESTED_ONLY && !mesh.alphaTesting))
+			{
+				continue;
+			}
+			if (drawSubset == SceneDrawSubset::ALL)
+				mesh.alphaTesting ? gl::Enable(gl::Cap::CULL_FACE) : gl::Disable(gl::Cap::CULL_FACE);
+
+
 			if (setTextures)
 			{
-				Assert(mesh.diffuse, "Mesh has no diffuse texture. This is not supported by the renderer.");
-				Assert(mesh.normalmap, "Mesh has no normal map. This is not supported by the renderer.");
-				Assert(mesh.roughnessMetallic, "Mesh has no roughnessMetallic map. This is not supported by the renderer.");
 				mesh.diffuse->Bind(0);
 				mesh.normalmap->Bind(1);
 				mesh.roughnessMetallic->Bind(2);
 			}
+			else if (drawSubset == SceneDrawSubset::ALPHATESTED_ONLY)
+				mesh.diffuse->Bind(0);
+
+
 			GL_CALL(glDrawElements, GL_TRIANGLES, mesh.numIndices, GL_UNSIGNED_INT, reinterpret_cast<const void*>(sizeof(std::uint32_t) * mesh.startIndex));
 		}
 	}

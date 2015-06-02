@@ -14,7 +14,7 @@
 #include <assimp/postprocess.h>
 
 std::unique_ptr<gl::VertexArrayObject> Model::m_vertexArrayObject;
-const unsigned int Model::m_rawModelVersion = 0;
+const unsigned int Model::m_rawModelVersion = 1;
 
 Model::Model(const std::string& originFilename) :
 	m_originFilename(PathUtils::CanonicalizePath(originFilename)),
@@ -96,6 +96,7 @@ void Model::SaveRaw(const std::string& filename, const Vertex* rawVertexData, co
 
 		jsonMesh["startIndex"] = mesh.startIndex;
 		jsonMesh["numIndices"] = mesh.numIndices;
+		jsonMesh["alphaTesting"] = mesh.alphaTesting;
 		jsonMesh["diffuseOrigin"] = mesh.diffuseOrigin;
 		jsonMesh["normalmapOrigin"] = mesh.normalmapOrigin;
 		jsonMesh["roughnessOrigin"] = mesh.roughnessOrigin;
@@ -188,6 +189,7 @@ std::shared_ptr<Model> Model::LoadFromRaw(const std::string& filename, const std
 
 		mesh.startIndex = jsonMesh.get("startIndex", 0).asUInt();
 		mesh.numIndices = jsonMesh.get("numIndices", 0).asUInt();
+		mesh.alphaTesting = jsonMesh.get("alphaTesting", false).asBool();
 		mesh.diffuseOrigin = jsonMesh.get("diffuseOrigin", defaultColor);
 		mesh.normalmapOrigin = jsonMesh.get("normalmapOrigin", "*default*");
 		mesh.roughnessOrigin = jsonMesh.get("roughnessOrigin", TextureManager::GetInstance().s_defaultRoughness);

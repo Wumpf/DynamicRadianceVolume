@@ -186,10 +186,19 @@ private:
 
 	void ConeTraceAO();
 
+
+	enum class SceneDrawSubset
+	{
+		ALL,
+		ALPHATESTED_ONLY,	///< Will also enforce use of base texture, even if textures are disabled.
+		FULLOPAQUE_ONLY
+	};
+
 	/// Draws scene, mesh by mesh.
 	///
 	/// Does set VAO, VBO and index buffers but nothing else. No culling!
-	void DrawScene(bool setTextures);
+	/// This method is super simplistic since it is assumed that there are not many meshes!
+	void DrawScene(bool setTextures, SceneDrawSubset drawSubset = SceneDrawSubset::ALL);
 
 
 	// ------------------------------------------------------------
@@ -232,10 +241,17 @@ private:
 	// ------------------------------------------------------------
 	// Direct lighting / RSM
 
+	/// Some shaders come in an alpha tested and a normal version
+	enum class ShaderAlphaTest
+	{
+		OFF = 0,
+		ON = 1
+ 	};
+
 	AutoReloadShaderPtr m_shaderDebugGBuffer;
-	AutoReloadShaderPtr m_shaderFillGBuffer;
-	AutoReloadShaderPtr m_shaderFillRSM;
-	AutoReloadShaderPtr m_shaderFillHighResSM;
+	AutoReloadShaderPtr m_shaderFillGBuffer[2];
+	AutoReloadShaderPtr m_shaderFillRSM[2];
+	AutoReloadShaderPtr m_shaderFillHighResSM[2];
 
 	AutoReloadShaderPtr m_shaderDeferredDirectLighting_Spot;
 

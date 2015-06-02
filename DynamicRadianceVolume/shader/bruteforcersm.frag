@@ -72,6 +72,6 @@ void main()
 
 
 	// Debug rsm
-	//OutputColor = texture(RSM_Flux, Texcoord * 2 ).rgb;
+	OutputColor = texture(RSM_Flux, Texcoord * 2 ).rgb;
 	//OutputColor = abs(UnpackNormal16I(texture(RSM_Normal, Texcoord * 2).xy));
 }

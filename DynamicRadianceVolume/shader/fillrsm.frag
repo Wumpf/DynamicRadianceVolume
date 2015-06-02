@@ -1,5 +1,8 @@
 #version 450 core
 
+// Options:
+//#define ALPHATESTING <DesiredAlphaThreshhold>
+
 #include "utils.glsl"
 #include "globalubos.glsl"
 #include "lightingfunctions.glsl"
@@ -14,12 +17,18 @@ layout(location = 0) out vec3 OutFlux;
 layout(location = 1) out ivec2 OutPackedNormal;
 layout(location = 2) out vec2 OutDepthLinSq;
 
-layout(binding = 0) uniform sampler2D DiffuseTexture;
+layout(binding = 0) uniform sampler2D BaseColorTexture;
 layout(binding = 1) uniform sampler2D Normalmap;
 layout(binding = 2) uniform sampler2D RoughnessMetalic;
 
 void main()
 {
+	vec4 baseColor = texture(BaseColorTexture, Texcoord);
+#ifdef ALPHATESTING
+	if(baseColor.a < 0.1)
+		discard;
+#endif
+
 	vec3 toLight = LightPosition - Position;
 	float distToLight = length(toLight);
 	toLight /= distToLight;
@@ -35,7 +44,7 @@ void main()
 	// -> total incoming flux = Intensity * PixelSteradian
 	// -> total outgoing flux = Incoming Flux * "reflectivity"
 
-	OutFlux = texture(DiffuseTexture, Texcoord).rgb * LightIntensity * (spotFalloff * pixelSteradian);
+	OutFlux = baseColor.rgb * LightIntensity * (spotFalloff * pixelSteradian);
 	OutDepthLinSq = vec2(distToLight, distToLight * distToLight);
 
 

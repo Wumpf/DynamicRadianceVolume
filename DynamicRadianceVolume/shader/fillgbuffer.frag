@@ -1,8 +1,9 @@
 #version 450 core
 
-#include "utils.glsl"
+// Options
+//#define ALPHATESTING <DesiredAlphaThreshhold>
 
-layout(early_fragment_tests) in; // Force early z.
+#include "utils.glsl"
 
 in vec3 Normal;
 in vec3 Tangent;
@@ -13,13 +14,18 @@ layout(binding = 0) uniform sampler2D DiffuseTexture;
 layout(binding = 1) uniform sampler2D Normalmap;
 layout(binding = 2) uniform sampler2D RoughnessMetalic;
 
-layout(location = 0) out vec3 OutDiffuse;
+layout(location = 0) out vec3 OutBaseColor;
 layout(location = 1) out ivec2 OutPackedNormal;
 layout(location = 2) out vec2 OutRoughnessMetallic;
 
 void main()
 {
-	OutDiffuse = texture(DiffuseTexture, Texcoord).rgb;
+	vec4 baseColor = texture(DiffuseTexture, Texcoord);
+#ifdef ALPHATESTING
+	if(baseColor.a < 0.1)
+		discard;
+#endif
+	OutBaseColor = baseColor.rgb;
 
 	// Normal with normalmapping.
 	vec3 normalMapNormal = texture(Normalmap, Texcoord).xyz;
