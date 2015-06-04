@@ -25,9 +25,9 @@ vec3 Interp(vec3 x)
 	//return x*x*(3.0 - 2.0*x);
 }
 
-vec3 ComputeLightingFromCaches(vec3 worldPosition, vec3 worldNormal,  int addressVolumeCascade, vec3 diffuseColor
+vec3 ComputeLightingFromCaches(vec3 worldPosition, vec3 worldNormal, int addressVolumeCascade, vec3 diffuseColor
 	#ifdef INDIRECT_SPECULAR
-								, vec3 cacheViewNormal, vec3 specularColor, float maxHalfSpecularEnvmapPixelSize, float specularEnvmapLod)
+								, vec2 specEnvLookupCoord, vec3 specularColor, float maxHalfSpecularEnvmapPixelSize, float specularEnvmapLod)
 	#else
 		)
 	#endif
@@ -35,13 +35,12 @@ vec3 ComputeLightingFromCaches(vec3 worldPosition, vec3 worldNormal,  int addres
 	vec3 addressCoord = (worldPosition - AddressVolumeCascades[addressVolumeCascade].Min) / AddressVolumeCascades[addressVolumeCascade].WorldVoxelSize;
 	ivec3 addressCoord00 = ivec3(addressCoord);
 
-
 #ifdef SHOW_ADDRESSVOL_CASCADES
 	const vec3 cascadeColors[] = { vec3(1, 0, 0), vec3(0, 0, 1), vec3(0, 1, 0), vec3(1, 1, 0), vec3(0, 1, 1)};
 	return cascadeColors[addressVolumeCascade] * (mod(length(addressCoord00) / AddressVolumeResolution*5, 1.0) * 0.5 + 0.5);
 #endif
 
-	ivec3 offsets[8] =
+	const ivec3 offsets[8] =
 	{
 		ivec3(0,0,0),
 		ivec3(1,0,0),
@@ -55,8 +54,26 @@ vec3 ComputeLightingFromCaches(vec3 worldPosition, vec3 worldNormal,  int addres
 	};
 
 
-	vec3 irradiance[8];
-	vec3 specular[8];
+	// trilinear interpolation
+	// Computing all weights here instead of using a bunch of "mix" statements reduces the register pressure! (perf gain was shown empirical!)
+	float weights[8];
+	{
+		vec3 interp = Interp(addressCoord - addressCoord00);
+		vec3 interpInv = vec3(1.0) - interp;
+
+		weights[0] = interpInv.x * interpInv.y * interpInv.z;
+		weights[1] = interp.x    * interpInv.y * interpInv.z;
+		weights[2] = interpInv.x * interp.y    * interpInv.z;
+		weights[3] = interp.x    * interp.y    * interpInv.z;
+		weights[4] = interpInv.x * interpInv.y * interp.z;
+		weights[5] = interp.x    * interpInv.y * interp.z;
+		weights[6] = interpInv.x * interp.y    * interp.z;
+		weights[7] = interp.x    * interp.y    * interp.z;
+	}
+
+
+	vec3 interpolatedIrradiance = vec3(0);
+	vec3 interpolatedSpecular = vec3(0);
 
 	#ifdef INDDIFFUSE_VIA_H
 		const float factor0 = 1.0 / (2.0 * PI);
@@ -64,13 +81,12 @@ vec3 ComputeLightingFromCaches(vec3 worldPosition, vec3 worldNormal,  int addres
 		const float factor2 = sqrt(15.0) / sqrt(2.0 * PI);
 	#endif
 
+
+
 	for(int i=0; i<8; ++i)
 	{
 		ivec3 cacheSamplePos = addressCoord00 + offsets[i]; //, ivec3(0), ivec3(AddressVolumeResolution-1));
-		cacheSamplePos.x += AddressVolumeResolution * addressVolumeCascade;
-
-		//OutputColor = vec3(cacheSamplePos.xxx) * 0.0001;
-		//return;
+		cacheSamplePos.x += AddressVolumeResolution * addressVolumeCascade;		
 
 		uint cacheAddress = texelFetch(VoxelAddressVolume, cacheSamplePos, 0).r;
 
@@ -85,83 +101,67 @@ vec3 ComputeLightingFromCaches(vec3 worldPosition, vec3 worldNormal,  int addres
 
 	#ifdef INDIRECT_SPECULAR
 		vec2 cacheSpecularEnvmapOffset = vec2(cacheAddress % SpecularEnvmapNumCachesPerDimension, cacheAddress / SpecularEnvmapNumCachesPerDimension);
-		vec2 hemiProjection = HemisphericalProjection(cacheViewNormal);
-		hemiProjection = clamp(hemiProjection, vec2(maxHalfSpecularEnvmapPixelSize), vec2(1.0 - maxHalfSpecularEnvmapPixelSize)); // Make sure not to filter pixels from neighboring caches.
-		vec2 cacheSpecularEnvmapTex = (hemiProjection + cacheSpecularEnvmapOffset) * SpecularEnvmapPerCacheSize_Texcoord;
-		specular[i] = textureLod(CacheSpecularEnvmap, cacheSpecularEnvmapTex, specularEnvmapLod).rgb;
+		vec2 cacheSpecularEnvmapTex = (specEnvLookupCoord + cacheSpecularEnvmapOffset) * SpecularEnvmapPerCacheSize_Texcoord;
+		interpolatedSpecular += textureLod(CacheSpecularEnvmap, cacheSpecularEnvmapTex, specularEnvmapLod).rgb * weights[i];
 	#endif
 
 		// -----------------------------------------------
 		// IRRADIANCE VIA SH
 	#if defined(INDDIFFUSE_VIA_SH1) || defined(INDDIFFUSE_VIA_SH2)
 		// Band 0
-		irradiance[i] = vec3(LightCacheEntries[cacheAddress].SH00_r,
+		vec3 irradiance = vec3(LightCacheEntries[cacheAddress].SH00_r,
 								LightCacheEntries[cacheAddress].SH00_g,
 								LightCacheEntries[cacheAddress].SH00_b) * ShEvaFactor0;
 
 		// Band 1
-		irradiance[i] -= LightCacheEntries[cacheAddress].SH1neg1 * (ShEvaFactor1 * worldNormal.y);
-		irradiance[i] += LightCacheEntries[cacheAddress].SH10 * (ShEvaFactor1 * worldNormal.z);
-		irradiance[i] -= LightCacheEntries[cacheAddress].SH1pos1 * (ShEvaFactor1 * worldNormal.x);
+		irradiance -= LightCacheEntries[cacheAddress].SH1neg1 * (ShEvaFactor1 * worldNormal.y);
+		irradiance += LightCacheEntries[cacheAddress].SH10 * (ShEvaFactor1 * worldNormal.z);
+		irradiance -= LightCacheEntries[cacheAddress].SH1pos1 * (ShEvaFactor1 * worldNormal.x);
 
 		// Band 2
 		#ifdef INDDIFFUSE_VIA_SH2
-		irradiance[i] -= LightCacheEntries[cacheAddress].SH2neg2 * (ShEvaFactor2n2_p1_n1 * worldNormal.x * worldNormal.y);
-		irradiance[i] += LightCacheEntries[cacheAddress].SH2neg1 * (ShEvaFactor2n2_p1_n1 * worldNormal.y * worldNormal.z);
-		irradiance[i] += vec3(LightCacheEntries[cacheAddress].SH20_r,
+		irradiance -= LightCacheEntries[cacheAddress].SH2neg2 * (ShEvaFactor2n2_p1_n1 * worldNormal.x * worldNormal.y);
+		irradiance += LightCacheEntries[cacheAddress].SH2neg1 * (ShEvaFactor2n2_p1_n1 * worldNormal.y * worldNormal.z);
+		irradiance += vec3(LightCacheEntries[cacheAddress].SH20_r,
 								LightCacheEntries[cacheAddress].SH20_g,
 								LightCacheEntries[cacheAddress].SH20_b) * (ShEvaFactor20 * (worldNormal.z * worldNormal.z * 3.0 - 1.0));
-		irradiance[i] += LightCacheEntries[cacheAddress].SH2pos1 * (ShEvaFactor2n2_p1_n1 * worldNormal.x * worldNormal.z);
-		irradiance[i] += LightCacheEntries[cacheAddress].SH2pos2 * (ShEvaFactor2p2 * (worldNormal.x * worldNormal.x - worldNormal.y * worldNormal.y));	
-
+		irradiance += LightCacheEntries[cacheAddress].SH2pos1 * (ShEvaFactor2n2_p1_n1 * worldNormal.x * worldNormal.z);
+		irradiance += LightCacheEntries[cacheAddress].SH2pos2 * (ShEvaFactor2p2 * (worldNormal.x * worldNormal.x - worldNormal.y * worldNormal.y));	
 		#endif
 
 		// -----------------------------------------------
 		// IRRADIANCE VIA H-Basis
 	#elif defined(INDDIFFUSE_VIA_H)
-		irradiance[i]  = LightCacheEntries[cacheAddress].irradianceH1 * factor0;
-		irradiance[i] -= LightCacheEntries[cacheAddress].irradianceH2 * factor1 * cacheViewNormal.y;
-		irradiance[i] += LightCacheEntries[cacheAddress].irradianceH3 * factor1 * (2.0 * cacheViewNormal.z - 1.0);
-		irradiance[i] -= vec3(LightCacheEntries[cacheAddress].irradianceH4r,
+		irradiance  = LightCacheEntries[cacheAddress].irradianceH1 * factor0;
+		irradiance -= LightCacheEntries[cacheAddress].irradianceH2 * factor1 * cacheViewNormal.y;
+		irradiance += LightCacheEntries[cacheAddress].irradianceH3 * factor1 * (2.0 * cacheViewNormal.z - 1.0);
+		irradiance -= vec3(LightCacheEntries[cacheAddress].irradianceH4r,
 								LightCacheEntries[cacheAddress].irradianceH4g,
 								LightCacheEntries[cacheAddress].irradianceH4b) * (factor1 * cacheViewNormal.x);
 		#if INDDIFFUSE_VIA_H > 4
-		irradiance[i] += LightCacheEntries[cacheAddress].irradianceH5 * (factor2 * cacheViewNormal.x * cacheViewNormal.y);
-		irradiance[i] += LightCacheEntries[cacheAddress].irradianceH6 * (factor2 * (cacheViewNormal.x * cacheViewNormal.x - cacheViewNormal.y * cacheViewNormal.y) * 0.5);
+		irradiance += LightCacheEntries[cacheAddress].irradianceH5 * (factor2 * cacheViewNormal.x * cacheViewNormal.y);
+		irradiance += LightCacheEntries[cacheAddress].irradianceH6 * (factor2 * (cacheViewNormal.x * cacheViewNormal.x - cacheViewNormal.y * cacheViewNormal.y) * 0.5);
 		#endif
 	#endif
 
 
 		// Negative irradiance values are not meaningful (may happen due to SH overshooting)
-		irradiance[i] = max(irradiance[i], vec3(0.0));
-	}
+		irradiance = max(irradiance, vec3(0.0));
 
-	// trilinear interpolation
-	// TODO: Interpolate earlier to lower register pressure!
-	vec3 interp = Interp(addressCoord - addressCoord00);
-	vec3 interpolatedIrradiance = 
-		mix(mix(mix(irradiance[0], irradiance[1], interp.x),
-				mix(irradiance[2], irradiance[3], interp.x), interp.y),
-			mix(mix(irradiance[4], irradiance[5], interp.x),
-				mix(irradiance[6], irradiance[7], interp.x), interp.y), interp.z);
+		interpolatedIrradiance += irradiance * weights[i];
+	}
 
 #ifndef INDIRECT_SPECULAR
 	return interpolatedIrradiance * diffuseColor / PI;
 #else
-	vec3 interpolatedSpecular = 
-		mix(mix(mix(specular[0], specular[1], interp.x),
-				mix(specular[2], specular[3], interp.x), interp.y),
-			mix(mix(specular[4], specular[5], interp.x),
-				mix(specular[6], specular[7], interp.x), interp.y), interp.z);
-
-
 	return interpolatedIrradiance * diffuseColor / PI + interpolatedSpecular * specularColor;
 #endif
 }
 
 void main()
 {	
-	//OutputColor = texelFetch(CacheSpecularEnvmap, ivec2(Texcoord * BackbufferResolution/4), 0).rgb; // TODO
+	// Display spec envmap.
+	//OutputColor = texelFetch(CacheSpecularEnvmap, ivec2(Texcoord * BackbufferResolution/2), 0).rgb; // TODO
 	//return;
 
 	// Get pixel world position.
@@ -190,15 +190,18 @@ void main()
 	float blinnExponent = RoughnessToBlinnExponent(roughnessMetalic.x);
 	float specularEnvmapLod = GetHemisphereLodForBlinnPhongExponent(blinnExponent, SpecularEnvmapPerCacheSize_Texel);
 	float maxHalfSpecularEnvmapPixelSize = 0.5 / (pow(2.0, -ceil(specularEnvmapLod)) * SpecularEnvmapPerCacheSize_Texel);
-	//OutputColor = vec3(specularEnvmapLod) * 0.25;
-	//return;
+
+	vec3 cacheViewNormal = worldNormal * ComputeLocalViewSpace(worldPosition);
+	vec2 specEnvLookupCoord = HemisphericalProjection(cacheViewNormal);
+	specEnvLookupCoord = clamp(specEnvLookupCoord, vec2(maxHalfSpecularEnvmapPixelSize), vec2(1.0 - maxHalfSpecularEnvmapPixelSize)); // Make sure not to filter pixels from neighboring caches.
 #endif
 
 
-	vec3 cacheViewNormal = worldNormal * ComputeLocalViewSpace(worldPosition);
+
+
 	OutputColor = ComputeLightingFromCaches(worldPosition, worldNormal, addressVolumeCascade, diffuseColor
 		#ifdef INDIRECT_SPECULAR
-											, cacheViewNormal, specularColor, maxHalfSpecularEnvmapPixelSize, specularEnvmapLod);
+											, specEnvLookupCoord, specularColor, maxHalfSpecularEnvmapPixelSize, specularEnvmapLod);
 		#else 
 				);
 		#endif
@@ -209,13 +212,14 @@ void main()
 	{
 		vec3 secondColor = ComputeLightingFromCaches(worldPosition, worldNormal, addressVolumeCascade+1, diffuseColor
 		#ifdef INDIRECT_SPECULAR
-											, cacheViewNormal, specularColor, maxHalfSpecularEnvmapPixelSize, specularEnvmapLod);
+											, specEnvLookupCoord, specularColor, maxHalfSpecularEnvmapPixelSize, specularEnvmapLod);
 		#else 
 				);
 		#endif
 
 		OutputColor = mix(OutputColor, secondColor, cascadeTransition);
 	}
+
 #endif
 
 	// Test code for "Cache Local View Space"
