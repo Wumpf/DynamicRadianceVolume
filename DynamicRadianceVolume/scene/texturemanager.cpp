@@ -141,8 +141,7 @@ std::shared_ptr<gl::Texture2D> TextureManager::GetRoughnessMetallic(const std::s
 	int metallicTexSizeY = roughnessTexSizeY;
 	if (roughnessTexture != metallicTexture)
 	{
-		
-		stbi_uc* metallicData = LoadTexture(metallicTexture, metallicTexSizeX, metallicTexSizeY);
+		metallicData = LoadTexture(metallicTexture, metallicTexSizeX, metallicTexSizeY);
 		if (!metallicData)
 		{
 			stbi_image_free(roughnessData);
