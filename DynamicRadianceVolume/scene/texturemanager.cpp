@@ -25,6 +25,27 @@ TextureManager::~TextureManager()
 {
 }
 
+TextureManager::Channel TextureManager::ChannelFromChar(char c)
+{
+	switch (c)
+	{
+	case 'A':
+	case 'a':
+		return Channel::A;
+
+	case 'G':
+	case 'g':
+		return Channel::G;
+
+	case 'B':
+	case 'b':
+		return Channel::B;
+
+	default:
+		return Channel::R;
+	}
+}
+
 std::shared_ptr<gl::Texture2D> TextureManager::GetDiffuse(const std::string& filename)
 {
 	auto textureEntry = m_diffuseTextures.find(filename);
@@ -88,12 +109,12 @@ std::shared_ptr<gl::Texture2D> TextureManager::GetNormalmap(const std::string& f
 }
 
 
-stbi_uc* Load1DTexture(const std::string filename, int& sizeX, int& sizeY)
+stbi_uc* LoadTexture(const std::string filename, int& sizeX, int& sizeY)
 {
 	sizeX = -1;
 	sizeY = -1;
 	int roughnessNumComps = -1;
-	stbi_uc* data = stbi_load(filename.c_str(), &sizeX, &sizeY, &roughnessNumComps, 1);
+	stbi_uc* data = stbi_load(filename.c_str(), &sizeX, &sizeY, &roughnessNumComps, 4);
 	if (!data)
 	{
 		LOG_ERROR("Error loading texture \"" << filename << "\": " << stbi_failure_reason());
@@ -103,7 +124,8 @@ stbi_uc* Load1DTexture(const std::string filename, int& sizeX, int& sizeY)
 	return data;
 }
 
-std::shared_ptr<gl::Texture2D> TextureManager::GetRoughnessMetallic(const std::string& roughnessTexture, const std::string& metallicTexture)
+std::shared_ptr<gl::Texture2D> TextureManager::GetRoughnessMetallic(const std::string& roughnessTexture, const std::string& metallicTexture,
+																bool invertRoughnessTexture, Channel roughnessTextureChannel, Channel metallicTextureChannel)
 {
 	std::string identifier = roughnessTexture + "_" + metallicTexture;
 	auto textureEntry = m_roughnessMetallicTextures.find(identifier);
@@ -111,32 +133,53 @@ std::shared_ptr<gl::Texture2D> TextureManager::GetRoughnessMetallic(const std::s
 		return textureEntry->second;
 
 	int roughnessTexSizeX, roughnessTexSizeY;
-	stbi_uc* roughnessData = Load1DTexture(roughnessTexture, roughnessTexSizeX, roughnessTexSizeY);
+	stbi_uc* roughnessData = LoadTexture(roughnessTexture, roughnessTexSizeX, roughnessTexSizeY);
 	if (!roughnessData) return nullptr;
 
-	int metallicTexSizeX, metallicTexSizeY;
-	stbi_uc* metallicData = Load1DTexture(metallicTexture, metallicTexSizeX, metallicTexSizeY);
-	if (!metallicData)
+	stbi_uc* metallicData = nullptr;
+	int metallicTexSizeX = roughnessTexSizeX;
+	int metallicTexSizeY = roughnessTexSizeY;
+	if (roughnessTexture != metallicTexture)
 	{
-		stbi_image_free(roughnessData);
-		return nullptr;
+		
+		stbi_uc* metallicData = LoadTexture(metallicTexture, metallicTexSizeX, metallicTexSizeY);
+		if (!metallicData)
+		{
+			stbi_image_free(roughnessData);
+			return nullptr;
+		}
 	}
+	else
+		metallicData = roughnessData;
 
 	if (metallicTexSizeX != roughnessTexSizeX || metallicTexSizeY != roughnessTexSizeY)
 	{
 		LOG_ERROR("Size of metallic texture does not match size of roughness texture!");
-		stbi_image_free(metallicData);
+		if (roughnessData != metallicData)
+			stbi_image_free(metallicData);
 		stbi_image_free(roughnessData);
 		return nullptr;
 	}
 
 	std::unique_ptr<unsigned char[]> textureData(new unsigned char[roughnessTexSizeX * roughnessTexSizeY * 2]);
-	for (int i = 0; i < metallicTexSizeX * metallicTexSizeY; ++i)
+	if (invertRoughnessTexture)
 	{
-		textureData[i * 2] = roughnessData[i];
-		textureData[i * 2 + 1] = metallicData[i];
+		for (int i = 0; i < metallicTexSizeX * metallicTexSizeY; ++i)
+		{
+			textureData[i * 2] = roughnessData[i * 4 + (int)roughnessTextureChannel];
+			textureData[i * 2 + 1] = metallicData[i * 4 + (int)metallicTextureChannel];
+		}
 	}
-	stbi_image_free(metallicData);
+	else
+	{
+		for (int i = 0; i < metallicTexSizeX * metallicTexSizeY; ++i)
+		{
+			textureData[i * 2] = 255 - roughnessData[i * 4 + (int)roughnessTextureChannel];
+			textureData[i * 2 + 1] = metallicData[i * 4 + (int)metallicTextureChannel];
+		}
+	}
+	if (roughnessData != metallicData)
+		stbi_image_free(metallicData);
 	stbi_image_free(roughnessData);
 
 	auto texture = std::make_shared<gl::Texture2D>(roughnessTexSizeX, roughnessTexSizeY, gl::TextureFormat::RG8, textureData.get(), gl::TextureSetDataFormat::RG, gl::TextureSetDataType::UNSIGNED_BYTE);
@@ -155,7 +198,7 @@ std::shared_ptr<gl::Texture2D> TextureManager::GetRoughnessMetallic(const std::s
 		return textureEntry->second;
 
 	int roughnessTexSizeX, roughnessTexSizeY;
-	stbi_uc* roughnessData = Load1DTexture(roughnessTexture, roughnessTexSizeX, roughnessTexSizeY);
+	stbi_uc* roughnessData = LoadTexture(roughnessTexture, roughnessTexSizeX, roughnessTexSizeY);
 	if (!roughnessData) return nullptr;
 
 	std::unique_ptr<unsigned char[]> textureData(new unsigned char[roughnessTexSizeX * roughnessTexSizeY * 2]);
@@ -184,7 +227,7 @@ std::shared_ptr<gl::Texture2D> TextureManager::GetRoughnessMetallic(float roughn
 		return textureEntry->second;
 
 	int metallicTexSizeX, metallicTexSizeY;
-	stbi_uc* metallicData = Load1DTexture(metallicTexture, metallicTexSizeX, metallicTexSizeY);
+	stbi_uc* metallicData = LoadTexture(metallicTexture, metallicTexSizeX, metallicTexSizeY);
 	if (!metallicData) return nullptr;
 
 	std::unique_ptr<unsigned char[]> textureData(new unsigned char[metallicTexSizeX * metallicTexSizeY * 2]);

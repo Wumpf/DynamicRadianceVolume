@@ -21,6 +21,16 @@ class TextureManager
 public:
 	static TextureManager& GetInstance();
 
+	enum class Channel
+	{
+		R, G, B, A
+	};
+
+	/// Retrieves Channel enum from a single char - either r, g, b or a (case insensitive)
+	/// Defaults to Channel::R.
+	static Channel ChannelFromChar(char c);
+
+
 	/// Gets diffuse/basecolor from file.
 	/// Interprets data as srgb and generates mipmaps.
 	std::shared_ptr<gl::Texture2D> GetDiffuse(const std::string& filename);
@@ -39,7 +49,8 @@ public:
 
 
 	/// If metallicTexture is empty, will fallback to default metallic.
-	std::shared_ptr<gl::Texture2D> GetRoughnessMetallic(const std::string& roughnessTexture, const std::string& metallicTexture);
+	std::shared_ptr<gl::Texture2D> GetRoughnessMetallic(const std::string& roughnessTexture, const std::string& metallicTexture, 
+														bool invertRoughnessTexture = false, Channel roughnessTextureChannel = Channel::R, Channel metallicTextureChannel = Channel::R);
 	std::shared_ptr<gl::Texture2D> GetRoughnessMetallic(const std::string& roughnessTexture, float metallicValue);
 	std::shared_ptr<gl::Texture2D> GetRoughnessMetallic(float roughnessTexture, const std::string& metallicTexture);
 	std::shared_ptr<gl::Texture2D> GetRoughnessMetallic(float roughnessValue, float metallicValue);

@@ -918,7 +918,7 @@ void Renderer::AllocateCaches()
 	m_shaderCacheGather->BindSSBO(*m_lightCacheCounter, "LightCacheCounter");
 	m_shaderCacheGather->BindSSBO(*m_lightCacheBuffer, "LightCacheBuffer");
 	//m_shaderCacheGather->BindSSBO(*m_lightCacheHashMap);
-	m_CAVAtlas->BindImage(0, gl::Texture::ImageAccess::READ_WRITE);
+	m_CAVAtlas->BindImage(0, gl::Texture::ImageAccess::READ_WRITE, gl::TextureFormat::R32UI, 0);
 
 	m_shaderCacheGather->Activate();
 
@@ -1026,10 +1026,10 @@ void Renderer::DrawScene(bool setTextures, SceneDrawSubset drawSubset)
 {
 	Model::BindVAO();
 
-	if (drawSubset == SceneDrawSubset::FULLOPAQUE_ONLY)
+	/*if (drawSubset == SceneDrawSubset::FULLOPAQUE_ONLY)
 		gl::Enable(gl::Cap::CULL_FACE);
 	else if (drawSubset == SceneDrawSubset::ALPHATESTED_ONLY)
-		gl::Disable(gl::Cap::CULL_FACE);
+		gl::Disable(gl::Cap::CULL_FACE);*/
 
 	if (setTextures)
 	{
@@ -1059,8 +1059,13 @@ void Renderer::DrawScene(bool setTextures, SceneDrawSubset drawSubset)
 			{
 				continue;
 			}
-			if (drawSubset == SceneDrawSubset::ALL)
-				mesh.alphaTesting ? gl::Enable(gl::Cap::CULL_FACE) : gl::Disable(gl::Cap::CULL_FACE);
+			//if (drawSubset == SceneDrawSubset::ALL)
+			//	mesh.alphaTesting ? gl::Enable(gl::Cap::CULL_FACE) : gl::Disable(gl::Cap::CULL_FACE);
+
+			if (mesh.doubleSided)
+				gl::Disable(gl::Cap::CULL_FACE);
+			else
+				gl::Enable(gl::Cap::CULL_FACE);
 
 
 			if (setTextures)

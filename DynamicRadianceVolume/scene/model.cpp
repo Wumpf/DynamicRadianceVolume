@@ -14,7 +14,7 @@
 #include <assimp/postprocess.h>
 
 std::unique_ptr<gl::VertexArrayObject> Model::m_vertexArrayObject;
-const unsigned int Model::m_rawModelVersion = 1;
+const unsigned int Model::m_rawModelVersion = 2;
 
 Model::Model(const std::string& originFilename) :
 	m_originFilename(PathUtils::CanonicalizePath(originFilename)),
@@ -97,6 +97,7 @@ void Model::SaveRaw(const std::string& filename, const Vertex* rawVertexData, co
 		jsonMesh["startIndex"] = mesh.startIndex;
 		jsonMesh["numIndices"] = mesh.numIndices;
 		jsonMesh["alphaTesting"] = mesh.alphaTesting;
+		jsonMesh["doubleSided"] = mesh.doubleSided;
 		jsonMesh["diffuseOrigin"] = mesh.diffuseOrigin;
 		jsonMesh["normalmapOrigin"] = mesh.normalmapOrigin;
 		jsonMesh["roughnessOrigin"] = mesh.roughnessOrigin;
@@ -190,6 +191,7 @@ std::shared_ptr<Model> Model::LoadFromRaw(const std::string& filename, const std
 		mesh.startIndex = jsonMesh.get("startIndex", 0).asUInt();
 		mesh.numIndices = jsonMesh.get("numIndices", 0).asUInt();
 		mesh.alphaTesting = jsonMesh.get("alphaTesting", false).asBool();
+		mesh.doubleSided = jsonMesh.get("doubleSided", mesh.alphaTesting).asBool();
 		mesh.diffuseOrigin = jsonMesh.get("diffuseOrigin", defaultColor);
 		mesh.normalmapOrigin = jsonMesh.get("normalmapOrigin", "*default*");
 		mesh.roughnessOrigin = jsonMesh.get("roughnessOrigin", TextureManager::GetInstance().s_defaultRoughness);
@@ -448,8 +450,30 @@ void Model::Mesh::LoadTextures(const std::string& directory)
 	else if (metallicOrigin.isDouble())
 		roughnessMetallic = TextureManager::GetInstance().GetRoughnessMetallic(PathUtils::AppendPath(directory, roughnessOrigin.asString()), metallicOrigin.asFloat());
 	else
-		roughnessMetallic = TextureManager::GetInstance().GetRoughnessMetallic(PathUtils::AppendPath(directory, roughnessOrigin.asString()), PathUtils::AppendPath(directory, metallicOrigin.asString()));
+	{
+		std::string roughnessFilename, metallicFilename;
+		bool invertRoughness = false;
+		TextureManager::Channel roughnessChannel = TextureManager::Channel::R;
+		TextureManager::Channel metallicChannel = TextureManager::Channel::R;
 
+		if (roughnessOrigin.isString())
+			roughnessFilename = PathUtils::AppendPath(directory, roughnessOrigin.asString());
+		else
+		{
+			roughnessFilename = PathUtils::AppendPath(directory, roughnessOrigin.get("filename", "*NO FILENAME!*").asString());
+			roughnessChannel = TextureManager::ChannelFromChar(roughnessOrigin.get("channel", "r").asString()[0]);
+			invertRoughness = roughnessOrigin.get("inverted", false).asBool();
+		}
+		if (metallicOrigin.isString())
+			metallicFilename = PathUtils::AppendPath(directory, metallicOrigin.asString());
+		else
+		{
+			metallicFilename = PathUtils::AppendPath(directory, metallicOrigin.get("filename", "*NO FILENAME!*").asString());
+			metallicChannel = TextureManager::ChannelFromChar(metallicOrigin.get("channel", "r").asString()[0]);
+		}
+
+		roughnessMetallic = TextureManager::GetInstance().GetRoughnessMetallic(roughnessFilename, metallicFilename, invertRoughness, roughnessChannel, metallicChannel);
+	}
 }
 
 void Model::CreateVAO()

@@ -50,6 +50,7 @@ public:
 		std::shared_ptr<gl::Texture2D> roughnessMetallic; // Combined texture of roughness (R) and metallic values (G)
 		
 		bool alphaTesting;
+		bool doubleSided; // Usually set to true, if alphaTesting enabled.
 
 		Json::Value diffuseOrigin;
 		Json::Value normalmapOrigin;
