@@ -13,7 +13,7 @@ Scene::Scene() :
 	Model::CreateVAO();
 
 	m_boundingBox.min = ei::Vec3(std::numeric_limits<float>::max());
-	m_boundingBox.max = ei::Vec3(std::numeric_limits<float>::min());
+	m_boundingBox.max = ei::Vec3(-std::numeric_limits<float>::max());
 }
 
 Scene::~Scene()
@@ -33,7 +33,7 @@ void Scene::Update(ezTime timeSinceLastUpdate)
 void Scene::UpdateBoundingbox()
 {
 	m_boundingBox.min = ei::Vec3(std::numeric_limits<float>::max());
-	m_boundingBox.max = ei::Vec3(std::numeric_limits<float>::min());
+	m_boundingBox.max = ei::Vec3(-std::numeric_limits<float>::max());
 
 	for (auto& it : m_entities)
 	{
