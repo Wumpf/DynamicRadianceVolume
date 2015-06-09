@@ -44,7 +44,7 @@ void main()
 	// -> total incoming flux = Intensity * PixelSteradian
 	// -> total outgoing flux = Incoming Flux * "reflectivity"
 
-	OutFlux = baseColor.rgb * LightIntensity * (spotFalloff * pixelSteradian);
+	OutFlux = baseColor.rgb * LightIntensity * (spotFalloff * pixelSteradian / PI); // /PI is preponed for later intensity calculation
 	OutDepthLinSq = vec2(distToLight, distToLight * distToLight);
 
 

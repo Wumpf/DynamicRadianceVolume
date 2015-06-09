@@ -102,7 +102,6 @@ void main()
 #ifdef INDIRECT_SHADOW
 	ivec3 volumeSize = textureSize(VoxelVolume, 0);
 	vec3 voxelPos = (worldPosition - VolumeWorldMin) / (VoxelSizeInWorld * volumeSize);
-	float startOffset = sqrt(2.0) * AddressVolumeCascades[0].WorldVoxelSize / VoxelSizeInWorld + 0.5;
 #endif
 
 
@@ -142,7 +141,7 @@ void main()
 		vec2 rsmSamplePosF = (rsmSamplePos + vec2(0.5)) / RSMResolution;
 
 		// Sample flux
-		cacheEntry.Flux = textureLod(RSM_Flux, rsmSamplePosF, 0).rgb;
+		cacheEntry.Flux = textureLod(RSM_Flux, rsmSamplePosF, 0).rgb; // Actually this is flux / PI
 
 		// Sample Depth and compute VAL area
 		float sourceLightToVAL = textureLod(RSM_DepthLinSq, rsmSamplePosF, 0).r;
@@ -156,7 +155,7 @@ void main()
 		cacheEntry.Normal = UnpackNormal16I(textureLod(RSM_Normal, rsmSamplePosF, 0).xy);
 
 		// Write into cache, all together.
-		barrier(); // Wait for other threads to chew their lights
+		barrier(); // Wait for other threads to chew their lights.
  		RSMCache[gl_LocalInvocationID.x] = cacheEntry;
 		barrier(); // Make sure all other threads have written their lights.
 
@@ -199,25 +198,26 @@ void main()
 				toAverageVal /= lightDist;
 				vec3 dirInVoxel = toAverageVal / volumeSize;
 
-				vec3 currentPosVoxel = voxelPos + dirInVoxel*startOffset;
-				//float lastOcclusion = 0.0;
+				#define VOXE_CONE_START_OFFSET 1.5
+				vec3 currentPosVoxel = voxelPos + dirInVoxel*VOXE_CONE_START_OFFSET;
+			//	float lastOcclusion = 0.0;
 				float occlusion = 0.0;
 				float stepSize = 1.0;
 				float dist = 0.0;
-				float goalDist = lightDist / VoxelSizeInWorld - startOffset;// Assuming that the light is within the voxel bounds!
+				float goalDist = lightDist / VoxelSizeInWorld - VOXE_CONE_START_OFFSET;// Assuming that the light is within the voxel bounds!
 
-				for(int s=0; s<64; ++s)
+				for(int s=0; s<32; ++s)
 				{
 					currentPosVoxel += dirInVoxel * stepSize;
 					//if(saturate(currentPosVoxel) != currentPosVoxel) break; // seems not to be necessary
 
 					dist += stepSize;
 
-					float currentSphereRadius = dist * distToSphereRad;
+					float currentSphereRadius = max(0.5, dist * distToSphereRad);
 
 					// Lookup in miplevel that has voxels of the size of the current sphere radius.
 					float newOcclusion = textureLod(VoxelVolume, currentPosVoxel, log2(currentSphereRadius)).r; 
-					//lastOcclusion = occlusion;
+				//	lastOcclusion = occlusion;
 					occlusion += (1.0 - occlusion) * newOcclusion;
 
 					if(dist >= goalDist)
@@ -234,7 +234,12 @@ void main()
 
 			{
 				vec3 valTotalExitantFlux = RSMCache[i].Flux;
+				
+				// This branch slows usually more down than speeding up.
+				// There is some empirical evidence, that it leads to a speed up if specular is activated
+				#ifdef INDIRECT_SPECULAR
 				if(valTotalExitantFlux.x + valTotalExitantFlux.y + valTotalExitantFlux.z < 0.001) continue;
+				#endif
 
 				vec3 valNormal = RSMCache[i].Normal;
 				vec3 valPosition = RSMCache[i].Position;
@@ -248,9 +253,10 @@ void main()
 				toVal *= inversesqrt(lightDistanceSq);
 
 				// Light intensity
-				float fluxToIntensity = saturate(dot(valNormal, -toVal)) / PI;
+				float fluxToIntensity = saturate(dot(valNormal, -toVal)); // / PI -- division was already performed at RSM creation time.
 
 				fluxToIntensity *= shadowing;
+
 
 				// Note that this is not yet irradianceIn - multiplication with dot(N,L) is missing.
 				vec3 radianceIn = valTotalExitantFlux * (fluxToIntensity / (lightDistanceSq + RSMCache[i].DiscArea));

@@ -51,7 +51,7 @@ void main()
 			float cosTheta = saturate(dot(toVal, worldNormal));
 
 			// Light intensity
-			vec3 valTotalExitantFlux = texelFetch(RSM_Flux, rsmSamplePos, 0).rgb;
+			vec3 valTotalExitantFlux = texelFetch(RSM_Flux, rsmSamplePos, 0).rgb; // Actually this is flux divided with PI!
 			vec3 valNormal = UnpackNormal16I(texelFetch(RSM_Normal, rsmSamplePos, 0).xy);
 
 
@@ -60,7 +60,7 @@ void main()
 			vec3 valToLight = valPosition.xyz - LightPosition;
 			float valToLightDistSq = dot(valToLight, valToLight); // todo: Compute directly from lightDepth
 			float valArea = valToLightDistSq * ValAreaFactor;
-			float fluxToIntensity = saturate(dot(valNormal, -toVal)) / PI;
+			float fluxToIntensity = saturate(dot(valNormal, -toVal));
 			float fluxToIrradiance = fluxToIntensity * cosTheta / (lightDistanceSq + valArea);
 			//float fluxToIrradiance = fluxToIntensity * cosTheta / (lightDistanceSq); // VPL instead of VAL
 
