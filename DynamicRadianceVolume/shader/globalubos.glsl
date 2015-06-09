@@ -105,5 +105,4 @@ layout(binding = 4, shared) uniform SpotLight
 	int IndirectShadowComputationSampleInterval;  	// IndirectShadowComputationBlockSize * IndirectShadowComputationBlockSize
 	float IndirectShadowComputationSuperValWidth;	// sqrt(ValAreaFactor) * SHADOW_COMPUTATION_INTERVAL_BLOCK -- The scaling factor of the "superval" used for cone tracing (scales with distance!)
 	float IndirectShadowSamplingOffset; 			// = vec2(0.5 + sqrt(2.0) * IndirectShadowComputationBlockSize / 2.0);
-	float IndirectShadowSamplingMinDistToSphereFactor; // = sin(minimalShadowConeAngle * 0.5)
 };

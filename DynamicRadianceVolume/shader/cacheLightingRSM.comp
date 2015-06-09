@@ -190,7 +190,6 @@ void main()
 				//float distToSphereRad = sampleSphereRadius / d_dsq.x;
 				// Simplification yields:
 				float distToSphereRad = max(IndirectShadowComputationSuperValWidth, sqrt(depthVariance) * 2.0 / d_dsq.x);
-				distToSphereRad = max(distToSphereRad, IndirectShadowSamplingMinDistToSphereFactor); // Clamp to small values.
 
 
 				vec3 toAverageVal = averageValPos - worldPosition;
@@ -206,27 +205,28 @@ void main()
 				float dist = 0.0;
 				float goalDist = lightDist / VoxelSizeInWorld - VOXE_CONE_START_OFFSET;// Assuming that the light is within the voxel bounds!
 
+				// Converts from sphereRadius to stepsize so that the next sphere just touches the old one.
+				float sphereRadiusToStepSize = 2.0 / (1.0 - distToSphereRad);
+
 				for(int s=0; s<32; ++s)
 				{
 					currentPosVoxel += dirInVoxel * stepSize;
-					//if(saturate(currentPosVoxel) != currentPosVoxel) break; // seems not to be necessary
-
 					dist += stepSize;
 
-					float currentSphereRadius = max(0.5, dist * distToSphereRad);
+					float currentSphereRadius = dist * distToSphereRad;
 
 					// Lookup in miplevel that has voxels of the size of the current sphere radius.
 					float newOcclusion = textureLod(VoxelVolume, currentPosVoxel, log2(currentSphereRadius)).r; 
-				//	lastOcclusion = occlusion;
 					occlusion += (1.0 - occlusion) * newOcclusion;
 
 					if(dist >= goalDist)
 						break;
 
-					stepSize = currentSphereRadius * 2.0;
+					stepSize = max(1.0, currentSphereRadius * sphereRadiusToStepSize);
+					//stepSize = max(1.0, currentSphereRadius * 2.0);
+					//stepSize = max(1.0, currentSphereRadius * 3.0);
 				}
 
-				//occlusion = mix(lastOcclusion, occlusion, (dist - goalDist) / stepSize); // should be correcter but yields more artefacts.
 				shadowing = saturate(1.0 - occlusion);
 			}
 		#endif

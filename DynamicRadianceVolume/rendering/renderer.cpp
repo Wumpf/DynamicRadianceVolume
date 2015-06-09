@@ -650,7 +650,6 @@ void Renderer::PrepareLights()
 		Assert(cacheLightingThreadsPerGroup % indirectShadowComputationSampleInterval == 0, "cacheLightingThreadsPerGroup needs to be a multiple of indirectShadowComputationSampleInterval!"); // See cacheLightingRSM.comp shadow computation.
 		uboView["IndirectShadowComputationSuperValWidth"].Set(sqrtf(valAreaFactor) * indirectShadowComputationBlockSize);
 		uboView["IndirectShadowSamplingOffset"].Set(0.5f + sqrtf(2.0f) * indirectShadowComputationBlockSize / 2.0f);
-		uboView["IndirectShadowSamplingMinDistToSphereFactor"].Set(sinf(light.indirectShadowMinHalfConeAngle));
 
 
 		// (Re)Init shadow map if necessary.

@@ -128,9 +128,6 @@ void Application::ChangeLightCount(unsigned int lightCount)
 		m_tweakBar->AddReadWrite<int>(namePrefix + "IndirectShadowLod", [=](){ return m_scene->GetLights()[i].indirectShadowComputationLod; },
 			[=](int j){ m_scene->GetLights()[i].indirectShadowComputationLod = j; }, groupSetting + " label=\"Ind. Shadow Lod\" min=0 max=4 step=1");
 
-		m_tweakBar->AddReadWrite<float>(namePrefix + "IndirectShadowMinConeAngle", [=](){ return m_scene->GetLights()[i].indirectShadowMinHalfConeAngle / (ei::PI / 180.0f); },
-			[=](float f){ m_scene->GetLights()[i].indirectShadowMinHalfConeAngle = f  * (ei::PI / 180.0f); }, groupSetting + " label=\"Ind. Shadow Min. Half Angle\" min=0 max=30 step=0.1");
-
 		m_tweakBar->SetGroupProperties(lightGroup, "Lights", lightGroup, false);
 	}
 	m_tweakBar->SetGroupProperties("Lights", "", "Lights", false);
