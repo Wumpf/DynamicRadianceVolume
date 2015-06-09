@@ -165,7 +165,7 @@ std::shared_ptr<gl::Texture2D> TextureManager::GetRoughnessMetallic(const std::s
 	{
 		for (int i = 0; i < metallicTexSizeX * metallicTexSizeY; ++i)
 		{
-			textureData[i * 2] = roughnessData[i * 4 + (int)roughnessTextureChannel];
+			textureData[i * 2] = 255 - roughnessData[i * 4 + (int)roughnessTextureChannel];
 			textureData[i * 2 + 1] = metallicData[i * 4 + (int)metallicTextureChannel];
 		}
 	}
@@ -173,7 +173,7 @@ std::shared_ptr<gl::Texture2D> TextureManager::GetRoughnessMetallic(const std::s
 	{
 		for (int i = 0; i < metallicTexSizeX * metallicTexSizeY; ++i)
 		{
-			textureData[i * 2] = 255 - roughnessData[i * 4 + (int)roughnessTextureChannel];
+			textureData[i * 2] = roughnessData[i * 4 + (int)roughnessTextureChannel];
 			textureData[i * 2 + 1] = metallicData[i * 4 + (int)metallicTextureChannel];
 		}
 	}
@@ -204,7 +204,7 @@ std::shared_ptr<gl::Texture2D> TextureManager::GetRoughnessMetallic(const std::s
 	unsigned char metallicChar = static_cast<unsigned char>(Clamp(metallicValue, 0.0f, 1.0f) * 255);
 	for (int i = 0; i < roughnessTexSizeX * roughnessTexSizeY; ++i)
 	{
-		textureData[i * 2] = roughnessData[i];
+		textureData[i * 2] = roughnessData[i*4];
 		textureData[i * 2 + 1] = metallicChar;
 	}
 	stbi_image_free(roughnessData);
@@ -234,7 +234,7 @@ std::shared_ptr<gl::Texture2D> TextureManager::GetRoughnessMetallic(float roughn
 	for (int i = 0; i < metallicTexSizeX * metallicTexSizeY; ++i)
 	{
 		textureData[i * 2] = roughnessChar;
-		textureData[i * 2 + 1] = metallicData[i];
+		textureData[i * 2 + 1] = metallicData[i*4];
 	}
 	stbi_image_free(metallicData);
 

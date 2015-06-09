@@ -23,7 +23,7 @@ public:
 
 	enum class Channel
 	{
-		R, G, B, A
+		R=0, G, B, A
 	};
 
 	/// Retrieves Channel enum from a single char - either r, g, b or a (case insensitive)
