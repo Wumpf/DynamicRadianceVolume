@@ -181,12 +181,14 @@ void main()
 	vec3 worldNormal = UnpackNormal16I(textureLod(GBuffer_Normal, Texcoord, 0.0).rg);
 
 	// Sample material data
+	vec3 diffuseColor;
 	vec3 baseColor = texture(GBuffer_Diffuse, Texcoord).rgb;
+#ifdef INDIRECT_SPECULAR
+	
 	vec2 roughnessMetalic = texture(GBuffer_RoughnessMetalic, Texcoord).rg;
-	vec3 diffuseColor, specularColor;
+	vec3 specularColor;
 	ComputeMaterialColors(baseColor, roughnessMetalic.y, diffuseColor, specularColor);
 
-#ifdef INDIRECT_SPECULAR
 	float blinnExponent = RoughnessToBlinnExponent(roughnessMetalic.x);
 	float specularEnvmapLod = GetHemisphereLodForBlinnPhongExponent(blinnExponent, SpecularEnvmapPerCacheSize_Texel);
 	float maxHalfSpecularEnvmapPixelSize = 0.5 / (pow(2.0, -ceil(specularEnvmapLod)) * SpecularEnvmapPerCacheSize_Texel);
@@ -194,6 +196,8 @@ void main()
 	vec3 cacheViewNormal = worldNormal * ComputeLocalViewSpace(worldPosition);
 	vec2 specEnvLookupCoord = HemisphericalProjection(cacheViewNormal);
 	specEnvLookupCoord = clamp(specEnvLookupCoord, vec2(maxHalfSpecularEnvmapPixelSize), vec2(1.0 - maxHalfSpecularEnvmapPixelSize)); // Make sure not to filter pixels from neighboring caches.
+#else
+	diffuseColor = baseColor;
 #endif
 
 
