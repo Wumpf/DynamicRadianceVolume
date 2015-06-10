@@ -43,7 +43,7 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	m_specularEnvmapMaxFillHolesLevel(0),
 	m_specularEnvmapDirectWrite(true),
 	m_showCAVCascades(false),
-	m_smoothCAVCascadeTransition(true),
+	m_CAVCascadeTransitionSize(2.0f),
 	m_indirectShadow(true),
 	m_indirectSpecular(false)
 {
@@ -202,7 +202,7 @@ void Renderer::ReloadSettingDependentCacheShader()
 		settings += "#define INDIRECT_SHADOW\n";
 	if (m_showCAVCascades)
 		settings += "#define SHOW_ADDRESSVOL_CASCADES\n";
-	if (m_smoothCAVCascadeTransition)
+	if (m_CAVCascadeTransitionSize > 0.0f)
 		settings += "#define ADDRESSVOL_CASCADE_TRANSITIONS\n";
 	
 	switch (m_indirectDiffuseMode)
@@ -339,9 +339,11 @@ void Renderer::UpdateVolumeUBO(const Camera& camera)
 	float largestExtent = ei::max(extent);
 	VolumeWorldMax += ei::Vec3(largestExtent) - extent;
 	mappedMemory["VolumeWorldMin"].Set(VolumeWorldMin);
-	mappedMemory["VolumeWorldMax"].Set(VolumeWorldMax);
 	mappedMemory["VoxelSizeInWorld"].Set((VolumeWorldMax.x - VolumeWorldMin.x) / m_voxelization->GetVoxelTexture().GetWidth());
-
+	mappedMemory["VolumeWorldMax"].Set(VolumeWorldMax);
+	
+	mappedMemory["CAVTransitionZoneSize"].Set(m_CAVCascadeTransitionSize);
+	
 	//auto inverseViewProjection = ei::invert(camera.ComputeProjectionMatrix() * camera.ComputeViewMatrix());
 
 	// Cache address volume cascades.
@@ -1154,6 +1156,16 @@ void Renderer::SetCAVCascadeWorldSize(unsigned int cascade, float voxelWorldSize
 	}*/
 
 	m_CAVCascadeWorldSize[cascade] = voxelWorldSize;
+}
+
+void Renderer::SetCAVCascadeTransitionSize(float transitionZoneSize)
+{
+	bool updateShader = (m_CAVCascadeTransitionSize > 0 && transitionZoneSize <= 0.0) || 
+						(m_CAVCascadeTransitionSize <= 0 && transitionZoneSize > 0.0);
+
+	m_CAVCascadeTransitionSize = transitionZoneSize;
+	if (updateShader)
+		ReloadSettingDependentCacheShader();
 }
 
 void Renderer::SetExposure(float exposure)

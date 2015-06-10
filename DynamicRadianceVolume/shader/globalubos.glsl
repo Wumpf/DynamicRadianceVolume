@@ -44,7 +44,7 @@ layout(binding = 1, shared) uniform PerFrame
 
 #define MAX_NUM_ADDRESS_VOLUME_CASCADES 4
 
-struct NumAddressVolumeCascade
+struct CAVCascade
 {
 	// World min/max of the cache grid (snapped)
 	vec3 Min;
@@ -68,11 +68,13 @@ layout(binding = 2, shared) uniform VolumeInfo
 	// TODO: Cascading of multiple volumes.
 	// Note that both the voxel and the address volume share sizes but might not be of the same resolution!
 	vec3 VolumeWorldMin; // World min coordinate of voxel volume (currently assumed to be scene-static)
-	vec3 VolumeWorldMax; // || max
 	float VoxelSizeInWorld; 		// Voxels are enforced to be cubic (simplifies several computations and improves quality)
+	vec3 VolumeWorldMax; // || max
+	
+	float CAVTransitionZoneSize;
 
 	// Address Volume
-	NumAddressVolumeCascade AddressVolumeCascades[MAX_NUM_ADDRESS_VOLUME_CASCADES];
+	CAVCascade AddressVolumeCascades[MAX_NUM_ADDRESS_VOLUME_CASCADES];
 };
 
 // UBO for values that change with each object

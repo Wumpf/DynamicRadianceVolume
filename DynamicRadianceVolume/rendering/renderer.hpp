@@ -128,8 +128,9 @@ public:
 	// Address volume usage
 	bool GetShowCAVCascades() const								{ return m_showCAVCascades; }
 	void SetShowCAVCascades(bool show)							{ m_showCAVCascades = show; ReloadSettingDependentCacheShader(); }
-	bool GetSmoothCAVCascadeTransition() const					{ return m_smoothCAVCascadeTransition; }
-	void SetSmoothCAVCascadeTransition(bool transitionEnabled)	{ m_smoothCAVCascadeTransition = transitionEnabled; ReloadSettingDependentCacheShader(); }
+	float GetCAVCascadeTransitionSize() const					{ return m_CAVCascadeTransitionSize; }
+	void SetCAVCascadeTransitionSize(float transitionZoneSize); ///< A value of zero transition means off.
+
 
 	void BindObjectUBO(unsigned int objectIndex);
 
@@ -224,7 +225,7 @@ private:
 	std::unique_ptr<gl::Texture3D> m_CAVAtlas;
 	std::vector<float> m_CAVCascadeWorldSize; ///< World size of the cascade cubes.
 	bool m_showCAVCascades;
-	bool m_smoothCAVCascadeTransition;
+	float m_CAVCascadeTransitionSize;
 
 	BufferPtr m_lightCacheBuffer;
 	BufferPtr m_lightCacheCounter;

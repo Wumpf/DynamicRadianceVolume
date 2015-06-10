@@ -130,5 +130,5 @@ float ComputeAddressVolumeCascadeTransition(vec3 worldPosition, int addressVolum
 	float minDist = min(min(min(distToMax.x, distToMax.y), distToMax.z),
 						min(min(distToMin.x, distToMin.y), distToMin.z));
 
-	return clamp(1.0 - minDist / AddressVolumeCascades[addressVolumeCascade].WorldVoxelSize, 0.0, 1.0);
+	return clamp(1.0 - minDist / (AddressVolumeCascades[addressVolumeCascade].WorldVoxelSize * CAVTransitionZoneSize), 0.0, 1.0);
 }

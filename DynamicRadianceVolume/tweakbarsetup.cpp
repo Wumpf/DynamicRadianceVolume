@@ -180,7 +180,7 @@ void Application::SetupTweakBarBinding()
 
 		// Address Volume
 		std::string groupSetting = " group=AddressVolume";
-		m_tweakBar->AddReadWrite<bool>("Smooth Transitions", [&](){ return m_renderer->GetSmoothCAVCascadeTransition(); }, [&](bool b){ return m_renderer->SetSmoothCAVCascadeTransition(b); }, groupSetting);
+		m_tweakBar->AddReadWrite<float>("Transition Size", [&](){ return m_renderer->GetCAVCascadeTransitionSize(); }, [&](float f){ return m_renderer->SetCAVCascadeTransitionSize(f); }, groupSetting + " min=0.0 max=10.0 step=0.1");
 		m_tweakBar->AddReadWrite<bool>("Display Cascades", [&](){ return m_renderer->GetShowCAVCascades(); }, [&](bool b){ return m_renderer->SetShowCAVCascades(b); }, groupSetting);
 		m_tweakBar->AddReadWrite<int>("Resolution", [&](){ return m_renderer->GetCAVResolution(); },
 			[&](int i){ return m_renderer->SetCAVCascades(m_renderer->GetCAVCascadeCount(), i); }, " min=16 max=256 step=16" + groupSetting);
