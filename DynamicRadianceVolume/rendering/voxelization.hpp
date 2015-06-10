@@ -24,6 +24,9 @@ public:
 	Voxelization(unsigned int resolution);
 	~Voxelization();
 
+	void SetResolution(unsigned int resolution);
+	unsigned int GetResolution() const;
+
 	/// Voxel debug output.
 	void DrawVoxelRepresentation();
 

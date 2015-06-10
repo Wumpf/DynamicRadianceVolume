@@ -35,11 +35,21 @@ Voxelization::Voxelization(unsigned int resolution) :
 	m_shaderVoxelDebug->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/voxeldebug.frag");
 	m_shaderVoxelDebug->CreateProgram();
 
-	m_voxelSceneTexture = std::make_unique<gl::Texture3D>(resolution, resolution, resolution, gl::TextureFormat::R8, 0);
+	SetResolution(resolution);
 }
 
 Voxelization::~Voxelization()
 {
+}
+
+
+void Voxelization::SetResolution(unsigned int resolution)
+{
+	m_voxelSceneTexture = std::make_unique<gl::Texture3D>(resolution, resolution, resolution, gl::TextureFormat::R8, 0);
+}
+unsigned int Voxelization::GetResolution() const
+{
+	return m_voxelSceneTexture->GetWidth();
 }
 
 void Voxelization::DrawVoxelRepresentation()

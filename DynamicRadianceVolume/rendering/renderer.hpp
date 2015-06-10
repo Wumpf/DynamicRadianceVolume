@@ -78,6 +78,10 @@ public:
 	void SetIndirectSpecular(bool active)	{ m_indirectSpecular = active; ReloadSettingDependentCacheShader(); }
 	bool GetIndirectSpecular() const		{ return m_indirectSpecular; }
 
+	
+	void SetVoxelVolumeResultion(unsigned int resolution);
+	unsigned int GetVoxelVolumeResultion() const;
+
 	/// Sets size of the per cache specular env map in pixel.
 	///
 	/// \attention Needs to be a power of two!

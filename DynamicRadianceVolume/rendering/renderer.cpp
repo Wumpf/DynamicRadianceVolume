@@ -412,6 +412,17 @@ void Renderer::UpdateVolumeUBO(const Camera& camera)
 	m_uboVolumeInfo->Unmap();
 }
 
+void Renderer::SetVoxelVolumeResultion(unsigned int resolution)
+{
+	m_voxelization->SetResolution(resolution);
+	UpdateConstantUBO();
+}
+
+unsigned int Renderer::GetVoxelVolumeResultion() const
+{
+	return m_voxelization->GetResolution();
+}
+
 void Renderer::SetPerCacheSpecularEnvMapSize(unsigned int specularEnvmapPerCacheSize)
 {
 	Assert(IsPowerOfTwo(specularEnvmapPerCacheSize), "Per cache specular envmap size needs to be a power of two!");
