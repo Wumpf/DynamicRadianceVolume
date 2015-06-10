@@ -74,6 +74,8 @@ class Exporter
                 foreach (var meshFilter in meshFilters)
                 {
                     Mesh mesh = meshFilter.sharedMesh;
+                    if (mesh == null)
+                        continue;
 
                     // Check mesh topologies
                     bool invalidTopology = false;
