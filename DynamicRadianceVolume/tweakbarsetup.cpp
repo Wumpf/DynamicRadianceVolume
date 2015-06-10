@@ -170,6 +170,8 @@ void Application::SetupTweakBarBinding()
 		m_tweakBar->AddEnumType("IndirectDiffuseModeType", indirectDiffuseModeVals);
 		m_tweakBar->AddEnum("Indirect Diffuse Mode", "IndirectDiffuseModeType", [&](){ return (int)m_renderer->GetIndirectDiffuseMode(); }, [&](int mode){ return m_renderer->SetIndirectDiffuseMode(static_cast<Renderer::IndirectDiffuseMode>(mode)); });
 
+		m_tweakBar->AddReadWrite<int>("Voxel Resolution", [&](){ return m_renderer->GetVoxelVolumeResultion(); }, [&](int i){ return m_renderer->SetVoxelVolumeResultion(i); }, " min=16 max=512 step=16");
+
 		m_tweakBar->AddReadWrite<int>("Max Total Cache Count", [&](){ return m_renderer->GetMaxCacheCount(); },
 			[&](int i){ return m_renderer->SetMaxCacheCount(i); }, " min=2048 max=1048576 step=2048");
 		m_tweakBar->AddReadWrite<bool>("Track Light Cache Count", [&](){ return m_renderer->GetReadLightCacheCount(); },

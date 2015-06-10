@@ -197,7 +197,7 @@ void main()
 				toAverageVal /= lightDist;
 				vec3 dirInVoxel = toAverageVal / volumeSize;
 
-				#define VOXE_CONE_START_OFFSET 1.5
+				#define VOXE_CONE_START_OFFSET 2.0 //sqrt(2)
 				vec3 currentPosVoxel = voxelPos + dirInVoxel*VOXE_CONE_START_OFFSET;
 			//	float lastOcclusion = 0.0;
 				float occlusion = 0.0;

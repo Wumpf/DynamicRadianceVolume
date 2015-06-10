@@ -28,7 +28,6 @@ float RandomWang(inout uint seed)
 	return float(WangHash(seed) % 8388593) / 8388593.0;
 }
 
-
 vec2 Random2(inout uint seed)
 {
 	return vec2(Random(seed), Random(seed));

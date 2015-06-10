@@ -1,6 +1,6 @@
 #version 450 core
 
-// Options
+// Options:
 //#define ALPHATESTING <DesiredAlphaThreshhold>
 
 #include "utils.glsl"
@@ -10,7 +10,7 @@ in vec3 Tangent;
 in float BitangentHandedness;
 in vec2 Texcoord;
 
-layout(binding = 0) uniform sampler2D DiffuseTexture;
+layout(binding = 0) uniform sampler2D BaseColorTexture;
 layout(binding = 1) uniform sampler2D Normalmap;
 layout(binding = 2) uniform sampler2D RoughnessMetalic;
 
@@ -20,7 +20,7 @@ layout(location = 2) out vec2 OutRoughnessMetallic;
 
 void main()
 {
-	vec4 baseColor = texture(DiffuseTexture, Texcoord);
+	vec4 baseColor = texture(BaseColorTexture, Texcoord);
 #ifdef ALPHATESTING
 	if(baseColor.a < 0.1)
 		discard;

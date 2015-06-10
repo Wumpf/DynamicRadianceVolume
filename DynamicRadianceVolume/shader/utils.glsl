@@ -188,9 +188,8 @@ float GetBlinnPhongExponentForHemispherePixel(float hemisphereResolution)
 	// Hemisphere Pixel size: 2pi / res²
 	return hemisphereResolution * hemisphereResolution - 1.0;
 #endif
-
-
 }
+
 float GetHemisphereLodForBlinnPhongExponent(float blinnPhongExponent, float baseLevelResolution)
 {
 	// See GetBlinnPhongExponentForHemispherePixel but resolved to mip level
