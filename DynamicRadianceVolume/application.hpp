@@ -49,7 +49,7 @@ private:
 
 	ezTime m_timeSinceLastUpdate;
 
-	
+	bool m_showTweakBar;
 
 	std::string m_tweakBarStatisticGroupSetting;	
 	std::vector<std::string> m_tweakBarStatisticEntries;

@@ -21,7 +21,8 @@
 
 Application::Application(int argc, char** argv) :
 	m_detachViewFromCameraUpdate(false),
-	m_tweakBarStatisticGroupSetting(" group=\"TimerStatistics\"")
+	m_tweakBarStatisticGroupSetting(" group=\"TimerStatistics\""),
+	m_showTweakBar(true)
 {
 	// Logger init.
 	Logger::g_logger.Initialize(new Logger::FilePolicy("log.txt"));
@@ -209,7 +210,8 @@ void Application::Draw()
 	m_renderer->Draw(*m_camera, m_detachViewFromCameraUpdate);
 	if (m_detachViewFromCameraUpdate)
 		m_frustumOutlineRenderer->Draw();
-	m_tweakBar->Draw();
+	if (m_showTweakBar)
+		m_tweakBar->Draw();
 	m_window->Present();
 
 	FrameProfiler::GetInstance().OnFrameEnd();
@@ -217,4 +219,6 @@ void Application::Draw()
 
 void Application::Input()
 {
+	if (m_window->WasButtonPressed(GLFW_KEY_F10))
+		m_showTweakBar = !m_showTweakBar;
 }
