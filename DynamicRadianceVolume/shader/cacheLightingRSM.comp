@@ -128,7 +128,7 @@ void main()
 		irradianceHBasis[i] = vec3(0);
 #endif
 
-	int totalNumRSMPixels = RSMResolution * RSMResolution;
+	int totalNumRSMPixels = RSMReadResolution * RSMReadResolution;
 	for(uint rsmPixelIndex = 0; rsmPixelIndex < totalNumRSMPixels; rsmPixelIndex += LIGHTING_THREADS_PER_GROUP)
 	{
 		// Load LIGHTING_THREADS_PER_GROUP RMS pixels
@@ -137,8 +137,8 @@ void main()
 		// Unpack rsmPixelIndex to a actual position.
 		uint localRsmPixelPos = rsmPixelIndex + gl_LocalInvocationID.x;
 		ivec2 rsmSamplePos = ivec2(Morton_2D_Decode_16bit(localRsmPixelPos)); 
-		//ivec2 rsmSamplePos = ivec2(localRsmPixelPos / RSMResolution, localRsmPixelPos % RSMResolution);
-		vec2 rsmSamplePosF = (rsmSamplePos + vec2(0.5)) / RSMResolution;
+		//ivec2 rsmSamplePos = ivec2(localRsmPixelPos / RSMReadResolution, localRsmPixelPos % RSMReadResolution);
+		vec2 rsmSamplePosF = (rsmSamplePos + vec2(0.5)) / RSMReadResolution;
 
 		// Sample flux
 		cacheEntry.Flux = textureLod(RSM_Flux, rsmSamplePosF, 0).rgb; // Actually this is flux / PI
@@ -169,7 +169,7 @@ void main()
 			{
 				uint localRsmPixelPos = uint(rsmPixelIndex + i);
 				uvec2 upperLeftSampleTexel = Morton_2D_Decode_16bit(localRsmPixelPos);
-				vec2 rsmMidTexcoord = (upperLeftSampleTexel + IndirectShadowSamplingOffset) / RSMResolution;
+				vec2 rsmMidTexcoord = (upperLeftSampleTexel + IndirectShadowSamplingOffset) / RSMReadResolution;
 
 				vec2 d_dsq = textureLod(RSM_DepthLinSq, rsmMidTexcoord, IndirectShadowComputationLod).xy;
 				vec4 rsmClipSpace = vec4(rsmMidTexcoord * 2.0 - vec2(1.0), 0.0, 1.0) * InverseLightViewProjection;

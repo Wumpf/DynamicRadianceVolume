@@ -113,11 +113,15 @@ void Application::ChangeLightCount(unsigned int lightCount)
 
 		m_tweakBar->AddSeperator(namePrefix + "shadowseparator", groupSetting);
 
-		m_tweakBar->AddEnum(namePrefix + "RSMRes", "RSMResolution", [=](){ return m_scene->GetLights()[i].rsmResolution; },
-			[=](int res){ m_scene->GetLights()[i].rsmResolution = res; }, groupSetting + " label=\"Reflective Shadow Map Resolution\"");
+		m_tweakBar->AddEnum(namePrefix + "RSMReadResolution", "RSMResolution", [=](){ return static_cast<unsigned int>(m_scene->GetLights()[i].rsmResolution / pow(2, m_scene->GetLights()[i].rsmReadLod)); },
+			[=](int res){ m_scene->GetLights()[i].rsmReadLod = static_cast<unsigned int>(log2(m_scene->GetLights()[i].rsmResolution / res)); }, groupSetting + " label=\"RSM Read Resolution\"");
 
-		m_tweakBar->AddReadWrite<int>(namePrefix + "ShadowMapRes", [=](){ return m_scene->GetLights()[i].shadowMapResolution; },
-			[=](int res){ m_scene->GetLights()[i].shadowMapResolution = res; }, groupSetting + " label=\"Shadow Map Resolution\" min=16 max=4096 step=16");
+		m_tweakBar->AddEnum(namePrefix + "RSMRenderResolution", "RSMResolution", [=](){ return m_scene->GetLights()[i].rsmResolution; },
+			[=](int res){ 
+				int readRes = static_cast<int>(m_scene->GetLights()[i].rsmResolution / pow(2, m_scene->GetLights()[i].rsmReadLod));
+				m_scene->GetLights()[i].rsmResolution = res;
+				m_scene->GetLights()[i].rsmReadLod = static_cast<unsigned int>(log2(res / readRes));
+			}, groupSetting + " label=\"RSM Render Resolution\"");
 
 		m_tweakBar->AddReadWrite<float>(namePrefix + "NormalBias", [=](){ return m_scene->GetLights()[i].normalOffsetShadowBias; },
 			[=](float f){ m_scene->GetLights()[i].normalOffsetShadowBias = f; }, groupSetting + " label=\"NormalOffset Shadow Bias\" min=0.00 max=100.0 step=0.001");
@@ -255,7 +259,7 @@ void Application::SetupTweakBarBinding()
 		};
 		m_tweakBar->AddEnumType("LightType", lightTypeVals);
 		// Define RSM resolution
-		std::vector<TwEnumVal> rsmResVals = { { 16, "16x16" }, { 32, "32x32" }, { 64, "64x64" }, { 128, "128x128" }, { 256, "256x256" }, { 512, "512x512" } };
+		std::vector<TwEnumVal> rsmResVals = { { 16, "16x16" }, { 32, "32x32" }, { 64, "64x64" }, { 128, "128x128" }, { 256, "256x256" }, { 512, "512x512" }, { 1024, "1024x1024" }, { 2048, "2048x2048" } };
 		m_tweakBar->AddEnumType("RSMResolution", rsmResVals);
 
 		std::function<void(const int&)> changeLightCount = std::bind(&Application::ChangeLightCount, this, std::placeholders::_1);

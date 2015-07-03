@@ -187,6 +187,7 @@ void Application::Update()
 		for (const std::string& entry : m_tweakBarStatisticEntries)
 			m_tweakBar->Remove(entry);
 		m_tweakBarStatisticEntries.clear();
+		
 
 		// Add
 		for (const auto& entry : FrameProfiler::GetInstance().GetAllRecordedEvents())

@@ -33,13 +33,13 @@ void main()
 	OutputColor = vec3(0.0);
 
 	ivec2 rsmSamplePos = ivec2(0);
-	for(; rsmSamplePos.x<RSMResolution; ++rsmSamplePos.x)
+	for(; rsmSamplePos.x<RSMReadResolution; ++rsmSamplePos.x)
 	{
 		rsmSamplePos.y = 0;
-		for(; rsmSamplePos.y<RSMResolution; ++rsmSamplePos.y)
+		for(; rsmSamplePos.y<RSMReadResolution; ++rsmSamplePos.y)
 		{
 			float lightDepth = texelFetch(RSM_Depth, rsmSamplePos, 0).r;
-			vec4 valPosition = vec4((rsmSamplePos + vec2(0.5)) / RSMResolution * 2.0 - vec2(1.0), lightDepth, 1.0) * InverseLightViewProjection;
+			vec4 valPosition = vec4((rsmSamplePos + vec2(0.5)) / RSMReadResolution * 2.0 - vec2(1.0), lightDepth, 1.0) * InverseLightViewProjection;
 			valPosition.xyz /= valPosition.w;
 
 			// Direction and distance to light.
@@ -61,8 +61,8 @@ void main()
 			float valToLightDistSq = dot(valToLight, valToLight); // todo: Compute directly from lightDepth
 			float valArea = valToLightDistSq * ValAreaFactor;
 			float fluxToIntensity = saturate(dot(valNormal, -toVal));
-			float fluxToIrradiance = fluxToIntensity * cosTheta / (lightDistanceSq + valArea);
-			//float fluxToIrradiance = fluxToIntensity * cosTheta / (lightDistanceSq); // VPL instead of VAL
+			//float fluxToIrradiance = fluxToIntensity * cosTheta / (lightDistanceSq + valArea);
+			float fluxToIrradiance = fluxToIntensity * cosTheta / (lightDistanceSq); // VPL instead of VAL
 
 			vec3 irradiance = valTotalExitantFlux * fluxToIrradiance;
 
@@ -72,6 +72,6 @@ void main()
 
 
 	// Debug rsm
-	//OutputColor = texture(RSM_Flux, Texcoord * 2 ).rgb;
+	OutputColor = textureLod(RSM_Flux, Texcoord * 2, 0 ).rgb;
 	//OutputColor = abs(UnpackNormal16I(texture(RSM_Normal, Texcoord * 2).xy));
 }

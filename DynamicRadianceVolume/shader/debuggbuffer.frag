@@ -8,8 +8,8 @@ out vec3 OutputColor;
 #include "utils.glsl"
 #include "globalubos.glsl"
 
-//#define OUTPUT_POS
-#define OUTPUT_NORMAL
+#define OUTPUT_POS
+//#define OUTPUT_NORMAL
 //#define OUTPUT_DIFFUSE
 //#define OUTPUT_SPECPROPS
 
@@ -22,7 +22,7 @@ void main()
 #ifdef OUTPUT_POS
 	vec4 worldPosition4D = vec4(Texcoord * 2.0 - vec2(1.0), texture(GBuffer_Depth, Texcoord).r, 1.0) * InverseViewProjection;
 	vec3 worldPosition = worldPosition4D.xyz / worldPosition4D.w;
-	OutputColor = abs(worldPosition.xyz);
+	OutputColor = vec3(texture(GBuffer_Depth, Texcoord).r*100);//abs(worldPosition.xyz);
 #endif
 
 #ifdef OUTPUT_NORMAL

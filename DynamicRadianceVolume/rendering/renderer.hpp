@@ -38,7 +38,7 @@ class Renderer
 public:
 	Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& resolution);
 	~Renderer();
-	
+
 	/// Performs all drawing operations.
 	/// \param detachViewFromCameraUpdate
 	///		If true, all camera update related state will not be updated. Only view matrices etc. change so that the previous view can be watched from a different camera.
@@ -54,7 +54,7 @@ public:
 
 		GBUFFER_DEBUG = 3,
 		DIRECTONLY,
-	//	DIRECTONLY_CACHE,
+		//	DIRECTONLY_CACHE,
 		VOXELVIS = 5,
 		AMBIENTOCCLUSION
 	};
@@ -69,16 +69,16 @@ public:
 	};
 
 	IndirectDiffuseMode GetIndirectDiffuseMode() const { return m_indirectDiffuseMode; }
-	void SetIndirectDiffuseMode(IndirectDiffuseMode mode) { m_indirectDiffuseMode = mode; ReloadSettingDependentCacheShader(); }
+	void SetIndirectDiffuseMode(IndirectDiffuseMode mode) { m_indirectDiffuseMode = mode; ReloadLightingSettingDependentCacheShader(); }
 
 	/// Activate/deactivates casting of indirect shadows.
-	void SetIndirectShadow(bool active)		{ m_indirectShadow = active; ReloadSettingDependentCacheShader(); }
+	void SetIndirectShadow(bool active)		{ m_indirectShadow = active; ReloadLightingSettingDependentCacheShader(); }
 	bool GetIndirectShadow() const			{ return m_indirectShadow; }
 	/// Activates/deactivates glossy indirect lighting.
-	void SetIndirectSpecular(bool active)	{ m_indirectSpecular = active; ReloadSettingDependentCacheShader(); }
+	void SetIndirectSpecular(bool active)	{ m_indirectSpecular = active; ReloadLightingSettingDependentCacheShader(); }
 	bool GetIndirectSpecular() const		{ return m_indirectSpecular; }
 
-	
+
 	void SetVoxelVolumeResultion(unsigned int resolution);
 	unsigned int GetVoxelVolumeResultion() const;
 
@@ -98,7 +98,7 @@ public:
 	unsigned int GetSpecularEnvMapHoleFillLevel() const { return m_specularEnvmapMaxFillHolesLevel; }
 
 
-	void SetSpecularEnvMapDirectWrite(bool directWrite) { m_specularEnvmapDirectWrite = directWrite; ReloadSettingDependentCacheShader(); }
+	void SetSpecularEnvMapDirectWrite(bool directWrite) { m_specularEnvmapDirectWrite = directWrite; ReloadLightingSettingDependentCacheShader(); }
 	bool GetSpecularEnvMapDirectWrite() const { return m_specularEnvmapDirectWrite; }
 
 	/// Sets maximum cache count. Will print warning to log if given value can not be achieved.
@@ -127,16 +127,15 @@ public:
 
 	// Address volume usage
 	bool GetShowCAVCascades() const								{ return m_showCAVCascades; }
-	void SetShowCAVCascades(bool show)							{ m_showCAVCascades = show; ReloadSettingDependentCacheShader(); }
+	void SetShowCAVCascades(bool show)							{ m_showCAVCascades = show; ReloadLightingSettingDependentCacheShader(); }
 	float GetCAVCascadeTransitionSize() const					{ return m_CAVCascadeTransitionSize; }
 	void SetCAVCascadeTransitionSize(float transitionZoneSize); ///< A value of zero transition means off.
 
+	float GetExposure() const { return m_exposure; }
+	void SetExposure(float exposure);
+
 
 	void BindObjectUBO(unsigned int objectIndex);
-
-	void SetExposure(float exposure);
-	float GetExposure() const { return m_exposure; }
-
 
 	static const unsigned int s_maxNumCAVCascades = 4; ///< see globalubos.glsl
 
@@ -145,7 +144,7 @@ private:
 
 	void LoadAllShaders();
 	/// Reloads several cache related shaders that have macros depending on the current configuration.
-	void ReloadSettingDependentCacheShader();
+	void ReloadLightingSettingDependentCacheShader();
 
 	/// Allocates cache buffer and cache specular envmap according to the current configuration.
 	///
@@ -158,7 +157,7 @@ private:
 
 	unsigned int RoundSizeToUBOAlignment(unsigned int size) const  { return size + (m_UBOAlignment - size % m_UBOAlignment) % m_UBOAlignment; }
 
-	void UpdateConstantUBO(); 
+	void UpdateConstantUBO();
 
 	/// Updates general perframe ubo.
 	void UpdatePerFrameUBO(const Camera& camera);
@@ -183,7 +182,7 @@ private:
 
 	/// Performs direct lighting for all lights.
 	void ApplyDirectLighting();
-	
+
 	void ApplyRSMsBruteForce();
 
 	void OutputHDRTextureToBackbuffer();
@@ -198,6 +197,7 @@ private:
 
 
 	void ConeTraceAO();
+
 
 
 	enum class SceneDrawSubset
@@ -244,7 +244,7 @@ private:
 	AutoReloadShaderPtr m_shaderCacheGather;
 	AutoReloadShaderPtr m_shaderCacheApply;
 	AutoReloadShaderPtr m_shaderLightCachePrepare;
-//	AutoReloadShaderPtr m_shaderLightCachesDirect;
+	//	AutoReloadShaderPtr m_shaderLightCachesDirect;
 	AutoReloadShaderPtr m_shaderLightCachesRSM;
 
 	AutoReloadShaderPtr m_shaderSpecularEnvmapMipMap;
@@ -261,12 +261,11 @@ private:
 	{
 		OFF = 0,
 		ON = 1
- 	};
+	};
 
 	AutoReloadShaderPtr m_shaderDebugGBuffer;
 	AutoReloadShaderPtr m_shaderFillGBuffer[2];
 	AutoReloadShaderPtr m_shaderFillRSM[2];
-	AutoReloadShaderPtr m_shaderFillHighResSM[2];
 
 	AutoReloadShaderPtr m_shaderDeferredDirectLighting_Spot;
 
@@ -288,23 +287,36 @@ private:
 		~ShadowMap() { DeInit(); }
 
 		/// Initializes all textures and the fbo with the given resolution (square)
-		/// Will recreate if already initialized.
-		/// If rsmResolution == shadowMapResolution, depthHighRes will point to the same texture as depthBuffer and highresShadowMapFBO will be nullptr.
-		void Init(unsigned int rsmResolution, unsigned int shadowMapResolution);
+		/// Will recreate if already initialized with different settings, otherwise do nothing.
+		void Init(unsigned int rsmResolution);
+
+		/// Resolves MSAA and creates MipMaps for RSM.
+		void PrepareRSM(const gl::ScreenAlignedTriangle& screenTri);
+
+		/// Binds FBO for filling the RSM.
+		void BindFBO_RSM();
+		/// Binds FBO for high Res Depth - does nothing and returns false if there is no highres depth.
+		bool BindFBO_HighResDepth();
+
+		gl::Texture2D& GetFlux() 			{ return *flux; }
+		gl::Texture2D& GetNormal()			{ return *normal; }
+		gl::Texture2D& GetDepthLinSq()		{ return *depthLinSq; }
+		gl::Texture2D& GetHighResDepth()	{ return *depthBuffer; }
+
+	private:
+		std::vector<gl::FramebufferObject*> rsmFBOs;
 
 		gl::Texture2D* flux;
 		gl::Texture2D* normal;
 		gl::Texture2D* depthLinSq;
 		gl::Texture2D* depthBuffer;
-		gl::Texture2D* depthHighRes;
 
-		gl::FramebufferObject* rsmFBO;
-		gl::FramebufferObject* highresShadowMapFBO;
+		static AutoReloadShaderPtr m_shaderRSMDownSample;
 
-	private:
 		void DeInit();
 	};
 	std::vector<ShadowMap> m_shadowMaps; ///< A shadowmap for every light.
+
 
 	Texture2DPtr m_HDRBackbufferTexture;
 	FramebufferObjectPtr m_HDRBackbuffer;

@@ -137,11 +137,6 @@ void Renderer::LoadAllShaders()
 		m_shaderFillRSM[i]->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/defaultmodel_rsm.vert", define);
 		m_shaderFillRSM[i]->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/fillrsm.frag", define);
 		m_shaderFillRSM[i]->CreateProgram();
-
-		m_shaderFillHighResSM[i] = new gl::ShaderObject("fill high res sm" + postfix);
-		m_shaderFillHighResSM[i]->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/defaultmodel_highressm.vert", define);
-		m_shaderFillHighResSM[i]->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/fillhighressm.frag", define);
-		m_shaderFillHighResSM[i]->CreateProgram();
 	}
 
 	m_shaderDeferredDirectLighting_Spot = new gl::ShaderObject("direct lighting - spot");
@@ -184,10 +179,10 @@ void Renderer::LoadAllShaders()
 	m_shaderSpecularEnvmapFillHoles->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/specularenvmap_fillholes.frag");
 	m_shaderSpecularEnvmapFillHoles->CreateProgram();
 
-	ReloadSettingDependentCacheShader();
+	ReloadLightingSettingDependentCacheShader();
 }
 
-void Renderer::ReloadSettingDependentCacheShader()
+void Renderer::ReloadLightingSettingDependentCacheShader()
 {
 	std::string settings;
 	if (m_indirectSpecular)
@@ -433,7 +428,7 @@ void Renderer::SetPerCacheSpecularEnvMapSize(unsigned int specularEnvmapPerCache
 	m_specularEnvmapMaxFillHolesLevel = std::min(m_specularEnvmapMaxFillHolesLevel, static_cast<unsigned int>(log2(m_specularEnvmapPerCacheSize)));
 
 	AllocateCacheData();
-	ReloadSettingDependentCacheShader();
+	ReloadLightingSettingDependentCacheShader();
 	UpdateConstantUBO();
 }
 
@@ -643,13 +638,17 @@ void Renderer::PrepareLights()
 		uboView["LightViewProjection"].Set(viewProjection);
 		uboView["InverseLightViewProjection"].Set(inverseViewProjection);
 
-		unsigned int shadowMapResolution_nextPow2 = 1 << static_cast<unsigned int>(ceil(log2(light.rsmResolution)));
+		int shadowMapResolution_nextPow2 = 1 << static_cast<int>(ceil(log2(light.rsmResolution)));
 		if (shadowMapResolution_nextPow2 != light.rsmResolution)
 			LOG_WARNING("RSM resolution needs to be a power of 2! Using " << shadowMapResolution_nextPow2);
-		uboView["RSMResolution"].Set(static_cast<int>(shadowMapResolution_nextPow2));
+		
+		uboView["RSMRenderResolution"].Set(shadowMapResolution_nextPow2);
+		
+		int rsmReadResolution = static_cast<int>(shadowMapResolution_nextPow2 / pow(2, light.rsmReadLod));
+		uboView["RSMReadResolution"].Set(rsmReadResolution);
 
 		float clipPlaneWidth = sinf(light.halfAngle) * light.nearPlane * 2.0f;
-		float valAreaFactor = clipPlaneWidth * clipPlaneWidth / (light.nearPlane * light.nearPlane * light.rsmResolution * light.rsmResolution);
+		float valAreaFactor = clipPlaneWidth * clipPlaneWidth / (light.nearPlane * light.nearPlane * rsmReadResolution * rsmReadResolution);
 		//float valAreaFactor = powf(sinf(light.halfAngle) * 2.0f / light.shadowMapResolution, 2.0);
 		uboView["ValAreaFactor"].Set(valAreaFactor);
 
@@ -665,11 +664,8 @@ void Renderer::PrepareLights()
 		uboView["IndirectShadowSamplingOffset"].Set(0.5f + sqrtf(2.0f) * indirectShadowComputationBlockSize / 2.0f);
 
 
-		// (Re)Init shadow map if necessary.
-		if (!m_shadowMaps[lightIndex].depthBuffer || m_shadowMaps[lightIndex].depthBuffer->GetWidth() != light.rsmResolution || m_shadowMaps[lightIndex].depthHighRes->GetWidth() != light.shadowMapResolution)
-		{
-			m_shadowMaps[lightIndex].Init(light.rsmResolution, light.shadowMapResolution);
-		}
+		// (Re)Init shadow map if necessary (function does not do anything if already intialized with same settings.
+		m_shadowMaps[lightIndex].Init(light.rsmResolution);
 	}
 }
 
@@ -733,35 +729,25 @@ void Renderer::DrawShadowMaps()
 	for (unsigned int lightIndex = 0; lightIndex < m_scene->GetLights().size(); ++lightIndex)
 	{
 		m_uboRing_SpotLight->BindBlockAsUBO(m_uboInfoSpotLight.bufferBinding, lightIndex);
-		
-		m_shadowMaps[lightIndex].rsmFBO->Bind(true);
+
+		m_shadowMaps[lightIndex].BindFBO_RSM();
 		GL_CALL(glClear, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		m_shaderFillRSM[(int)ShaderAlphaTest::OFF]->Activate();
 		DrawScene(true, SceneDrawSubset::FULLOPAQUE_ONLY);
 		m_shaderFillRSM[(int)ShaderAlphaTest::ON]->Activate();
 		DrawScene(true, SceneDrawSubset::ALPHATESTED_ONLY);
+	}
 
-		// generate RSM mipmaps
-		m_shadowMaps[lightIndex].depthLinSq->GenMipMaps();
+	for (unsigned int lightIndex = 0; lightIndex < m_scene->GetLights().size(); ++lightIndex)
+	{
+		// Resolve and generate RSM mipmaps
+		m_shadowMaps[lightIndex].PrepareRSM(*m_screenTriangle);
 
-
-		// Separate high resolution shadow map
-		if (m_shadowMaps[lightIndex].highresShadowMapFBO)
-		{
-			GL_CALL(glColorMask, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-
-			m_shadowMaps[lightIndex].highresShadowMapFBO->Bind(true);
-
-			GL_CALL(glClear, GL_DEPTH_BUFFER_BIT);
-			
-			m_shaderFillHighResSM[(int)ShaderAlphaTest::OFF]->Activate();
-			DrawScene(true, SceneDrawSubset::FULLOPAQUE_ONLY);
-			m_shaderFillHighResSM[(int)ShaderAlphaTest::ON]->Activate();
-			DrawScene(true, SceneDrawSubset::ALPHATESTED_ONLY);
-
-			GL_CALL(glColorMask, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-		}
+		// Set base levels for reading.
+		GL_CALL(glTextureParameteri, m_shadowMaps[lightIndex].GetFlux().GetInternHandle(), GL_TEXTURE_BASE_LEVEL, m_scene->GetLights()[lightIndex].rsmReadLod);
+		GL_CALL(glTextureParameteri, m_shadowMaps[lightIndex].GetNormal().GetInternHandle(), GL_TEXTURE_BASE_LEVEL, m_scene->GetLights()[lightIndex].rsmReadLod);
+		GL_CALL(glTextureParameteri, m_shadowMaps[lightIndex].GetDepthLinSq().GetInternHandle(), GL_TEXTURE_BASE_LEVEL, m_scene->GetLights()[lightIndex].rsmReadLod);
 	}
 }
 
@@ -794,7 +780,7 @@ void Renderer::ApplyDirectLighting()
 
 	for (unsigned int lightIndex = 0; lightIndex < m_scene->GetLights().size(); ++lightIndex)
 	{
-		m_shadowMaps[lightIndex].depthHighRes->Bind(4);
+		m_shadowMaps[lightIndex].GetHighResDepth().Bind(4);
 		
 		m_uboRing_SpotLight->BindBlockAsUBO(m_uboInfoSpotLight.bufferBinding, lightIndex);
 		m_screenTriangle->Draw();
@@ -817,9 +803,9 @@ void Renderer::ApplyRSMsBruteForce()
 
 	for (unsigned int lightIndex = 0; lightIndex < m_scene->GetLights().size(); ++lightIndex)
 	{
-		m_shadowMaps[lightIndex].flux->Bind(4);
-		m_shadowMaps[lightIndex].depthBuffer->Bind(5);
-		m_shadowMaps[lightIndex].normal->Bind(6);
+		m_shadowMaps[lightIndex].GetFlux().Bind(4);
+		m_shadowMaps[lightIndex].GetDepthLinSq().Bind(5);
+		m_shadowMaps[lightIndex].GetNormal().Bind(6);
 
 		m_uboRing_SpotLight->BindBlockAsUBO(m_uboInfoSpotLight.bufferBinding, lightIndex);
 		m_screenTriangle->Draw();
@@ -878,9 +864,9 @@ void Renderer::LightCachesRSM()
 
 	for (unsigned int lightIndex = 0; lightIndex < m_scene->GetLights().size(); ++lightIndex)
 	{
-		m_shadowMaps[lightIndex].flux->Bind(0);
-		m_shadowMaps[lightIndex].depthLinSq->Bind(1);
-		m_shadowMaps[lightIndex].normal->Bind(2);
+		m_shadowMaps[lightIndex].GetFlux().Bind(0);
+		m_shadowMaps[lightIndex].GetDepthLinSq().Bind(1);
+		m_shadowMaps[lightIndex].GetNormal().Bind(2);
 
 		m_uboRing_SpotLight->BindBlockAsUBO(m_uboInfoSpotLight.bufferBinding, lightIndex);
 		GL_CALL(glDispatchComputeIndirect, 0);
@@ -1165,7 +1151,7 @@ void Renderer::SetCAVCascadeTransitionSize(float transitionZoneSize)
 
 	m_CAVCascadeTransitionSize = transitionZoneSize;
 	if (updateShader)
-		ReloadSettingDependentCacheShader();
+		ReloadLightingSettingDependentCacheShader();
 }
 
 void Renderer::SetExposure(float exposure)
@@ -1187,63 +1173,107 @@ void Renderer::SaveToPFM(const std::string& filename) const
 
 
 
+AutoReloadShaderPtr Renderer::ShadowMap::m_shaderRSMDownSample;
 
 Renderer::ShadowMap::ShadowMap(ShadowMap& old) :
+	rsmFBOs(old.rsmFBOs),
+
 	flux(old.flux),
 	normal(old.normal),
 	depthLinSq(old.depthLinSq),
-	depthBuffer(old.depthBuffer),
-	depthHighRes(old.depthHighRes),
-	rsmFBO(old.rsmFBO),
-	highresShadowMapFBO(old.highresShadowMapFBO)
+	depthBuffer(old.depthBuffer)
 {
+	old.rsmFBOs.clear();
+
 	old.flux = nullptr;
 	old.normal = nullptr;
 	old.depthLinSq = nullptr;
 	old.depthBuffer = nullptr;
-	old.depthHighRes = nullptr;
-	old.rsmFBO = nullptr;
-	old.highresShadowMapFBO = nullptr;
 }
 Renderer::ShadowMap::ShadowMap() :
 	flux(nullptr),
 	normal(nullptr),
 	depthLinSq(nullptr),
-	depthBuffer(nullptr),
-	depthHighRes(nullptr),
-	rsmFBO(nullptr),
-	highresShadowMapFBO(nullptr)
+	depthBuffer(nullptr)
 {}
 
 void Renderer::ShadowMap::DeInit()
 {
-	if (depthHighRes == depthBuffer)
-		depthHighRes = nullptr;
+	for (gl::FramebufferObject* fbo : rsmFBOs)
+	{
+		SAFE_DELETE(fbo);
+	}
+	rsmFBOs.clear();
 
 	SAFE_DELETE(flux);
 	SAFE_DELETE(normal);
 	SAFE_DELETE(depthLinSq);
 	SAFE_DELETE(depthBuffer);
-	SAFE_DELETE(depthHighRes);
-	SAFE_DELETE(rsmFBO);
-	SAFE_DELETE(highresShadowMapFBO);
 }
 
-void Renderer::ShadowMap::Init(unsigned int rsmResolution, unsigned int shadowMapResolution)
+void Renderer::ShadowMap::Init(unsigned int rsmResolution)
 {
+	if (flux != nullptr && rsmResolution == flux->GetWidth())
+	{
+		return;
+	}
+
 	DeInit();
 
-	flux = new gl::Texture2D(rsmResolution, rsmResolution, gl::TextureFormat::R11F_G11F_B10F, 1, 0); // Format hopefully sufficient!
-	normal = new gl::Texture2D(rsmResolution, rsmResolution, gl::TextureFormat::RG16I, 1, 0);
-	depthLinSq = new gl::Texture2D(rsmResolution, rsmResolution, gl::TextureFormat::RG16F, 0, 0); // has mipmap chain!
+	flux = new gl::Texture2D(rsmResolution, rsmResolution, gl::TextureFormat::RGBA16F, 0, 0); // R11G11B10 was not sufficient for downsampling ops
+	normal = new gl::Texture2D(rsmResolution, rsmResolution, gl::TextureFormat::RG16I, 0, 0);
+	depthLinSq = new gl::Texture2D(rsmResolution, rsmResolution, gl::TextureFormat::RG16F, 0, 0);
 	depthBuffer = new gl::Texture2D(rsmResolution, rsmResolution, gl::TextureFormat::DEPTH_COMPONENT32F, 1, 0);
-	if (rsmResolution == shadowMapResolution)
-		depthHighRes = depthBuffer;
-	else
-		depthHighRes = new gl::Texture2D(shadowMapResolution, shadowMapResolution, gl::TextureFormat::DEPTH_COMPONENT32F, 1, 0);
 
-	rsmFBO = new gl::FramebufferObject({ gl::FramebufferObject::Attachment(flux), gl::FramebufferObject::Attachment(normal), gl::FramebufferObject::Attachment(depthLinSq) }, gl::FramebufferObject::Attachment(depthBuffer));
-	
-	if (rsmResolution != shadowMapResolution)
-		highresShadowMapFBO = new gl::FramebufferObject({}, gl::FramebufferObject::Attachment(depthHighRes));
+	rsmFBOs.push_back(new gl::FramebufferObject({ gl::FramebufferObject::Attachment(flux), gl::FramebufferObject::Attachment(normal), gl::FramebufferObject::Attachment(depthLinSq) }, gl::FramebufferObject::Attachment(depthBuffer)));
+	for (int i = 1; i < log2(rsmResolution); ++i)
+	{
+		rsmFBOs.push_back(new gl::FramebufferObject({ gl::FramebufferObject::Attachment(flux, i), gl::FramebufferObject::Attachment(normal, i), gl::FramebufferObject::Attachment(depthLinSq, i) }));
+	}	
+}
+
+void Renderer::ShadowMap::PrepareRSM(const gl::ScreenAlignedTriangle& screenTri)
+{	
+	if (m_shaderRSMDownSample.get() == nullptr)
+	{
+		m_shaderRSMDownSample = new gl::ShaderObject("RSM downsample");
+		m_shaderRSMDownSample->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
+		m_shaderRSMDownSample->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/downsamplersm.frag");
+		m_shaderRSMDownSample->CreateProgram();
+	}
+
+	gl::Disable(gl::Cap::DEPTH_TEST);
+	gl::Disable(gl::Cap::CULL_FACE);
+	gl::SetDepthWrite(false);
+	m_shaderRSMDownSample->Activate();
+
+	const auto& samplerLinearClamp = gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR, gl::SamplerObject::Filter::LINEAR,
+		gl::SamplerObject::Border::CLAMP));
+	const auto& samplerNearestClamp = gl::SamplerObject::GetSamplerObject(gl::SamplerObject::Desc(gl::SamplerObject::Filter::NEAREST, gl::SamplerObject::Filter::NEAREST, gl::SamplerObject::Filter::NEAREST,
+		gl::SamplerObject::Border::CLAMP));
+
+
+	GetFlux().Bind(0);
+	samplerNearestClamp.BindSampler(0);
+	GetNormal().Bind(1);
+	samplerNearestClamp.BindSampler(1);
+	GetDepthLinSq().Bind(2);
+	samplerLinearClamp.BindSampler(2);
+
+	for (int i = 1; i < rsmFBOs.size(); ++i)
+	{
+		GL_CALL(glTextureParameteri, GetFlux().GetInternHandle(), GL_TEXTURE_BASE_LEVEL, i - 1);
+		GL_CALL(glTextureParameteri, GetNormal().GetInternHandle(), GL_TEXTURE_BASE_LEVEL, i - 1);
+		GL_CALL(glTextureParameteri, GetDepthLinSq().GetInternHandle(), GL_TEXTURE_BASE_LEVEL, i - 1);
+
+		rsmFBOs[i]->Bind(true);
+		GL_CALL(glClear, GL_COLOR_BUFFER_BIT);
+
+		screenTri.Draw();
+	}
+}
+
+void Renderer::ShadowMap::BindFBO_RSM()
+{
+	rsmFBOs[0]->Bind(true);
 }

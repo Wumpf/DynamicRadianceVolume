@@ -6,7 +6,7 @@ struct Light
 {
 public:
 	Light() : type(Type::SPOT), intensity(10.0f), position(0.0f), direction(0.0f, 0.0f, 1.0f), halfAngle(0.5f),
-		rsmResolution(32), shadowMapResolution(1024),
+		rsmResolution(1024), rsmReadLod(4),
 		normalOffsetShadowBias(0.01f), shadowBias(0.0001f),
 		indirectShadowComputationLod(2)
 	{} 
@@ -25,7 +25,9 @@ public:
 	float halfAngle;
 
 	unsigned int rsmResolution; // Only Pow2 resolutions are allowed
-	unsigned int shadowMapResolution;
+	unsigned int rsmReadLod;
+
+
 	float normalOffsetShadowBias;
 	float shadowBias;
 
