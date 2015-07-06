@@ -24,6 +24,7 @@ namespace gl
 class Scene;
 class SceneEntity;
 class Voxelization;
+class Model;
 
 typedef std::unique_ptr<gl::Texture2D> Texture2DPtr;
 typedef std::unique_ptr<gl::Buffer> BufferPtr;
@@ -51,6 +52,7 @@ public:
 	{
 		RSM_BRUTEFORCE = 0,
 		DYN_RADIANCE_VOLUME = 1,
+		DYN_RADIANCE_VOLUME_DEBUG = 2,
 
 		GBUFFER_DEBUG = 3,
 		DIRECTONLY,
@@ -253,6 +255,11 @@ private:
 
 	AutoReloadShaderPtr m_shaderConeTraceAO;
 
+	std::shared_ptr<Model> m_debugSphereModel;
+	BufferPtr m_cacheDebugIndirectDrawBuffer;
+	AutoReloadShaderPtr m_shaderCacheDebug_Prepare;
+	AutoReloadShaderPtr m_shaderCacheDebug_Render;
+
 
 	// ------------------------------------------------------------
 	// Direct lighting / RSM
@@ -321,6 +328,7 @@ private:
 
 	Texture2DPtr m_HDRBackbufferTexture;
 	FramebufferObjectPtr m_HDRBackbuffer;
+	FramebufferObjectPtr m_HDRBackbufferWithGBufferDepth;
 	AutoReloadShaderPtr m_shaderTonemap;
 
 	AutoReloadShaderPtr m_shaderIndirectLightingBruteForceRSM;

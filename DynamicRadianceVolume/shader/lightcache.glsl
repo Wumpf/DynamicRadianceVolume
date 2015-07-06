@@ -132,3 +132,53 @@ float ComputeAddressVolumeCascadeTransition(vec3 worldPosition, int addressVolum
 
 	return clamp(1.0 - minDist / (AddressVolumeCascades[addressVolumeCascade].WorldVoxelSize * CAVTransitionZoneSize), 0.0, 1.0);
 }
+
+#if LIGHTCACHEMODE == LIGHTCACHEMODE_APPLY
+	vec3 SampleCacheIrradiance(uint cacheAddress, vec3 worldNormal)
+	{
+		// IRRADIANCE VIA SH
+	#if defined(INDDIFFUSE_VIA_SH1) || defined(INDDIFFUSE_VIA_SH2)
+		// Band 0
+		vec3 irradiance = vec3(LightCacheEntries[cacheAddress].SH00_r,
+								LightCacheEntries[cacheAddress].SH00_g,
+								LightCacheEntries[cacheAddress].SH00_b) * ShEvaFactor0;
+
+		// Band 1
+		irradiance -= LightCacheEntries[cacheAddress].SH1neg1 * (ShEvaFactor1 * worldNormal.y);
+		irradiance += LightCacheEntries[cacheAddress].SH10 * (ShEvaFactor1 * worldNormal.z);
+		irradiance -= LightCacheEntries[cacheAddress].SH1pos1 * (ShEvaFactor1 * worldNormal.x);
+
+		// Band 2
+		#ifdef INDDIFFUSE_VIA_SH2
+		irradiance -= LightCacheEntries[cacheAddress].SH2neg2 * (ShEvaFactor2n2_p1_n1 * worldNormal.x * worldNormal.y);
+		irradiance += LightCacheEntries[cacheAddress].SH2neg1 * (ShEvaFactor2n2_p1_n1 * worldNormal.y * worldNormal.z);
+		irradiance += vec3(LightCacheEntries[cacheAddress].SH20_r,
+								LightCacheEntries[cacheAddress].SH20_g,
+								LightCacheEntries[cacheAddress].SH20_b) * (ShEvaFactor20 * (worldNormal.z * worldNormal.z * 3.0 - 1.0));
+		irradiance += LightCacheEntries[cacheAddress].SH2pos1 * (ShEvaFactor2n2_p1_n1 * worldNormal.x * worldNormal.z);
+		irradiance += LightCacheEntries[cacheAddress].SH2pos2 * (ShEvaFactor2p2 * (worldNormal.x * worldNormal.x - worldNormal.y * worldNormal.y));	
+		#endif
+
+		// -----------------------------------------------
+		// IRRADIANCE VIA H-Basis
+	/*#elif defined(INDDIFFUSE_VIA_H)
+		irradiance  = LightCacheEntries[cacheAddress].irradianceH1 * factor0;
+		irradiance -= LightCacheEntries[cacheAddress].irradianceH2 * factor1 * cacheViewNormal.y;
+		irradiance += LightCacheEntries[cacheAddress].irradianceH3 * factor1 * (2.0 * cacheViewNormal.z - 1.0);
+		irradiance -= vec3(LightCacheEntries[cacheAddress].irradianceH4r,
+								LightCacheEntries[cacheAddress].irradianceH4g,
+								LightCacheEntries[cacheAddress].irradianceH4b) * (factor1 * cacheViewNormal.x);
+		#if INDDIFFUSE_VIA_H > 4
+		irradiance += LightCacheEntries[cacheAddress].irradianceH5 * (factor2 * cacheViewNormal.x * cacheViewNormal.y);
+		irradiance += LightCacheEntries[cacheAddress].irradianceH6 * (factor2 * (cacheViewNormal.x * cacheViewNormal.x - cacheViewNormal.y * cacheViewNormal.y) * 0.5);
+		#endif*/
+
+		// Negative irradiance values are not meaningful (may happen due to SH overshooting)
+		irradiance = max(irradiance, vec3(0.0));
+
+		return irradiance;
+	#endif
+
+		return vec3(0.0);
+	}
+#endif

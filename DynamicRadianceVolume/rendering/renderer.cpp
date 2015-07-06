@@ -90,6 +90,10 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	SetScene(scene);
 	OnScreenResize(resolution);
 
+	// For cache debugging
+	m_cacheDebugIndirectDrawBuffer = std::make_unique<gl::Buffer>(sizeof(std::uint32_t) * 5, gl::Buffer::IMMUTABLE);
+	m_debugSphereModel = Model::FromFile("../models/sphere.obj");
+
 	// General GL settings
 	gl::Enable(gl::Cap::DEPTH_TEST);
 	gl::Disable(gl::Cap::DITHER);
@@ -179,6 +183,10 @@ void Renderer::LoadAllShaders()
 	m_shaderSpecularEnvmapFillHoles->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/specularenvmap_fillholes.frag");
 	m_shaderSpecularEnvmapFillHoles->CreateProgram();
 
+	m_shaderCacheDebug_Prepare = new gl::ShaderObject("prepare cache debug");
+	m_shaderCacheDebug_Prepare->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cachedebug/prepareindirectdrawbuffer.comp");
+	m_shaderCacheDebug_Prepare->CreateProgram();
+
 	ReloadLightingSettingDependentCacheShader();
 }
 
@@ -225,6 +233,12 @@ void Renderer::ReloadLightingSettingDependentCacheShader()
 	m_shaderCacheApply->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/screenTri.vert");
 	m_shaderCacheApply->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/cacheApply.frag", settings);
 	m_shaderCacheApply->CreateProgram();
+
+	m_shaderCacheDebug_Render = new gl::ShaderObject("cache debug render");
+	m_shaderCacheDebug_Render->AddShaderFromFile(gl::ShaderObject::ShaderType::VERTEX, "shader/cachedebug/sphere.vert", settings);
+	m_shaderCacheDebug_Render->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/cachedebug/sphere.frag", settings);
+	m_shaderCacheDebug_Render->CreateProgram();
+
 }
 
 void Renderer::AllocateCacheData()
@@ -459,6 +473,8 @@ void Renderer::OnScreenResize(const ei::UVec2& newResolution)
 	m_HDRBackbufferTexture = std::make_unique<gl::Texture2D>(newResolution.x, newResolution.y, gl::TextureFormat::RGBA16F, 1, 0);
 	m_HDRBackbuffer.reset(new gl::FramebufferObject(gl::FramebufferObject::Attachment(m_HDRBackbufferTexture.get())));
 
+	m_HDRBackbufferWithGBufferDepth.reset(new gl::FramebufferObject(gl::FramebufferObject::Attachment(m_HDRBackbufferTexture.get()), gl::FramebufferObject::Attachment(m_GBuffer_depth.get())));
+
 	GL_CALL(glViewport, 0, 0, newResolution.x, newResolution.y);
 
 
@@ -511,6 +527,7 @@ void Renderer::Draw(const Camera& camera, bool detachViewFromCameraUpdate)
 		break;
 
 	//case Mode::DIRECTONLY_CACHE:
+	case Mode::DYN_RADIANCE_VOLUME_DEBUG:
 	case Mode::DYN_RADIANCE_VOLUME:
 		if (m_indirectShadow)
 			m_voxelization->VoxelizeScene(*this);
@@ -541,6 +558,27 @@ void Renderer::Draw(const Camera& camera, bool detachViewFromCameraUpdate)
 		m_uboRing_SpotLight->CompleteFrame();
 
 		ApplyCaches();
+
+		if (m_mode == Mode::DYN_RADIANCE_VOLUME_DEBUG && m_debugSphereModel)
+		{
+			m_lightCacheBuffer->BindShaderStorageBuffer(0);
+			m_lightCacheCounter->BindShaderStorageBuffer(1);
+			m_cacheDebugIndirectDrawBuffer->BindShaderStorageBuffer(4);
+
+			m_shaderCacheDebug_Prepare->Activate();
+			GL_CALL(glDispatchCompute, 1, 1, 1);
+
+			gl::Enable(gl::Cap::CULL_FACE);
+			gl::Enable(gl::Cap::DEPTH_TEST);
+			gl::SetDepthWrite(true);
+			m_HDRBackbufferWithGBufferDepth->Bind(false);
+			m_debugSphereModel->BindVAO();
+			m_debugSphereModel->BindBuffers();
+			GL_CALL(glMemoryBarrier, GL_COMMAND_BARRIER_BIT);
+			m_cacheDebugIndirectDrawBuffer->BindIndirectDrawBuffer();
+			m_shaderCacheDebug_Render->Activate();
+			glDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, nullptr);
+		}
 
 		OutputHDRTextureToBackbuffer();
 		break;
@@ -699,6 +737,10 @@ void Renderer::BindObjectUBO(unsigned int _objectIndex)
 
 void Renderer::OutputHDRTextureToBackbuffer()
 {
+	gl::Disable(gl::Cap::CULL_FACE);
+	gl::Disable(gl::Cap::DEPTH_TEST);
+	gl::SetDepthWrite(false);
+
 	gl::FramebufferObject::BindBackBuffer();
 	m_shaderTonemap->Activate();
 

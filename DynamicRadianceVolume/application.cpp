@@ -48,6 +48,7 @@ Application::Application(int argc, char** argv) :
 
 	// Watch shader dir.
 	ShaderFileWatcher::Instance().SetShaderWatchDirectory("shader");
+	ShaderFileWatcher::Instance().SetShaderWatchDirectory("shader/cachedebug");
 
 	// Resize handler.
 	m_window->AddResizeHandler([&](int width, int height){

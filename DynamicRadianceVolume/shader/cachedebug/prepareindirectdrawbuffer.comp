@@ -1,0 +1,25 @@
+#version 450 core
+
+#include "../globalubos.glsl"
+
+#define LIGHTCACHEMODE LIGHTCACHEMODE_APPLY
+#include "../lightcache.glsl"
+
+layout(std430, binding = 4) restrict writeonly buffer DrawElementsIndirectCommand
+{
+	uint Count;
+	uint PrimCount;
+	uint FirstIndex;
+	uint BaseVertex;
+	uint BaseInstance;
+};
+
+layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+void main()
+{
+	Count = 240;
+	PrimCount = TotalLightCacheCount;
+	FirstIndex = 0;
+	BaseVertex = 0;
+	BaseInstance = 0;
+}

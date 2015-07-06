@@ -155,6 +155,7 @@ void Application::SetupTweakBarBinding()
 		{
 			TwEnumVal{ (int)Renderer::Mode::RSM_BRUTEFORCE, "RSM Bruteforce (slow!)" },
 			TwEnumVal{ (int)Renderer::Mode::DYN_RADIANCE_VOLUME, "Dyn. Cache Volume" },
+			TwEnumVal{ (int)Renderer::Mode::DYN_RADIANCE_VOLUME_DEBUG, "Dyn. Cache Volume Debug" },
 			TwEnumVal{ (int)Renderer::Mode::GBUFFER_DEBUG, "GBuffer Debug" },
 			TwEnumVal{ (int)Renderer::Mode::DIRECTONLY, "DirectLight only" },
 			//TwEnumVal{ (int)Renderer::Mode::DIRECTONLY_CACHE, "DirectLight only - via Cache" },
