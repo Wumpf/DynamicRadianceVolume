@@ -81,6 +81,8 @@ public:
 
 	void SetVoxelVolumeResultion(unsigned int resolution);
 	unsigned int GetVoxelVolumeResultion() const;
+	void SetVoxelVolumeRefreshInterval(float timeInterval);
+	float GetVoxelVolumeRefreshInterval() const;
 
 	/// Sets size of the per cache specular env map in pixel.
 	///
@@ -197,7 +199,6 @@ private:
 
 
 	void ConeTraceAO();
-
 
 
 	enum class SceneDrawSubset

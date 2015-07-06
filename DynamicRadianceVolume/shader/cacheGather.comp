@@ -8,11 +8,11 @@
 
 layout(binding = 0, r32ui) restrict coherent uniform uimage3D VoxelAddressVolume;
 
-#define LOCAL_SIZE 16
+#define LOCAL_SIZE 8
 
 #define ADDRESS_COORD_CACHE_SIZE 23 // should be a prime number smaller than LOCAL_SIZE*LOCAL_SIZE whose increment is dividable by 4
 shared int addressCoordCache[ADDRESS_COORD_CACHE_SIZE];
-shared uint cacheListSize;
+shared int cacheListSize;
 shared int cacheList[LOCAL_SIZE*LOCAL_SIZE * 4]; // Should be LOCAL_SIZE * LOCAL_SIZE * 8. Super unlikely to use full list
 
 
@@ -37,7 +37,7 @@ void RegisterCaches(vec3 worldPosition, int addressVolumeCascade)
 	int oldVal = atomicCompSwap(addressCoordCache[cacheAddress], -1, cacheLookup);
 	if(oldVal != cacheLookup)
 	{
-		uint oldCacheSize = atomicAdd(cacheListSize, uint(8));
+		int oldCacheSize = atomicAdd(cacheListSize, 8);
 
 		// Add caches to hashlist/cache
 		int cacheLookup_Y = cacheLookup + AddressVolumeResolution;
@@ -105,8 +105,8 @@ void main()
 	barrier();
 
 	// Now allocate caches.
-	const uint loopEnd = cacheListSize; // Helping the compiler to realize that this variable is not changed anymore
-	for(uint i=invocationID1D; i<loopEnd; i += LOCAL_SIZE*LOCAL_SIZE)
+	const int loopEnd = cacheListSize; // Helping the compiler to realize that this variable is not changed anymore
+	for(int i=invocationID1D; i<loopEnd; i += LOCAL_SIZE*LOCAL_SIZE)
 	{
 		int cacheCoordToWrite = cacheList[i];
 

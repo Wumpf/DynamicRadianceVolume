@@ -420,6 +420,16 @@ unsigned int Renderer::GetVoxelVolumeResultion() const
 	return m_voxelization->GetResolution();
 }
 
+void Renderer::SetVoxelVolumeRefreshInterval(float timeInterval)
+{
+	m_voxelization->SetRefreshInterval(timeInterval);
+}
+
+float Renderer::GetVoxelVolumeRefreshInterval() const
+{
+	return m_voxelization->GetRefreshInterval();
+}
+
 void Renderer::SetPerCacheSpecularEnvMapSize(unsigned int specularEnvmapPerCacheSize)
 {
 	Assert(IsPowerOfTwo(specularEnvmapPerCacheSize), "Per cache specular envmap size needs to be a power of two!");
@@ -508,7 +518,7 @@ void Renderer::Draw(const Camera& camera, bool detachViewFromCameraUpdate)
 		m_uboRing_PerObject->CompleteFrame();
 
 		if (m_indirectShadow)
-			m_voxelization->GenMipMap();
+			m_voxelization->BlendAndMipMap();
 
 		if (!detachViewFromCameraUpdate)
 			AllocateCaches();
@@ -564,7 +574,7 @@ void Renderer::Draw(const Camera& camera, bool detachViewFromCameraUpdate)
 		
 		m_uboRing_PerObject->CompleteFrame();
 
-		m_voxelization->GenMipMap();
+		m_voxelization->BlendAndMipMap();
 
 		GL_CALL(glViewport, 0, 0, m_HDRBackbufferTexture->GetWidth(), m_HDRBackbufferTexture->GetHeight());
 		m_voxelization->DrawVoxelRepresentation();
@@ -577,7 +587,7 @@ void Renderer::Draw(const Camera& camera, bool detachViewFromCameraUpdate)
 
 		m_uboRing_PerObject->CompleteFrame();
 
-		m_voxelization->GenMipMap();
+		m_voxelization->BlendAndMipMap();
 
 		m_HDRBackbuffer->Bind(true);
 		GL_CALL(glClear, GL_COLOR_BUFFER_BIT);
@@ -920,8 +930,8 @@ void Renderer::AllocateCaches()
 
 	m_shaderCacheGather->Activate();
 
-	const unsigned int threadsPerGroupX = 16;
-	const unsigned int threadsPerGroupY = 16;
+	const unsigned int threadsPerGroupX = 8;
+	const unsigned int threadsPerGroupY = 8;
 	unsigned numThreadGroupsX = (m_HDRBackbufferTexture->GetWidth() + threadsPerGroupX - 1) / threadsPerGroupX;
 	unsigned numThreadGroupsY = (m_HDRBackbufferTexture->GetHeight() + threadsPerGroupY - 1) / threadsPerGroupY;
 	GL_CALL(glDispatchCompute, numThreadGroupsX, numThreadGroupsY, 1);
