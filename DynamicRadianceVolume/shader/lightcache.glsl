@@ -57,7 +57,7 @@ struct LightCacheEntry
 	float _padding1;
 	#endif
 
-#elif defined(INDDIFFUSE_VIA_H)
+/*#elif defined(INDDIFFUSE_VIA_H)
 	// Irradiance via H basis - in "Cache Local View Space"
 	vec3 irradianceH1;
 	float irradianceH4r;
@@ -70,7 +70,7 @@ struct LightCacheEntry
 	float _padding1;
 	vec3 irradianceH6;
 	float _padding2;
-	#endif
+	#endif*/
 #endif
 
 };
@@ -141,22 +141,22 @@ float ComputeAddressVolumeCascadeTransition(vec3 worldPosition, int addressVolum
 		// Band 0
 		vec3 irradiance = vec3(LightCacheEntries[cacheAddress].SH00_r,
 								LightCacheEntries[cacheAddress].SH00_g,
-								LightCacheEntries[cacheAddress].SH00_b) * ShEvaFactor0;
+								LightCacheEntries[cacheAddress].SH00_b) * ShCosLobeFactor0;
 
 		// Band 1
-		irradiance -= LightCacheEntries[cacheAddress].SH1neg1 * (ShEvaFactor1 * worldNormal.y);
-		irradiance += LightCacheEntries[cacheAddress].SH10 * (ShEvaFactor1 * worldNormal.z);
-		irradiance -= LightCacheEntries[cacheAddress].SH1pos1 * (ShEvaFactor1 * worldNormal.x);
+		irradiance -= LightCacheEntries[cacheAddress].SH1neg1 * (ShCosLobeFactor1 * worldNormal.y);
+		irradiance += LightCacheEntries[cacheAddress].SH10 * (ShCosLobeFactor1 * worldNormal.z);
+		irradiance -= LightCacheEntries[cacheAddress].SH1pos1 * (ShCosLobeFactor1 * worldNormal.x);
 
 		// Band 2
 		#ifdef INDDIFFUSE_VIA_SH2
-		irradiance -= LightCacheEntries[cacheAddress].SH2neg2 * (ShEvaFactor2n2_p1_n1 * worldNormal.x * worldNormal.y);
-		irradiance += LightCacheEntries[cacheAddress].SH2neg1 * (ShEvaFactor2n2_p1_n1 * worldNormal.y * worldNormal.z);
+		irradiance -= LightCacheEntries[cacheAddress].SH2neg2 * (ShCosLobeFactor2n2_p1_n1 * worldNormal.x * worldNormal.y);
+		irradiance += LightCacheEntries[cacheAddress].SH2neg1 * (ShCosLobeFactor2n2_p1_n1 * worldNormal.y * worldNormal.z);
 		irradiance += vec3(LightCacheEntries[cacheAddress].SH20_r,
 								LightCacheEntries[cacheAddress].SH20_g,
-								LightCacheEntries[cacheAddress].SH20_b) * (ShEvaFactor20 * (worldNormal.z * worldNormal.z * 3.0 - 1.0));
-		irradiance += LightCacheEntries[cacheAddress].SH2pos1 * (ShEvaFactor2n2_p1_n1 * worldNormal.x * worldNormal.z);
-		irradiance += LightCacheEntries[cacheAddress].SH2pos2 * (ShEvaFactor2p2 * (worldNormal.x * worldNormal.x - worldNormal.y * worldNormal.y));	
+								LightCacheEntries[cacheAddress].SH20_b) * (ShCosLobeFactor20 * (worldNormal.z * worldNormal.z * 3.0 - 1.0));
+		irradiance += LightCacheEntries[cacheAddress].SH2pos1 * (ShCosLobeFactor2n2_p1_n1 * worldNormal.x * worldNormal.z);
+		irradiance += LightCacheEntries[cacheAddress].SH2pos2 * (ShCosLobeFactor2p2 * (worldNormal.x * worldNormal.x - worldNormal.y * worldNormal.y));	
 		#endif
 
 		// -----------------------------------------------

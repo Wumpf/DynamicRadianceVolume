@@ -263,18 +263,18 @@ void main()
 				//vec3 radianceIn = valTotalExitantFlux * (fluxToIntensity / lightDistanceSq); // VPL instead of VAL
 
 			#if defined(INDDIFFUSE_VIA_SH1) || defined(INDDIFFUSE_VIA_SH2)
-				// SH IrradianceIn
-				SH00 += ShCosLobeFactor0 * radianceIn;
-				SH1neg1 -= (ShCosLobeFactor1 * toVal.y) * radianceIn;
-				SH10 += (ShCosLobeFactor1 * toVal.z) * radianceIn;
-				SH1pos1 -= (ShCosLobeFactor1 * toVal.x) * radianceIn;
+				// SH RadianceIn
+				SH00 += ShEvaFactor0 * radianceIn;
+				SH1neg1 -= (ShEvaFactor1 * toVal.y) * radianceIn;
+				SH10 += (ShEvaFactor1 * toVal.z) * radianceIn;
+				SH1pos1 -= (ShEvaFactor1 * toVal.x) * radianceIn;
 
 				#ifdef INDDIFFUSE_VIA_SH2
-					SH2neg2 -= (ShCosLobeFactor2n2_p1_n1 * toVal.x * toVal.y) * radianceIn;
-					SH2neg1 += (ShCosLobeFactor2n2_p1_n1 * toVal.y * toVal.z) * radianceIn;
-					SH20 += (ShCosLobeFactor20 * (toVal.z * toVal.z * 3.0 - 1.0)) * radianceIn;
-					SH2pos1 += (ShCosLobeFactor2n2_p1_n1 * toVal.x * toVal.z) * radianceIn;
-					SH2pos2 += (ShCosLobeFactor2p2 * (toVal.x * toVal.x - toVal.y * toVal.y)) * radianceIn;
+					SH2neg2 -= (ShEvaFactor2n2_p1_n1 * toVal.x * toVal.y) * radianceIn;
+					SH2neg1 += (ShEvaFactor2n2_p1_n1 * toVal.y * toVal.z) * radianceIn;
+					SH20 += (ShEvaFactor20 * (toVal.z * toVal.z * 3.0 - 1.0)) * radianceIn;
+					SH2pos1 += (ShEvaFactor2n2_p1_n1 * toVal.x * toVal.z) * radianceIn;
+					SH2pos2 += (ShEvaFactor2p2 * (toVal.x * toVal.x - toVal.y * toVal.y)) * radianceIn;
 				#endif
 			#endif
 
@@ -282,19 +282,19 @@ void main()
 				vec3 toValCacheLocal = toVal * cacheLocalViewSpace;
 			#endif
 
-			#ifdef INDDIFFUSE_VIA_H
+		/*	#ifdef INDDIFFUSE_VIA_H
 				// H-Basis Irradiance
 				// The H-Basis version is comparatively unoptimized since the visual results were not as good:
 				// It leads to "swimming" of the lighting which makes it rather unsuitable.
-				float SH00 = ShCosLobeFactor0;
-				float SH1neg1 = -ShCosLobeFactor1  * toValCacheLocal.y;
-				float SH10 = ShCosLobeFactor1  * toValCacheLocal.z;
-				float SH1pos1 = -ShCosLobeFactor1 * toValCacheLocal.x;
-				float SH2neg2 = -ShCosLobeFactor2n2_p1_n1 * toValCacheLocal.x * toValCacheLocal.y;
-				float SH2neg1 = ShCosLobeFactor2n2_p1_n1 * toValCacheLocal.y * toValCacheLocal.z;
-				float SH20 = ShCosLobeFactor20 * (toValCacheLocal.z * toValCacheLocal.z * 3.0 - 1.0);
-				float SH2pos1 = ShCosLobeFactor2n2_p1_n1  * toValCacheLocal.x * toValCacheLocal.z;
-				float SH2pos2 = ShCosLobeFactor2p2  * (toValCacheLocal.x*toValCacheLocal.x - toValCacheLocal.y*toValCacheLocal.y);
+				float SH00 = ShEvaFactor0;
+				float SH1neg1 = -ShEvaFactor1  * toValCacheLocal.y;
+				float SH10 = ShEvaFactor1  * toValCacheLocal.z;
+				float SH1pos1 = -ShEvaFactor1 * toValCacheLocal.x;
+				float SH2neg2 = -ShEvaFactor2n2_p1_n1 * toValCacheLocal.x * toValCacheLocal.y;
+				float SH2neg1 = ShEvaFactor2n2_p1_n1 * toValCacheLocal.y * toValCacheLocal.z;
+				float SH20 = ShEvaFactor20 * (toValCacheLocal.z * toValCacheLocal.z * 3.0 - 1.0);
+				float SH2pos1 = ShEvaFactor2n2_p1_n1  * toValCacheLocal.x * toValCacheLocal.z;
+				float SH2pos2 = ShEvaFactor2p2  * (toValCacheLocal.x*toValCacheLocal.x - toValCacheLocal.y*toValCacheLocal.y);
 
 				irradianceHBasis[0] += (1.0 / sqrt(2) * SH00 		+ 0.5 * sqrt(3.0/2.0) * SH10) * radianceIn; 
 				irradianceHBasis[1] += (1.0 / sqrt(2) * SH1neg1 	+ 3.0 / 8.0 * sqrt(5.0/2.0) * SH2neg1) * radianceIn; 
@@ -304,7 +304,7 @@ void main()
 				irradianceHBasis[4] += (1.0 / sqrt(2) * SH2neg2) * radianceIn; 
 				irradianceHBasis[5] += (1.0 / sqrt(2) * SH2pos2) * radianceIn; 
 				#endif
-			#endif
+			#endif */
 
 
 			#ifdef INDIRECT_SPECULAR
@@ -341,7 +341,7 @@ void main()
 	if(gl_GlobalInvocationID.x < TotalLightCacheCount)
 	{
 		// Save to buffer.
-	#ifdef INDDIFFUSE_VIA_H
+	/*#ifdef INDDIFFUSE_VIA_H
 		LightCacheEntries[gl_GlobalInvocationID.x].irradianceH1 = irradianceHBasis[0];
 		LightCacheEntries[gl_GlobalInvocationID.x].irradianceH4r = irradianceHBasis[3].r;
 		LightCacheEntries[gl_GlobalInvocationID.x].irradianceH2 = irradianceHBasis[1];
@@ -352,7 +352,7 @@ void main()
 		LightCacheEntries[gl_GlobalInvocationID.x].irradianceH5 = irradianceHBasis[4];
 		LightCacheEntries[gl_GlobalInvocationID.x].irradianceH6 = irradianceHBasis[5];
 		#endif
-	#endif
+	#endif*/
 
 	#if defined(INDDIFFUSE_VIA_SH1) || defined(INDDIFFUSE_VIA_SH2)
 		LightCacheEntries[gl_GlobalInvocationID.x].SH1neg1 = SH1neg1;
