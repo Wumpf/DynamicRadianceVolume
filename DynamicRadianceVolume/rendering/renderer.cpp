@@ -35,7 +35,8 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 
 	m_readLightCacheCount(false),
 	m_lastNumLightCaches(0),
-	m_exposure(1.0f),
+	m_tonemapExposure(1.0f),
+	m_tonemapLMax(1.2f),
 	m_mode(Renderer::Mode::DYN_RADIANCE_VOLUME),
 	m_indirectDiffuseMode(IndirectDiffuseMode::SH1),
 
@@ -153,7 +154,8 @@ void Renderer::LoadAllShaders()
 	m_shaderTonemap->AddShaderFromFile(gl::ShaderObject::ShaderType::FRAGMENT, "shader/tonemapping.frag");
 	m_shaderTonemap->CreateProgram();
 	m_shaderTonemap->Activate();
-	GL_CALL(glUniform1f, 0, m_exposure);
+	SetTonemapLMax(m_tonemapLMax);
+	SetExposure(m_tonemapExposure);
 
 	/*m_shaderLightCachesDirect = new gl::ShaderObject("cache lighting direct");
 	m_shaderLightCachesDirect->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/cacheLightingDirect.comp");
@@ -1208,9 +1210,13 @@ void Renderer::SetCAVCascadeTransitionSize(float transitionZoneSize)
 
 void Renderer::SetExposure(float exposure)
 {
-	m_exposure = exposure;
-	m_shaderTonemap->Activate();
-	GL_CALL(glUniform1f, 0, m_exposure);
+	m_tonemapExposure = exposure;
+	GL_CALL(glProgramUniform1f, m_shaderTonemap->GetProgram(), 0, m_tonemapExposure);
+}
+void Renderer::SetTonemapLMax(float tonemapLMax)
+{
+	m_tonemapLMax = tonemapLMax;
+	GL_CALL(glProgramUniform1f, m_shaderTonemap->GetProgram(), 1, log2f(m_tonemapLMax + 1.0f));
 }
 
 void Renderer::SaveToPFM(const std::string& filename) const

@@ -241,6 +241,7 @@ void Application::SetupTweakBarBinding()
 
 		// Tonemap
 		m_tweakBar->AddReadWrite<float>("Exposure", [&](){ return m_renderer->GetExposure(); }, [&](float f){ return m_renderer->SetExposure(f); }, " min=0.1 max=100 step=0.05 ");
+		m_tweakBar->AddReadWrite<float>("L Max", [&](){ return m_renderer->GetTonemapLMax(); }, [&](float f){ return m_renderer->SetTonemapLMax(f); }, " min=0.1 max=100 step=0.05 ");
 
 		m_tweakBar->AddSeperator("Scene Settings");
 

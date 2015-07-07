@@ -135,8 +135,10 @@ public:
 	float GetCAVCascadeTransitionSize() const					{ return m_CAVCascadeTransitionSize; }
 	void SetCAVCascadeTransitionSize(float transitionZoneSize); ///< A value of zero transition means off.
 
-	float GetExposure() const { return m_exposure; }
+	float GetExposure() const { return m_tonemapExposure; }
 	void SetExposure(float exposure);
+	float GetTonemapLMax() const { return m_tonemapLMax; }
+	void SetTonemapLMax(float tonemapLMax);
 
 
 	void BindObjectUBO(unsigned int objectIndex);
@@ -286,7 +288,8 @@ private:
 	Texture2DPtr m_GBuffer_normal;
 	Texture2DPtr m_GBuffer_depth;
 	FramebufferObjectPtr m_GBuffer;
-	float m_exposure;
+	float m_tonemapExposure;
+	float m_tonemapLMax;
 
 	struct ShadowMap
 	{

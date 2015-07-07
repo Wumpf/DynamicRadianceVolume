@@ -365,6 +365,12 @@
     <ClInclude Include="rendering\frustumoutlines.hpp">
       <Filter>source\rendering</Filter>
     </ClInclude>
+    <ClInclude Include="..\dependencies\stb\stb_image.h">
+      <Filter>dependencies\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\stb\stb_image_write.h">
+      <Filter>dependencies\stb</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="utilities\note.txt">

@@ -229,6 +229,8 @@
     <ClInclude Include="..\dependencies\glhelper\glhelper\vertexarrayobject.hpp" />
     <ClInclude Include="..\dependencies\jsoncpp\json\json-forwards.h" />
     <ClInclude Include="..\dependencies\jsoncpp\json\json.h" />
+    <ClInclude Include="..\dependencies\stb\stb_image.h" />
+    <ClInclude Include="..\dependencies\stb\stb_image_write.h" />
     <ClInclude Include="anttweakbarinterface.hpp" />
     <ClInclude Include="application.hpp" />
     <ClInclude Include="camera\camera.hpp" />

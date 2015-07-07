@@ -14,6 +14,9 @@
 #include "anttweakbarinterface.hpp"
 #include "frameprofiler.hpp"
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image_write.h>
+
 #undef APIENTRY
 #include <windows.h>
 #include <shlwapi.h>
@@ -219,8 +222,44 @@ void Application::Draw()
 	FrameProfiler::GetInstance().OnFrameEnd();
 }
 
+static std::string UIntToMinLengthString(int _number, int _minDigits)
+{
+	int zeros = std::max(0, _minDigits - static_cast<int>(ceil(log10(_number + 1))));
+	std::string out = std::string(zeros, '0') + std::to_string(_number);
+	return out;
+}
+
+
 void Application::Input()
 {
 	if (m_window->WasButtonPressed(GLFW_KEY_F10))
+	{
+		auto screenSize = m_window->GetFramebufferSize();
+		char* pixels = new char[3 * screenSize.x * screenSize.y];
+
+		glReadPixels(0, 0, screenSize.x, screenSize.y, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+
+		time_t t = time(0);   // get time now
+		struct tm* now = localtime(&t);
+		std::string date = UIntToMinLengthString(now->tm_mon + 1, 2) + "." + UIntToMinLengthString(now->tm_mday, 2) + " " +
+							UIntToMinLengthString(now->tm_hour, 2) + ";" + UIntToMinLengthString(now->tm_min, 2) + ";" + std::to_string(now->tm_sec) + " ";
+		std::string filename = "../screenshots/" + date + " screenshot.png";
+
+		// Flip on y axis
+		for (unsigned int y = 0; y < screenSize.y / 2; ++y)
+		{
+			for (unsigned int x = 0; x < screenSize.x; ++x)
+			{
+				unsigned int flippedY = screenSize.y - y - 1;
+				std::swap(pixels[(x + y * screenSize.x) * 3 + 0], pixels[(x + flippedY * screenSize.x) * 3 + 0]);
+				std::swap(pixels[(x + y * screenSize.x) * 3 + 1], pixels[(x + flippedY * screenSize.x) * 3 + 1]);
+				std::swap(pixels[(x + y * screenSize.x) * 3 + 2], pixels[(x + flippedY * screenSize.x) * 3 + 2]);
+			}
+		}
+		stbi_write_png(filename.c_str(), screenSize.x, screenSize.y, 3, pixels, screenSize.x*3);
+		
+		delete[] pixels;
+	}
+	if (m_window->WasButtonPressed(GLFW_KEY_F11))
 		m_showTweakBar = !m_showTweakBar;
 }
