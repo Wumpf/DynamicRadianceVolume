@@ -436,14 +436,14 @@ unsigned int Renderer::GetVoxelVolumeResultion() const
 	return m_voxelization->GetResolution();
 }
 
-void Renderer::SetVoxelVolumeRefreshInterval(float timeInterval)
+void Renderer::SetVoxelVolumeAdaptionRate(float adaptionRate)
 {
-	m_voxelization->SetRefreshInterval(timeInterval);
+	m_voxelization->SetAdaptionRate(adaptionRate);
 }
 
-float Renderer::GetVoxelVolumeRefreshInterval() const
+float Renderer::GetVoxelVolumeAdaptionRate() const
 {
-	return m_voxelization->GetRefreshInterval();
+	return m_voxelization->GetAdaptionRate();
 }
 
 void Renderer::SetPerCacheSpecularEnvMapSize(unsigned int specularEnvmapPerCacheSize)
@@ -536,9 +536,6 @@ void Renderer::Draw(const Camera& camera, bool detachViewFromCameraUpdate)
 
 		m_uboRing_PerObject->CompleteFrame();
 
-		if (m_indirectShadow)
-			m_voxelization->BlendAndMipMap();
-
 		if (!detachViewFromCameraUpdate)
 			AllocateCaches();
 
@@ -614,8 +611,6 @@ void Renderer::Draw(const Camera& camera, bool detachViewFromCameraUpdate)
 		
 		m_uboRing_PerObject->CompleteFrame();
 
-		m_voxelization->BlendAndMipMap();
-
 		GL_CALL(glViewport, 0, 0, m_HDRBackbufferTexture->GetWidth(), m_HDRBackbufferTexture->GetHeight());
 		m_voxelization->DrawVoxelRepresentation();
 		break;
@@ -626,8 +621,6 @@ void Renderer::Draw(const Camera& camera, bool detachViewFromCameraUpdate)
 		m_voxelization->VoxelizeScene(*this);
 
 		m_uboRing_PerObject->CompleteFrame();
-
-		m_voxelization->BlendAndMipMap();
 
 		m_HDRBackbuffer->Bind(true);
 		GL_CALL(glClear, GL_COLOR_BUFFER_BIT);

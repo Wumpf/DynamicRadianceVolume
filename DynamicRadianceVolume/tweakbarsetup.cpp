@@ -176,7 +176,7 @@ void Application::SetupTweakBarBinding()
 		m_tweakBar->AddEnum("Indirect Diffuse Mode", "IndirectDiffuseModeType", [&](){ return (int)m_renderer->GetIndirectDiffuseMode(); }, [&](int mode){ return m_renderer->SetIndirectDiffuseMode(static_cast<Renderer::IndirectDiffuseMode>(mode)); });
 
 		m_tweakBar->AddReadWrite<int>("Voxel Resolution", [&](){ return m_renderer->GetVoxelVolumeResultion(); }, [&](int i){ return m_renderer->SetVoxelVolumeResultion(i); }, " min=16 max=512 step=16");
-		m_tweakBar->AddReadWrite<float>("Voxel Refresh Interval", [&](){ return m_renderer->GetVoxelVolumeRefreshInterval(); }, [&](float f){ return m_renderer->SetVoxelVolumeRefreshInterval(f); }, " min=0.0 max=1.0 step=0.05");
+		m_tweakBar->AddReadWrite<float>("Voxel Adaption Rate", [&](){ return m_renderer->GetVoxelVolumeAdaptionRate(); }, [&](float f){ return m_renderer->SetVoxelVolumeAdaptionRate(f); }, " min=0.1 max=1000.0 step=0.25");
 
 		m_tweakBar->AddReadWrite<int>("Max Total Cache Count", [&](){ return m_renderer->GetMaxCacheCount(); },
 			[&](int i){ return m_renderer->SetMaxCacheCount(i); }, " min=2048 max=1048576 step=2048");

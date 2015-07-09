@@ -83,8 +83,8 @@ public:
 
 	void SetVoxelVolumeResultion(unsigned int resolution);
 	unsigned int GetVoxelVolumeResultion() const;
-	void SetVoxelVolumeRefreshInterval(float timeInterval);
-	float GetVoxelVolumeRefreshInterval() const;
+	void SetVoxelVolumeAdaptionRate(float adaptionRate);
+	float GetVoxelVolumeAdaptionRate() const;
 
 	/// Sets size of the per cache specular env map in pixel.
 	///
