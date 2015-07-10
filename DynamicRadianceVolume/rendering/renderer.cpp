@@ -967,8 +967,8 @@ void Renderer::AllocateCaches()
 
 	m_shaderCacheGather->Activate();
 
-	const unsigned int threadsPerGroupX = 8;
-	const unsigned int threadsPerGroupY = 8;
+	const unsigned int threadsPerGroupX = 16;
+	const unsigned int threadsPerGroupY = 16;
 	unsigned numThreadGroupsX = (m_HDRBackbufferTexture->GetWidth() + threadsPerGroupX - 1) / threadsPerGroupX;
 	unsigned numThreadGroupsY = (m_HDRBackbufferTexture->GetHeight() + threadsPerGroupY - 1) / threadsPerGroupY;
 	GL_CALL(glDispatchCompute, numThreadGroupsX, numThreadGroupsY, 1);
@@ -1271,7 +1271,7 @@ void Renderer::ShadowMap::Init(unsigned int rsmResolution)
 
 	DeInit();
 
-	flux = new gl::Texture2D(rsmResolution, rsmResolution, gl::TextureFormat::RGBA16F, 0, 0); // R11G11B10 was not sufficient for downsampling ops
+	flux = new gl::Texture2D(rsmResolution, rsmResolution, gl::TextureFormat::RGB16F, 0, 0); // R11G11B10 was not sufficient for downsampling ops
 	normal = new gl::Texture2D(rsmResolution, rsmResolution, gl::TextureFormat::RG16I, 0, 0);
 	depthLinSq = new gl::Texture2D(rsmResolution, rsmResolution, gl::TextureFormat::RG16F, 0, 0);
 	depthBuffer = new gl::Texture2D(rsmResolution, rsmResolution, gl::TextureFormat::DEPTH_COMPONENT32F, 1, 0);

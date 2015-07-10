@@ -8,23 +8,17 @@
 
 layout(binding = 0, r32ui) restrict coherent uniform uimage3D VoxelAddressVolume;
 
-#define LOCAL_SIZE 8
+#define LOCAL_SIZE 16
 
-#define ADDRESS_COORD_CACHE_SIZE 23 // should be a prime number smaller than LOCAL_SIZE*LOCAL_SIZE whose increment is dividable by 4
-shared int addressCoordCache[ADDRESS_COORD_CACHE_SIZE];
-shared int cacheListSize;
-shared int cacheList[LOCAL_SIZE*LOCAL_SIZE * 4]; // Should be LOCAL_SIZE * LOCAL_SIZE * 8. Super unlikely to use full list
-
+shared int cacheList[LOCAL_SIZE][LOCAL_SIZE];
+shared int cacheList2[LOCAL_SIZE][LOCAL_SIZE]; // Second cache list for transitions
 
 // Quasi constants, derived from AddressVolumeResolution at the start of the shader.
 int AddressVolumeResolutionSq;
 int AddressVolumeResolutionCubic;
 
-void RegisterCaches(vec3 worldPosition, int addressVolumeCascade)
+int GetCache1DCoord(vec3 worldPosition, int addressVolumeCascade)
 {
-	// Cache only "main pixel address".
-	// This still leads to a lot of redundant writes in the address volume, but is clearly faster than performing the lookup for all addressCoord
-	// Need clamp for pixels that may lie outside of any address volume.
 	ivec3 addressGridPos = clamp(ivec3((worldPosition - AddressVolumeCascades[addressVolumeCascade].Min) / AddressVolumeCascades[addressVolumeCascade].WorldVoxelSize),
 									ivec3(0), ivec3(AddressVolumeResolution-1));
 
@@ -32,92 +26,33 @@ void RegisterCaches(vec3 worldPosition, int addressVolumeCascade)
 						addressGridPos.y * AddressVolumeResolution + 
 						addressGridPos.z * AddressVolumeResolutionSq + 
 						addressVolumeCascade * AddressVolumeResolutionCubic;
-	int cacheAddress = cacheLookup % ADDRESS_COORD_CACHE_SIZE;
-
-	int oldVal = atomicCompSwap(addressCoordCache[cacheAddress], -1, cacheLookup);
-	if(oldVal != cacheLookup)
-	{
-		int oldCacheSize = atomicAdd(cacheListSize, 8);
-
-		// Add caches to hashlist/cache
-		int cacheLookup_Y = cacheLookup + AddressVolumeResolution;
-		int cacheLookup_Z = cacheLookup + AddressVolumeResolutionSq;
-		cacheList[oldCacheSize + 0] = cacheLookup;
-		cacheList[oldCacheSize + 1] = cacheLookup + 1;
-		cacheList[oldCacheSize + 2] = cacheLookup_Y;
-		cacheList[oldCacheSize + 3] = cacheLookup_Y + 1;
-		cacheList[oldCacheSize + 4] = cacheLookup_Z;
-		cacheList[oldCacheSize + 5] = cacheLookup_Z + 1;
-		cacheList[oldCacheSize + 6] = cacheLookup_Z + AddressVolumeResolution;
-		cacheList[oldCacheSize + 7] = cacheLookup_Z + AddressVolumeResolution + 1;
-	}
+	return cacheLookup;
 }
 
-layout (local_size_x = LOCAL_SIZE, local_size_y = LOCAL_SIZE, local_size_z = 1) in;
-void main()
+void AllocateCaches(int compactCacheCoordBase, int addressVolumeCascade)
 {
-	int invocationID1D = int(gl_LocalInvocationID.x) + int(gl_LocalInvocationID.y) * LOCAL_SIZE;
-
-	// Prepare shared memory
-	if(invocationID1D < ADDRESS_COORD_CACHE_SIZE)
+	const ivec3 offsets[8] =
 	{
-		addressCoordCache[invocationID1D] = -1;
-	}
-	if(gl_LocalInvocationID.xy == uvec2(0))
+		ivec3(0,0,0),
+		ivec3(0,1,0),
+		ivec3(0,0,1),
+		ivec3(0,1,1),
+		ivec3(1,0,0),
+		ivec3(1,1,0),
+		ivec3(1,0,1),
+		ivec3(1,1,1)
+	};
+
+	compactCacheCoordBase -= AddressVolumeResolutionCubic * addressVolumeCascade;
+
+	ivec3 base_unpackedAddressCoord_CascadeLocal;
+	base_unpackedAddressCoord_CascadeLocal.z = compactCacheCoordBase / AddressVolumeResolutionSq;
+	base_unpackedAddressCoord_CascadeLocal.y = (compactCacheCoordBase - base_unpackedAddressCoord_CascadeLocal.z * AddressVolumeResolutionSq) / AddressVolumeResolution;
+	base_unpackedAddressCoord_CascadeLocal.x = compactCacheCoordBase % AddressVolumeResolution;
+
+	for(int i=0; i<8; ++i)
 	{
-		cacheListSize = 0;
-	}
-
-	AddressVolumeResolutionSq = AddressVolumeResolution * AddressVolumeResolution;
-	AddressVolumeResolutionCubic = AddressVolumeResolutionSq * AddressVolumeResolution;
-
-	barrier();
-
-	if(!any(greaterThanEqual(gl_GlobalInvocationID.xy, BackbufferResolution)))
-	{
-		// Get pixel world position ...
-		// Problem cache apply is done by a fragment shader which gets this data slighty different. This may lead to problems in the cache selection.
-		// Therefore we apply a small epsilon to the screenCor.
-		vec2 pixelPosition = vec2(gl_GlobalInvocationID.xy) + vec2(0.5);
-		float depthBufferDepth = textureLod(GBuffer_Depth, pixelPosition / BackbufferResolution, 0).r;
-		if(depthBufferDepth > 0.0001)
-		{
-			vec2 screenCor = pixelPosition / BackbufferResolution * 2.0 - vec2(1.0); 
-			vec4 worldPosition4D = vec4(screenCor, depthBufferDepth, 1.0) * InverseViewProjection;
-			vec3 worldPosition = worldPosition4D.xyz / worldPosition4D.w;
-
-			// Register caches for given cascade.
-			int addressVolumeCascade = ComputeAddressVolumeCascade(worldPosition);
-			RegisterCaches(worldPosition, addressVolumeCascade);
-
-			// Additional register pass for smooth cascade transitions?
-		#ifdef ADDRESSVOL_CASCADE_TRANSITIONS
-			float cascadeTransition = ComputeAddressVolumeCascadeTransition(worldPosition, addressVolumeCascade);
-			if(cascadeTransition > 0.0 && addressVolumeCascade < NumAddressVolumeCascades-1)
-			{
-				RegisterCaches(worldPosition, addressVolumeCascade+1);
-			}
-		#endif
-	}
-	}
-
-	// All done with registering in cache.
-	barrier();
-
-	// Now allocate caches.
-	const int loopEnd = cacheListSize; // Helping the compiler to realize that this variable is not changed anymore
-	for(int i=invocationID1D; i<loopEnd; i += LOCAL_SIZE*LOCAL_SIZE)
-	{
-		int cacheCoordToWrite = cacheList[i];
-
-		int addressVolumeCascade = cacheCoordToWrite / AddressVolumeResolutionCubic;
-		cacheCoordToWrite -= AddressVolumeResolutionCubic * addressVolumeCascade;
-
-		ivec3 unpackedAddressCoord_CascadeLocal;
-		unpackedAddressCoord_CascadeLocal.z = cacheCoordToWrite / AddressVolumeResolutionSq;
-		unpackedAddressCoord_CascadeLocal.y = (cacheCoordToWrite - unpackedAddressCoord_CascadeLocal.z * AddressVolumeResolutionSq) / AddressVolumeResolution;
-		unpackedAddressCoord_CascadeLocal.x = cacheCoordToWrite % AddressVolumeResolution;
-
+		ivec3 unpackedAddressCoord_CascadeLocal = base_unpackedAddressCoord_CascadeLocal + offsets[i % 8];
 		ivec3 unpackedAddressCoord = unpackedAddressCoord_CascadeLocal;
 		unpackedAddressCoord.x += addressVolumeCascade * AddressVolumeResolution;
 
@@ -134,4 +69,77 @@ void main()
 			imageStore(VoxelAddressVolume, unpackedAddressCoord, uvec4(lightCacheIndex + 1)); // +1 since zero means "cleared"
 		}
 	}
+}
+
+layout (local_size_x = LOCAL_SIZE, local_size_y = LOCAL_SIZE, local_size_z = 1) in;
+void main()
+{
+	AddressVolumeResolutionSq = AddressVolumeResolution * AddressVolumeResolution;
+	AddressVolumeResolutionCubic = AddressVolumeResolutionSq * AddressVolumeResolution;
+
+	// Prepare shared memory
+	cacheList[gl_LocalInvocationID.x][gl_LocalInvocationID.y] = 0xFFFFFFFF;
+#ifdef ADDRESSVOL_CASCADE_TRANSITIONS
+	cacheList2[gl_LocalInvocationID.x][gl_LocalInvocationID.y] = 0xFFFFFFFF;
+#endif
+
+	barrier();
+
+	int ownCacheCoord = 0xFFFFFFFF;
+	int ownCacheCoord2 = 0xFFFFFFFF;
+	int addressVolumeCascade = 0xFFFFFFFF;
+
+	if(!any(greaterThanEqual(gl_GlobalInvocationID.xy, BackbufferResolution)))
+	{
+		vec2 pixelPosition = vec2(gl_GlobalInvocationID.xy) + vec2(0.5);
+		float depthBufferDepth = textureLod(GBuffer_Depth, pixelPosition / BackbufferResolution, 0).r;
+		if(depthBufferDepth > 0.0001)
+		{
+			vec2 screenCor = pixelPosition / BackbufferResolution * 2.0 - vec2(1.0); 
+			vec4 worldPosition4D = vec4(screenCor, depthBufferDepth, 1.0) * InverseViewProjection;
+			vec3 worldPosition = worldPosition4D.xyz / worldPosition4D.w;
+
+			// Register caches for given cascade.
+			addressVolumeCascade = ComputeAddressVolumeCascade(worldPosition);
+			ownCacheCoord = GetCache1DCoord(worldPosition, addressVolumeCascade);
+			cacheList[gl_LocalInvocationID.x][gl_LocalInvocationID.y] = ownCacheCoord;
+
+			// Additional register pass for smooth cascade transitions?
+		#ifdef ADDRESSVOL_CASCADE_TRANSITIONS
+			float cascadeTransition = ComputeAddressVolumeCascadeTransition(worldPosition, addressVolumeCascade);
+			if(cascadeTransition > 0.0 && addressVolumeCascade < NumAddressVolumeCascades-1)
+			{
+				ownCacheCoord2 = GetCache1DCoord(worldPosition, addressVolumeCascade+1);
+				cacheList2[gl_LocalInvocationID.x][gl_LocalInvocationID.y] = ownCacheCoord2;
+			}
+		#endif
+		}
+	}
+
+	// All done with registering.
+	barrier();
+
+	// Has any neighbor that is more top down the same?
+	ivec2 lookUpThread = max(ivec2(0), ivec2(gl_LocalInvocationID.xy) - ivec2(1));
+	if(((cacheList[gl_LocalInvocationID.x][lookUpThread.y] != ownCacheCoord && 
+		 cacheList[lookUpThread.x][gl_LocalInvocationID.y] != ownCacheCoord &&
+		 cacheList[lookUpThread.x][lookUpThread.y] != ownCacheCoord) ||
+		 lookUpThread == gl_LocalInvocationID.xy) &&
+		 ownCacheCoord != 0xFFFFFFFF)
+	{
+		AllocateCaches(ownCacheCoord, addressVolumeCascade);
+	}
+
+	// Lookup in the other direction - so its likely that another warp will handle this allocation.
+#ifdef ADDRESSVOL_CASCADE_TRANSITIONS
+	lookUpThread = min(ivec2(LOCAL_SIZE-1), ivec2(gl_LocalInvocationID.xy) + ivec2(1));
+	if(((cacheList2[gl_LocalInvocationID.x][lookUpThread.y] != ownCacheCoord2 && 
+		 cacheList2[lookUpThread.x][gl_LocalInvocationID.y] != ownCacheCoord2 &&
+		 cacheList2[lookUpThread.x][lookUpThread.y] != ownCacheCoord2) ||
+		 lookUpThread == ivec2(LOCAL_SIZE-1)) &&
+		 ownCacheCoord2 != 0xFFFFFFFF)
+	{
+		AllocateCaches(ownCacheCoord2, addressVolumeCascade+1);
+	}
+#endif
 }
