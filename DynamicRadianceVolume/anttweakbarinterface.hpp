@@ -19,7 +19,7 @@ class AntTweakBarInterface
 {
 public:
 	/// \attention Redirects glfwwindow callbacks to AntTweakBar
-	AntTweakBarInterface(GLFWwindow* glfwWindow);
+	AntTweakBarInterface(GLFWwindow* glfwWindow, const std::string& barName, bool minimized = false);
 	~AntTweakBarInterface();
 
 	enum class TypeHint : int
@@ -144,8 +144,11 @@ private:
 	std::vector<EntryBase*> m_entries;
 	TwType m_hdrColorRGBStructType;
 	TwType m_positionStructType;
+	const std::string m_barName;
 
 	std::unordered_map<std::string, TwType> m_enumTypes;
+
+	static bool m_twInitialized;
 };
 
 template<typename T>

@@ -22,7 +22,7 @@ out VertexOutput
 
 void main(void)
 {
-	vec3 worldPosition = inPosition * 0.5 + LightCacheEntries[gl_InstanceID].Position;
+	vec3 worldPosition = inPosition * 0.1 + LightCacheEntries[gl_InstanceID].Position;
 	gl_Position = vec4(worldPosition, 1.0) * ViewProjection;
 
 	Out.LocalPosition = inPosition;

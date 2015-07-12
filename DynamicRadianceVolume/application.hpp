@@ -11,6 +11,7 @@ class InteractiveCamera;
 class Renderer;
 class AntTweakBarInterface;
 class FrustumOutlines;
+class HermiteSpline;
 
 class Application
 {
@@ -22,7 +23,8 @@ public:
 	void Run();
 
 private:
-	void SetupTweakBarBinding();
+	void SetupMainTweakBarBinding();
+	void SetupPathTweakBar();
 
 	void Update();
 
@@ -42,14 +44,26 @@ private:
 	std::shared_ptr<Scene> m_scene;
 	std::unique_ptr<Renderer> m_renderer;
 	std::unique_ptr<InteractiveCamera> m_camera;
-	std::unique_ptr<AntTweakBarInterface> m_tweakBar;
+	std::unique_ptr<AntTweakBarInterface> m_mainTweakBar;
+
+	enum class PathEditTarget
+	{
+		CAMERA,
+		LIGHT0
+	};
+	PathEditTarget m_pathEditTarget;
+	HermiteSpline* m_pathTweakBarEditPath;
+	std::unique_ptr<AntTweakBarInterface> m_pathTweakBar;
+
+	bool m_cameraFollowPath;
+	std::unique_ptr<HermiteSpline> m_cameraPath;
 
 	std::unique_ptr<FrustumOutlines> m_frustumOutlineRenderer;
 	bool m_detachViewFromCameraUpdate;
 
 	ezTime m_timeSinceLastUpdate;
 
-	bool m_showTweakBar;
+	bool m_showTweakBars;
 
 	std::string m_tweakBarStatisticGroupSetting;	
 	std::vector<std::string> m_tweakBarStatisticEntries;

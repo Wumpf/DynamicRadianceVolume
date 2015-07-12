@@ -39,7 +39,7 @@ void ShaderFileWatcher::handleFileAction(FW::WatchID watchid, const FW::String& 
 		std::string fullFilename = PathUtils::AppendPath(dir, filename);
 		for (auto shader : m_registeredShader)
 		{
-			shader->ShaderFileChangeHandler(fullFilename);
+			shader->ReloadShaderFile(fullFilename);
 		}
 	}
 }

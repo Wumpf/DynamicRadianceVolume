@@ -44,15 +44,20 @@ void TwEventKeyGLFW3(GLFWwindow* window, int key, int scancode, int action, int 
 }
 void TwEventCharGLFW3(GLFWwindow* window, int codepoint){ TwEventCharGLFW(codepoint, GLFW_PRESS); }
 
-AntTweakBarInterface::AntTweakBarInterface(GLFWwindow* glfwWindow) :
-	m_tweakBar(nullptr)
+bool AntTweakBarInterface::m_twInitialized = false;
+
+AntTweakBarInterface::AntTweakBarInterface(GLFWwindow* glfwWindow, const std::string& barName, bool minimized) :
+	m_tweakBar(nullptr),
+	m_barName(barName)
 {
-	if (!TwInit(TW_OPENGL_CORE, NULL))
+	if (!m_twInitialized && !TwInit(TW_OPENGL_CORE, NULL))
 	{
 		LOG_ERROR("AntTweakBar initialization failed: " << TwGetLastError());
 	}
 	else
 	{
+		
+
 		// Set GLFW event callbacks
 		int width, height;
 		glfwGetFramebufferSize(glfwWindow, &width, &height); 
@@ -67,32 +72,39 @@ AntTweakBarInterface::AntTweakBarInterface(GLFWwindow* glfwWindow) :
 
 
 		// Create a tweak bar
-		m_tweakBar = TwNewBar("TweakBar");
+		m_tweakBar = TwNewBar(m_barName.c_str());
 
-		TwDefine(" TweakBar size='350 500' ");
-		TwDefine(" TweakBar valueswidth=150 ");
-		TwDefine(" TweakBar refresh=0.2 ");
-		TwDefine(" TweakBar contained=true "); // TweakBar must be inside the window.
-		//TwDefine(" TweakBar alpha=200 ");
+		TwDefine((m_barName + " size='350 500' ").c_str());
+		TwDefine((m_barName + " valueswidth = 150 ").c_str());
+		TwDefine((m_barName + " refresh=0.2 ").c_str());
+		TwDefine((m_barName + " contained=true ").c_str()); // TweakBar must be inside the window.
+		//TwDefine((m_barName + " alpha=200 ");
+
+		TwDefine((m_barName + " iconified=" + (minimized ? "true" : "false")).c_str());
 
 
-		// Type for HDR color
-		TwStructMember hdrColorRGBMembers[] =
+		if (!m_twInitialized)
 		{
-			{ "R", TW_TYPE_FLOAT, 0, " step=0.1 min=0" },
-			{ "G", TW_TYPE_FLOAT, sizeof(float), " step=0.1 min=0" },
-			{ "B", TW_TYPE_FLOAT, sizeof(float) * 2, " step=0.1 min=0" },
-		};
-		m_hdrColorRGBStructType = TwDefineStruct("HDR Color", hdrColorRGBMembers, ArraySize(hdrColorRGBMembers), sizeof(ei::Vec3), nullptr, nullptr);
+			// Type for HDR color
+			TwStructMember hdrColorRGBMembers[] =
+			{
+				{ "R", TW_TYPE_FLOAT, 0, " step=0.1 min=0" },
+				{ "G", TW_TYPE_FLOAT, sizeof(float), " step=0.1 min=0" },
+				{ "B", TW_TYPE_FLOAT, sizeof(float) * 2, " step=0.1 min=0" },
+			};
+			m_hdrColorRGBStructType = TwDefineStruct("HDR Color", hdrColorRGBMembers, ArraySize(hdrColorRGBMembers), sizeof(ei::Vec3), nullptr, nullptr);
 
-		// Type for position
-		TwStructMember positionMembers[] =
-		{
-			{ "X", TW_TYPE_FLOAT, 0, " step=0.1" },
-			{ "Y", TW_TYPE_FLOAT, sizeof(float), " step=0.1" },
-			{ "Z", TW_TYPE_FLOAT, sizeof(float) * 2, " step=0.1" },
-		};
-		m_positionStructType = TwDefineStruct("Position", positionMembers, ArraySize(positionMembers), sizeof(ei::Vec3), nullptr, nullptr);
+			// Type for position
+			TwStructMember positionMembers[] =
+			{
+				{ "X", TW_TYPE_FLOAT, 0, " step=0.1" },
+				{ "Y", TW_TYPE_FLOAT, sizeof(float), " step=0.1" },
+				{ "Z", TW_TYPE_FLOAT, sizeof(float) * 2, " step=0.1" },
+			};
+			m_positionStructType = TwDefineStruct("Position", positionMembers, ArraySize(positionMembers), sizeof(ei::Vec3), nullptr, nullptr);
+		}
+
+		m_twInitialized = true;
 	}
 }
 
@@ -208,7 +220,7 @@ void AntTweakBarInterface::SetVisible(const std::string& name, bool enable)
 
 void AntTweakBarInterface::SetGroupProperties(const std::string& groupName, const std::string& parentGroup, const std::string& groupDisplayName, bool opened)
 {
-	std::string define = " TweakBar/" + groupName + " group='" + parentGroup + "' ";
+	std::string define = m_barName + "/" + groupName + " group='" + parentGroup + "' ";
 	define += " label= '" + groupDisplayName + "' ";
 	define = define + " opened=" + (opened ? "true" : "false");
 

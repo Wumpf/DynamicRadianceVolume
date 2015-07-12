@@ -183,6 +183,7 @@
     <ClCompile Include="anttweakbarinterface.cpp" />
     <ClCompile Include="application.cpp" />
     <ClCompile Include="camera\camera.cpp" />
+    <ClCompile Include="camera\hermitespline.cpp" />
     <ClCompile Include="camera\interactivecamera.cpp" />
     <ClCompile Include="FileWatcher\FileWatcher.cpp" />
     <ClCompile Include="FileWatcher\FileWatcherWin32.cpp" />
@@ -209,6 +210,18 @@
     <ClCompile Include="utilities\random.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\dependencies\epsilon\include\ei\2dfunctions.hpp" />
+    <ClInclude Include="..\dependencies\epsilon\include\ei\2dintersection.hpp" />
+    <ClInclude Include="..\dependencies\epsilon\include\ei\2dtypes.hpp" />
+    <ClInclude Include="..\dependencies\epsilon\include\ei\3dfunctions.hpp" />
+    <ClInclude Include="..\dependencies\epsilon\include\ei\3dintersection.hpp" />
+    <ClInclude Include="..\dependencies\epsilon\include\ei\3dtypes.hpp" />
+    <ClInclude Include="..\dependencies\epsilon\include\ei\config.hpp" />
+    <ClInclude Include="..\dependencies\epsilon\include\ei\details\inttemplate.hpp" />
+    <ClInclude Include="..\dependencies\epsilon\include\ei\details\matrixcomponents.hpp" />
+    <ClInclude Include="..\dependencies\epsilon\include\ei\details\matrixutililities.hpp" />
+    <ClInclude Include="..\dependencies\epsilon\include\ei\elementarytypes.hpp" />
+    <ClInclude Include="..\dependencies\epsilon\include\ei\vector.hpp" />
     <ClInclude Include="..\dependencies\glhelper\glhelper\buffer.hpp" />
     <ClInclude Include="..\dependencies\glhelper\glhelper\framebufferobject.hpp" />
     <ClInclude Include="..\dependencies\glhelper\glhelper\gl.hpp" />
@@ -234,6 +247,7 @@
     <ClInclude Include="anttweakbarinterface.hpp" />
     <ClInclude Include="application.hpp" />
     <ClInclude Include="camera\camera.hpp" />
+    <ClInclude Include="camera\hermitespline.hpp" />
     <ClInclude Include="camera\interactivecamera.hpp" />
     <ClInclude Include="FileWatcher\FileWatcher.h" />
     <ClInclude Include="FileWatcher\FileWatcherImpl.h" />
@@ -270,6 +284,14 @@
     <Text Include="utilities\note.txt" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\dependencies\epsilon\include\ei\details\2dfunctions.inl" />
+    <None Include="..\dependencies\epsilon\include\ei\details\2dtypes.inl" />
+    <None Include="..\dependencies\epsilon\include\ei\details\3dfunctions.inl" />
+    <None Include="..\dependencies\epsilon\include\ei\details\3dtypes.inl" />
+    <None Include="..\dependencies\epsilon\include\ei\details\config.inl" />
+    <None Include="..\dependencies\epsilon\include\ei\details\elementary.inl" />
+    <None Include="..\dependencies\epsilon\include\ei\details\matrix.inl" />
+    <None Include="..\dependencies\epsilon\include\ei\details\quaternion.inl" />
     <None Include="..\dependencies\glhelper\glhelper\buffer.inl" />
     <None Include="..\dependencies\glhelper\glhelper\glhelper.vcxproj.filters" />
     <None Include="..\dependencies\glhelper\glhelper\shaderdatametainfo.inl" />

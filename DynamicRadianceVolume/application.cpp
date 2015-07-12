@@ -25,7 +25,9 @@
 Application::Application(int argc, char** argv) :
 	m_detachViewFromCameraUpdate(false),
 	m_tweakBarStatisticGroupSetting(" group=\"TimerStatistics\""),
-	m_showTweakBar(true)
+	m_pathEditTarget(PathEditTarget::CAMERA),
+	m_showTweakBars(true),
+	m_cameraFollowPath(false)
 {
 	// Logger init.
 	Logger::g_logger.Initialize(new Logger::FilePolicy("log.txt"));
@@ -57,10 +59,15 @@ Application::Application(int argc, char** argv) :
 	m_window->AddResizeHandler([&](int width, int height){
 		m_renderer->OnScreenResize(ei::UVec2(width, height));
 		m_camera->SetAspectRatio(static_cast<float>(width) / height);
-		m_tweakBar->SetWindowSize(width, height);
+		m_mainTweakBar->SetWindowSize(width, height);
+		m_pathTweakBar->SetWindowSize(width, height);
 	});
 
-	SetupTweakBarBinding();
+	SetupMainTweakBarBinding();
+
+	m_cameraPath = std::make_unique<HermiteSpline>();
+	m_pathTweakBarEditPath = m_cameraPath.get();
+	SetupPathTweakBar();
 
 	// Default settings:
 	ChangeEntityCount(1);
@@ -189,7 +196,7 @@ void Application::Update()
 	{
 		// Remove old entries.
 		for (const std::string& entry : m_tweakBarStatisticEntries)
-			m_tweakBar->Remove(entry);
+			m_mainTweakBar->Remove(entry);
 		m_tweakBarStatisticEntries.clear();
 		
 
@@ -197,7 +204,7 @@ void Application::Update()
 		for (const auto& entry : FrameProfiler::GetInstance().GetAllRecordedEvents())
 		{
 			std::string name = entry.first;
-			m_tweakBar->AddReadOnly(name, [name]{
+			m_mainTweakBar->AddReadOnly(name, [name]{
 					auto it = std::find_if(FrameProfiler::GetInstance().GetAllRecordedEvents().begin(), FrameProfiler::GetInstance().GetAllRecordedEvents().end(),
 											[name](const FrameProfiler::EventList& v){ return v.first == name; });
 					if (it != FrameProfiler::GetInstance().GetAllRecordedEvents().end() && !it->second.empty())
@@ -208,6 +215,17 @@ void Application::Update()
 			m_tweakBarStatisticEntries.push_back(name);
 		}
 	}
+
+	if (m_cameraFollowPath)
+	{
+		ei::Vec3 position = m_camera->GetPosition();
+		ei::Vec3 direction = m_camera->GetDirection();
+
+		m_cameraPath->Move(static_cast<float>(m_timeSinceLastUpdate.GetSeconds()));
+		m_cameraPath->Evaluate(position, direction);
+		m_camera->SetPosition(position);
+		m_camera->SetDirection(direction);
+	}
 }
 
 void Application::Draw()
@@ -215,8 +233,11 @@ void Application::Draw()
 	m_renderer->Draw(*m_camera, m_detachViewFromCameraUpdate);
 	if (m_detachViewFromCameraUpdate)
 		m_frustumOutlineRenderer->Draw();
-	if (m_showTweakBar)
-		m_tweakBar->Draw();
+	if (m_showTweakBars)
+	{
+		m_mainTweakBar->Draw();
+		m_pathTweakBar->Draw();
+	}
 	m_window->Present();
 
 	FrameProfiler::GetInstance().OnFrameEnd();
@@ -261,5 +282,5 @@ void Application::Input()
 		delete[] pixels;
 	}
 	if (m_window->WasButtonPressed(GLFW_KEY_F11))
-		m_showTweakBar = !m_showTweakBar;
+		m_showTweakBars = !m_showTweakBars;
 }

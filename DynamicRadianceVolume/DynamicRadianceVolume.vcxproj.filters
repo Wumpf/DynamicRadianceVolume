@@ -52,6 +52,15 @@
     <Filter Include="source\shaderreload">
       <UniqueIdentifier>{69fb15de-2370-4523-962e-a4fcc43a843a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="dependencies\epsilon\src">
+      <UniqueIdentifier>{280b69ec-6322-41b5-a19a-b93828699dc6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dependencies\epsilon\include">
+      <UniqueIdentifier>{76933d85-9e9b-413a-9d6d-6c9962c035ec}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="dependencies\epsilon\include\details">
+      <UniqueIdentifier>{8c516ea8-7262-4dc2-bb51-60a93752159d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="outputwindow.cpp">
@@ -110,24 +119,6 @@
     </ClCompile>
     <ClCompile Include="rendering\renderer.cpp">
       <Filter>source\rendering</Filter>
-    </ClCompile>
-    <ClCompile Include="..\dependencies\epsilon\src\3dintersection.cpp">
-      <Filter>dependencies\epsilon</Filter>
-    </ClCompile>
-    <ClCompile Include="..\dependencies\epsilon\src\3dtypes.cpp">
-      <Filter>dependencies\epsilon</Filter>
-    </ClCompile>
-    <ClCompile Include="..\dependencies\epsilon\src\2dfunctions.cpp">
-      <Filter>dependencies\epsilon</Filter>
-    </ClCompile>
-    <ClCompile Include="..\dependencies\epsilon\src\2dintersection.cpp">
-      <Filter>dependencies\epsilon</Filter>
-    </ClCompile>
-    <ClCompile Include="..\dependencies\epsilon\src\2dtypes.cpp">
-      <Filter>dependencies\epsilon</Filter>
-    </ClCompile>
-    <ClCompile Include="..\dependencies\epsilon\src\3dfunctions.cpp">
-      <Filter>dependencies\epsilon</Filter>
     </ClCompile>
     <ClCompile Include="rendering\voxelization.cpp">
       <Filter>source\rendering</Filter>
@@ -203,6 +194,27 @@
     </ClCompile>
     <ClCompile Include="rendering\frustumoutlines.cpp">
       <Filter>source\rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="camera\hermitespline.cpp">
+      <Filter>source\camera</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\epsilon\src\2dfunctions.cpp">
+      <Filter>dependencies\epsilon\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\epsilon\src\2dintersection.cpp">
+      <Filter>dependencies\epsilon\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\epsilon\src\2dtypes.cpp">
+      <Filter>dependencies\epsilon\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\epsilon\src\3dfunctions.cpp">
+      <Filter>dependencies\epsilon\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\epsilon\src\3dintersection.cpp">
+      <Filter>dependencies\epsilon\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dependencies\epsilon\src\3dtypes.cpp">
+      <Filter>dependencies\epsilon\src</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -371,6 +383,45 @@
     <ClInclude Include="..\dependencies\stb\stb_image_write.h">
       <Filter>dependencies\stb</Filter>
     </ClInclude>
+    <ClInclude Include="camera\hermitespline.hpp">
+      <Filter>source\camera</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\epsilon\include\ei\2dtypes.hpp">
+      <Filter>dependencies\epsilon\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\epsilon\include\ei\3dfunctions.hpp">
+      <Filter>dependencies\epsilon\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\epsilon\include\ei\3dintersection.hpp">
+      <Filter>dependencies\epsilon\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\epsilon\include\ei\3dtypes.hpp">
+      <Filter>dependencies\epsilon\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\epsilon\include\ei\config.hpp">
+      <Filter>dependencies\epsilon\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\epsilon\include\ei\elementarytypes.hpp">
+      <Filter>dependencies\epsilon\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\epsilon\include\ei\vector.hpp">
+      <Filter>dependencies\epsilon\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\epsilon\include\ei\2dfunctions.hpp">
+      <Filter>dependencies\epsilon\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\epsilon\include\ei\2dintersection.hpp">
+      <Filter>dependencies\epsilon\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\epsilon\include\ei\details\matrixcomponents.hpp">
+      <Filter>dependencies\epsilon\include\details</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\epsilon\include\ei\details\matrixutililities.hpp">
+      <Filter>dependencies\epsilon\include\details</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dependencies\epsilon\include\ei\details\inttemplate.hpp">
+      <Filter>dependencies\epsilon\include\details</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="utilities\note.txt">
@@ -479,6 +530,30 @@
     </None>
     <None Include="shader\lightingfunctions.glsl">
       <Filter>shader</Filter>
+    </None>
+    <None Include="..\dependencies\epsilon\include\ei\details\matrix.inl">
+      <Filter>dependencies\epsilon\include\details</Filter>
+    </None>
+    <None Include="..\dependencies\epsilon\include\ei\details\quaternion.inl">
+      <Filter>dependencies\epsilon\include\details</Filter>
+    </None>
+    <None Include="..\dependencies\epsilon\include\ei\details\2dfunctions.inl">
+      <Filter>dependencies\epsilon\include\details</Filter>
+    </None>
+    <None Include="..\dependencies\epsilon\include\ei\details\2dtypes.inl">
+      <Filter>dependencies\epsilon\include\details</Filter>
+    </None>
+    <None Include="..\dependencies\epsilon\include\ei\details\3dfunctions.inl">
+      <Filter>dependencies\epsilon\include\details</Filter>
+    </None>
+    <None Include="..\dependencies\epsilon\include\ei\details\3dtypes.inl">
+      <Filter>dependencies\epsilon\include\details</Filter>
+    </None>
+    <None Include="..\dependencies\epsilon\include\ei\details\config.inl">
+      <Filter>dependencies\epsilon\include\details</Filter>
+    </None>
+    <None Include="..\dependencies\epsilon\include\ei\details\elementary.inl">
+      <Filter>dependencies\epsilon\include\details</Filter>
     </None>
   </ItemGroup>
 </Project>
