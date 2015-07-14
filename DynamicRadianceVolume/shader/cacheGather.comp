@@ -65,6 +65,25 @@ void AllocateCaches(int compactCacheCoordBase, int addressVolumeCascade)
 			LightCacheEntries[lightCacheIndex].Position = unpackedAddressCoord_CascadeLocal * AddressVolumeCascades[addressVolumeCascade].WorldVoxelSize + AddressVolumeCascades[addressVolumeCascade].Min;
 			//LightCacheEntries[lightCacheIndex].Cascade = addressVolumeCascade;
 
+			LightCacheEntries[lightCacheIndex].SH1neg1 = vec3(0);
+			LightCacheEntries[lightCacheIndex].SH00_r = 0;
+			LightCacheEntries[lightCacheIndex].SH10 = vec3(0);
+			LightCacheEntries[lightCacheIndex].SH00_g = 0;
+			LightCacheEntries[lightCacheIndex].SH1pos1 = vec3(0);
+			LightCacheEntries[lightCacheIndex].SH00_b = 0;
+
+			#ifdef INDDIFFUSE_VIA_SH2
+			LightCacheEntries[lightCacheIndex].SH2neg2 = vec3(0);
+			LightCacheEntries[lightCacheIndex].SH20_r = 0;
+			LightCacheEntries[lightCacheIndex].SH2neg1 = vec3(0);
+			LightCacheEntries[lightCacheIndex].SH20_g = 0;
+			LightCacheEntries[lightCacheIndex].SH2pos1 = vec3(0);
+			LightCacheEntries[lightCacheIndex].SH20_b = 0;
+			LightCacheEntries[lightCacheIndex].SH2pos2 = vec3(0);
+			#endif
+
+
+
 			// No need for atomic now since we keep it locked up
 			imageStore(VoxelAddressVolume, unpackedAddressCoord, uvec4(lightCacheIndex + 1)); // +1 since zero means "cleared"
 		}

@@ -917,8 +917,6 @@ void Renderer::LightCachesRSM()
 
 		m_uboRing_SpotLight->BindBlockAsUBO(m_uboInfoSpotLight.bufferBinding, lightIndex);
 		GL_CALL(glDispatchComputeIndirect, 0);
-
-		break; // Only first light! Todo.
 	}
 }
 
