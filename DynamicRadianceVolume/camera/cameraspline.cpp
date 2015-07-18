@@ -1,4 +1,4 @@
-#include "hermitespline.hpp"
+#include "cameraspline.hpp"
 
 #include <json/json.h>
 #include <fstream>
@@ -6,15 +6,15 @@
 #include "../utilities/logger.hpp"
 #include <ei/elementarytypes.hpp>
 
-const unsigned int HermiteSpline::m_pathFileVersion = 0;
+const unsigned int CameraSpline::m_pathFileVersion = 0;
 
-HermiteSpline::HermiteSpline() :
+CameraSpline::CameraSpline() :
 	m_travelTime(10.0f),
 	m_progress(0.0f),
 	m_loop(false)
 {}
 
-void HermiteSpline::SaveToJson(const std::string& filename) const
+void CameraSpline::SaveToJson(const std::string& filename) const
 {
 	Json::Value jsonRoot;
 
@@ -43,12 +43,12 @@ void HermiteSpline::SaveToJson(const std::string& filename) const
 	file << jsonRoot;
 }
 
-void HermiteSpline::LoadFromJson(const std::string& filename)
+void CameraSpline::LoadFromJson(const std::string& filename)
 {
 	std::ifstream jsonFile(filename);
 	if (jsonFile.bad() || !jsonFile.is_open())
 	{
-		LOG_ERROR("Failed to camera path from file \"" << filename << "\"");
+		LOG_ERROR("Failed to load camera path from file \"" << filename << "\"");
 		return;
 	}
 	Json::Value jsonRoot;
@@ -63,7 +63,7 @@ void HermiteSpline::LoadFromJson(const std::string& filename)
 	m_loop = jsonRoot.get("loop", false).asBool();
 
 	m_wayPoints.clear();
-	Json::Value waypoints = jsonRoot["wayPoints"];
+	Json::Value waypoints = jsonRoot["waypoints"];
 	m_wayPoints.resize(waypoints.size());
 	for (Json::Value::ArrayIndex i = 0; i < waypoints.size(); ++i)
 	{
@@ -72,12 +72,12 @@ void HermiteSpline::LoadFromJson(const std::string& filename)
 		w.direction.y = waypoints[i]["direction"][1].asFloat();
 		w.direction.z = waypoints[i]["direction"][2].asFloat();
 		w.position.x = waypoints[i]["position"][0].asFloat();
-		w.position.x = waypoints[i]["position"][1].asFloat();
-		w.position.x = waypoints[i]["position"][2].asFloat();
+		w.position.y = waypoints[i]["position"][1].asFloat();
+		w.position.z = waypoints[i]["position"][2].asFloat();
 	}
 }
 
-void HermiteSpline::Move(float passedTime)
+void CameraSpline::Move(float passedTime)
 {
 	m_progress += passedTime / m_travelTime;
 	if (m_loop)
@@ -86,7 +86,7 @@ void HermiteSpline::Move(float passedTime)
 		m_progress = ei::clamp(m_progress, 0.0f, 1.0f);
 }
 
-void HermiteSpline::Evaluate(float t, ei::Vec3& position, ei::Vec3& direction)
+void CameraSpline::Evaluate(float t, ei::Vec3& position, ei::Vec3& direction)
 {
 	if (m_wayPoints.size() == 0)
 		return;
@@ -96,30 +96,37 @@ void HermiteSpline::Evaluate(float t, ei::Vec3& position, ei::Vec3& direction)
 		direction = m_wayPoints[0].direction;
 	}
 
-	unsigned int index0, index1;
+	int indexn1, index0, indexp1, indexp2;
 
 	t = ei::clamp(t, 0.0f, 1.0f);
 
 	if (m_loop)
 	{
-		index0 = static_cast<unsigned int>(m_wayPoints.size() * m_progress);
-		index1 = (index0 + 1) % m_wayPoints.size();
+		index0 = static_cast<int>(m_wayPoints.size() * m_progress);
+		indexp1 = (index0 + 1) % m_wayPoints.size();
+		indexp2 = (index0 + 2) % m_wayPoints.size();
+		indexn1 = index0 - 1;
+		if (indexn1 < 0) indexn1 = static_cast<int>(m_wayPoints.size() - 1);
+
 		t = t * m_wayPoints.size() - index0;
 	}
 	else
 	{
-		index0 = static_cast<unsigned int>((m_wayPoints.size()-1) * m_progress);
-		index1 = index0 + 1;
+		index0 = static_cast<int>((m_wayPoints.size()-1) * m_progress);
+		indexp1 = index0 + 1;
+		indexp2 = ei::min(index0 + 2, static_cast<int>(m_wayPoints.size() - 1));
+		indexn1 = ei::max(0, index0 - 1);
 		t = t * (m_wayPoints.size() - 1) - index0;
 
-		if (index1 >= m_wayPoints.size())
+
+		if (indexp1 >= m_wayPoints.size())
 			return;
 	}
 
 	position =  (2.0f * t * t * t - 3.0f * t * t + 1.0f) * m_wayPoints[index0].position +
-				(       t * t * t - 2.0f * t * t + t   ) * m_wayPoints[index0].direction +
-			   (-2.0f * t * t * t + 3.0f * t * t       ) * m_wayPoints[index1].position +
-			    (       t * t * t -        t * t       ) * m_wayPoints[index1].direction;
+				(       t * t * t - 2.0f * t * t + t   ) * (m_wayPoints[indexp1].position - m_wayPoints[indexn1].position) * 0.5f +
+			   (-2.0f * t * t * t + 3.0f * t * t       ) * m_wayPoints[indexp1].position +
+			    (       t * t * t -        t * t       ) * (m_wayPoints[indexp2].position - m_wayPoints[index0].position) * 0.5f;
 	
 	// TODO
 	/*direction = (6.0f * t * t - 6.0f * t       ) * m_wayPoints[index0].position +
@@ -127,5 +134,15 @@ void HermiteSpline::Evaluate(float t, ei::Vec3& position, ei::Vec3& direction)
 			   (-6.0f * t * t + 6.0f * t       ) * m_wayPoints[index1].position +
 			    (3.0f * t * t - 2.0f * t       ) * m_wayPoints[index1].direction;*/
 
-	direction = ei::normalize(ei::slerp(m_wayPoints[index0].direction, m_wayPoints[index1].direction, t));
+//	ei::Vec3 newDirection = ei::slerp(m_wayPoints[index0].direction, m_wayPoints[indexp1].direction, t);
+
+	ei::Vec3 newDirection = (2.0f * t * t * t - 3.0f * t * t + 1.0f) * m_wayPoints[index0].direction +
+		(t * t * t - 2.0f * t * t + t) * (m_wayPoints[indexp1].direction - m_wayPoints[indexn1].direction) * 0.5f +
+		(-2.0f * t * t * t + 3.0f * t * t) * m_wayPoints[indexp1].direction +
+		(t * t * t - t * t) * (m_wayPoints[indexp2].direction - m_wayPoints[index0].direction) * 0.5f;
+
+
+	float len = ei::len(newDirection);
+	if (len > 0.0000001f)
+		direction = newDirection / len;
 }

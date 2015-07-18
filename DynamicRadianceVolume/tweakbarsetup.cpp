@@ -14,6 +14,8 @@
 #include "anttweakbarinterface.hpp"
 #include "frameprofiler.hpp"
 
+#include "utilities/filedialog.hpp"
+
 void Application::ChangeEntityCount(unsigned int entityCount)
 {
 	size_t oldEntityCount = m_scene->GetEntities().size();
@@ -70,11 +72,11 @@ void Application::ChangeEntityCount(unsigned int entityCount)
 
 void Application::ChangeLightCount(unsigned int lightCount)
 {
-	if (lightCount == 0)
+	/*if (lightCount == 0)
 	{
 		m_pathEditTarget = PathEditTarget::CAMERA;
 		m_pathTweakBarEditPath = m_cameraPath.get();
-	}
+	}*/
 
 	size_t oldLightCount = m_scene->GetLights().size();
 	m_scene->GetLights().resize(lightCount);
@@ -197,11 +199,11 @@ void Application::SetupMainTweakBarBinding()
 			[&](int i){ return m_renderer->SetCAVCascades(m_renderer->GetCAVCascadeCount(), i); }, " min=16 max=256 step=16" + groupSetting);
 		m_mainTweakBar->AddReadWrite<int>("#Cascades", [&](){ return m_renderer->GetCAVCascadeCount(); },
 			[&](int numCascades)
-			{
-				for (int i = 0; i < Renderer::s_maxNumCAVCascades; ++i)
-					m_mainTweakBar->SetVisible("CascadeSize_" + std::to_string(i), i < numCascades);
-				return m_renderer->SetCAVCascades(numCascades, m_renderer->GetCAVResolution());
-			}, " min=1 max=4 step=1" + groupSetting);
+		{
+			for (int i = 0; i < Renderer::s_maxNumCAVCascades; ++i)
+				m_mainTweakBar->SetVisible("CascadeSize_" + std::to_string(i), i < numCascades);
+			return m_renderer->SetCAVCascades(numCascades, m_renderer->GetCAVResolution());
+		}, " min=1 max=4 step=1" + groupSetting);
 		for (unsigned int i = 0; i < Renderer::s_maxNumCAVCascades; ++i)
 		{
 			std::string elementSettings = " min=1.0 max=10000 step=0.5" + groupSetting + " label=\"Cascade Size " + std::to_string(i) + "\"";
@@ -211,7 +213,7 @@ void Application::SetupMainTweakBarBinding()
 		}
 		m_mainTweakBar->SetGroupProperties("AddressVolume", "", "Light Cache Address Volume (CAV)", false);
 
-		
+
 		// Address Volume
 		groupSetting = " group=SpecEnvMap";
 		std::vector<TwEnumVal> specEnvMapRes = { { 4, "4x4" }, { 8, "8x8" }, { 16, "16x16" }, { 32, "32x32" }, { 64, "64x64" } };
@@ -232,7 +234,7 @@ void Application::SetupMainTweakBarBinding()
 		m_mainTweakBar->AddReadOnly("#Recorded", []{ return std::to_string(FrameProfiler::GetInstance().GetFrameDurations().size()); }, m_tweakBarStatisticGroupSetting);
 		m_mainTweakBar->AddSeperator("GPU Queries:", m_tweakBarStatisticGroupSetting);
 
-		m_mainTweakBar->SetGroupProperties(m_tweakBarStatisticGroupSetting.substr(m_tweakBarStatisticGroupSetting.find('=')+1), "", "Timer Stats", false);
+		m_mainTweakBar->SetGroupProperties(m_tweakBarStatisticGroupSetting.substr(m_tweakBarStatisticGroupSetting.find('=') + 1), "", "Timer Stats", false);
 	}
 
 	m_mainTweakBar->AddSeperator("General Render Mode Settings");
@@ -273,45 +275,4 @@ void Application::SetupMainTweakBarBinding()
 		std::function<void(const int&)> changeLightCount = std::bind(&Application::ChangeLightCount, this, std::placeholders::_1);
 		m_mainTweakBar->AddReadWrite<int>("Light Count", [&](){ return static_cast<int>(m_scene->GetLights().size()); }, changeLightCount, " min=1 max=16 step=1 group=Lights");
 	}
-}
-
-void Application::SetupPathTweakBar()
-{
-	m_pathTweakBar = std::make_unique<AntTweakBarInterface>(m_window->GetGLFWWindow(), "Path", true);
-
-	std::vector<TwEnumVal> targetEnum = { { static_cast<int>(PathEditTarget::CAMERA), "Camera" }, { static_cast<int>(PathEditTarget::LIGHT0), "Light0" } };
-	m_pathTweakBar->AddEnumType("PathTarget", targetEnum);
-	m_pathTweakBar->AddEnum("Path Target", "PathTarget", [&](){ return static_cast<int>(m_pathEditTarget); }, [&](int i){
-		m_pathEditTarget = static_cast<PathEditTarget>(i);
-		if (m_pathEditTarget == PathEditTarget::CAMERA)
-			m_pathTweakBarEditPath = m_cameraPath.get();
-		else if (m_pathEditTarget == PathEditTarget::LIGHT0 && m_scene->GetLights().size() > 0)
-			m_pathTweakBarEditPath = &m_scene->GetLights()[0].path;
-	});
-
-	m_pathTweakBar->AddButton("Save Path", [&]() { m_pathTweakBarEditPath->SaveToJson(SaveFileDialog("path.json", ".json")); });
-	m_pathTweakBar->AddButton("Load Path", [&]() { m_pathTweakBarEditPath->LoadFromJson(OpenFileDialog()); });
-	m_pathTweakBar->AddSeperator("main");
-
-	m_pathTweakBar->AddReadWrite<bool>("Follow Path", [&]() {
-		if (m_pathEditTarget == PathEditTarget::CAMERA)
-			return m_cameraFollowPath;
-		else if (m_pathEditTarget == PathEditTarget::LIGHT0 && m_scene->GetLights().size() > 0)
-			return m_scene->GetLights()[0].followPath;
-		else
-			return false;
-	}, [&](bool b) {
-		if (m_pathEditTarget == PathEditTarget::CAMERA)
-			m_cameraFollowPath = b;
-		else if (m_pathEditTarget == PathEditTarget::LIGHT0 && m_scene->GetLights().size() > 0)
-			m_scene->GetLights()[0].followPath = b;
-	});
-
-	m_pathTweakBar->AddReadWrite<bool>("Loop", [&]() { return m_pathTweakBarEditPath->GetLooping(); }, [&](bool b) { m_pathTweakBarEditPath->SetLooping(b); });
-	m_pathTweakBar->AddReadOnly("# way-points", [&]{ return std::to_string(m_pathTweakBarEditPath->GetWayPoints().size()); });
-	m_pathTweakBar->AddButton("Add way-point at View", [&]{ m_pathTweakBarEditPath->GetWayPoints().push_back(HermiteSpline::WayPoint{m_camera->GetPosition(), m_camera->GetDirection()}); });
-	m_pathTweakBar->AddButton("Remove last way-point", [&]{ if (!m_pathTweakBarEditPath->GetWayPoints().empty()) m_pathTweakBarEditPath->GetWayPoints().pop_back(); });
-	m_pathTweakBar->AddButton("Clear way-points", [&]{ m_pathTweakBarEditPath->GetWayPoints().clear(); });
-	m_pathTweakBar->AddReadWrite<float>("TravelTime", [&]{ return m_pathTweakBarEditPath->GetTravelTime(); }, [&](float f){ m_pathTweakBarEditPath->SetTravelTime(f); }, "min=0 max=1000 step=0.1");
-	m_pathTweakBar->AddReadWrite<float>("Progress", [&]{ return m_pathTweakBarEditPath->GetProgress(); }, [&](float f){ m_pathTweakBarEditPath->SetProgress(f); }, "min=0 max=1 step=0.001");
 }

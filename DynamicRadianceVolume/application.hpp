@@ -11,7 +11,8 @@ class InteractiveCamera;
 class Renderer;
 class AntTweakBarInterface;
 class FrustumOutlines;
-class HermiteSpline;
+class CameraSpline;
+class PathEditor;
 
 class Application
 {
@@ -22,18 +23,22 @@ public:
 
 	void Run();
 
+	OutputWindow& GetWindow() { return *m_window; }
+	CameraSpline& GetCameraPath() { return *m_cameraPath; }
+
+	const InteractiveCamera& GetCamera() const { return *m_camera; }
+
+	bool GetCameraFollowPath() const { return m_cameraFollowPath; }
+	void SetCameraFollowPath(bool b) { m_cameraFollowPath = b; }
+
 private:
 	void SetupMainTweakBarBinding();
-	void SetupPathTweakBar();
 
 	void Update();
 
 	void Draw();
 
 	void Input();
-
-	std::string OpenFileDialog();
-	std::string SaveFileDialog(const std::string& defaultName, const std::string& fileEnding);
 
 	void AddEntity(const std::string& filename);
 
@@ -46,17 +51,9 @@ private:
 	std::unique_ptr<InteractiveCamera> m_camera;
 	std::unique_ptr<AntTweakBarInterface> m_mainTweakBar;
 
-	enum class PathEditTarget
-	{
-		CAMERA,
-		LIGHT0
-	};
-	PathEditTarget m_pathEditTarget;
-	HermiteSpline* m_pathTweakBarEditPath;
-	std::unique_ptr<AntTweakBarInterface> m_pathTweakBar;
-
 	bool m_cameraFollowPath;
-	std::unique_ptr<HermiteSpline> m_cameraPath;
+	std::unique_ptr<CameraSpline> m_cameraPath;
+	std::unique_ptr<PathEditor> m_pathEditor;
 
 	std::unique_ptr<FrustumOutlines> m_frustumOutlineRenderer;
 	bool m_detachViewFromCameraUpdate;

@@ -3,12 +3,12 @@
 #include <ei/vector.hpp>
 #include <vector>
 
-/// Hermite spline with progress and speed for convenience
-class HermiteSpline
+/// Catmull-Rom for cameras with progress and speed for convenience
+class CameraSpline
 {
 public:
-	HermiteSpline();
-	~HermiteSpline() {}
+	CameraSpline();
+	~CameraSpline() {}
 
 	void SaveToJson(const std::string& filename) const;
 	void LoadFromJson(const std::string& filename);

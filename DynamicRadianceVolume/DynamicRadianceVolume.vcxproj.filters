@@ -195,9 +195,6 @@
     <ClCompile Include="rendering\frustumoutlines.cpp">
       <Filter>source\rendering</Filter>
     </ClCompile>
-    <ClCompile Include="camera\hermitespline.cpp">
-      <Filter>source\camera</Filter>
-    </ClCompile>
     <ClCompile Include="..\dependencies\epsilon\src\2dfunctions.cpp">
       <Filter>dependencies\epsilon\src</Filter>
     </ClCompile>
@@ -215,6 +212,13 @@
     </ClCompile>
     <ClCompile Include="..\dependencies\epsilon\src\3dtypes.cpp">
       <Filter>dependencies\epsilon\src</Filter>
+    </ClCompile>
+    <ClCompile Include="patheditor.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="utilities\filedialog.cpp" />
+    <ClCompile Include="camera\cameraspline.cpp">
+      <Filter>source\camera</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -383,9 +387,6 @@
     <ClInclude Include="..\dependencies\stb\stb_image_write.h">
       <Filter>dependencies\stb</Filter>
     </ClInclude>
-    <ClInclude Include="camera\hermitespline.hpp">
-      <Filter>source\camera</Filter>
-    </ClInclude>
     <ClInclude Include="..\dependencies\epsilon\include\ei\2dtypes.hpp">
       <Filter>dependencies\epsilon\include</Filter>
     </ClInclude>
@@ -421,6 +422,15 @@
     </ClInclude>
     <ClInclude Include="..\dependencies\epsilon\include\ei\details\inttemplate.hpp">
       <Filter>dependencies\epsilon\include\details</Filter>
+    </ClInclude>
+    <ClInclude Include="patheditor.hpp">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="utilities\filedialog.hpp">
+      <Filter>source\utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="camera\cameraspline.hpp">
+      <Filter>source\camera</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

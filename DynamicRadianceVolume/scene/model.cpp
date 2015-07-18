@@ -318,6 +318,12 @@ std::shared_ptr<Model> Model::LoadViaAssimp(const std::string& filename, const s
 			{
 				for(unsigned int v = 0; v < mesh.mNumVertices; ++v)
 				{
+					if (filename.find("teapot") != std::string::npos)
+					{
+						mesh.mTextureCoords[0][v][0] *= 5.0f;
+						mesh.mTextureCoords[0][v][1] *= 5.0f;
+					}
+
 					memcpy(&currentVertex->texcoord, &mesh.mTextureCoords[0][v], sizeof(float) * 2);
 					++currentVertex;
 				}

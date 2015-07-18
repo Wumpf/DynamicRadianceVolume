@@ -213,7 +213,7 @@ void AntTweakBarInterface::AddSeperator(const std::string& name, const std::stri
 
 void AntTweakBarInterface::SetVisible(const std::string& name, bool enable)
 {
-	std::string define = " TweakBar/" + name + " visible=" + (enable ? "true" : "false");
+	std::string define = m_barName + "/" + name + " visible=" + (enable ? "true" : "false");
 	if (!TwDefine(define.c_str()))
 		CheckTwError();
 }

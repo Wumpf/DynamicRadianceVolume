@@ -183,13 +183,14 @@
     <ClCompile Include="anttweakbarinterface.cpp" />
     <ClCompile Include="application.cpp" />
     <ClCompile Include="camera\camera.cpp" />
-    <ClCompile Include="camera\hermitespline.cpp" />
+    <ClCompile Include="camera\cameraspline.cpp" />
     <ClCompile Include="camera\interactivecamera.cpp" />
     <ClCompile Include="FileWatcher\FileWatcher.cpp" />
     <ClCompile Include="FileWatcher\FileWatcherWin32.cpp" />
     <ClCompile Include="frameprofiler.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="outputwindow.cpp" />
+    <ClCompile Include="patheditor.cpp" />
     <ClCompile Include="rendering\frustumoutlines.cpp" />
     <ClCompile Include="rendering\hdrimage.cpp" />
     <ClCompile Include="rendering\renderer.cpp" />
@@ -205,6 +206,7 @@
     <ClCompile Include="tweakbarsetup.cpp" />
     <ClCompile Include="utilities\assert.cpp" />
     <ClCompile Include="utilities\color.cpp" />
+    <ClCompile Include="utilities\filedialog.cpp" />
     <ClCompile Include="utilities\logger.cpp" />
     <ClCompile Include="utilities\policy.cpp" />
     <ClCompile Include="utilities\random.cpp" />
@@ -247,7 +249,7 @@
     <ClInclude Include="anttweakbarinterface.hpp" />
     <ClInclude Include="application.hpp" />
     <ClInclude Include="camera\camera.hpp" />
-    <ClInclude Include="camera\hermitespline.hpp" />
+    <ClInclude Include="camera\cameraspline.hpp" />
     <ClInclude Include="camera\interactivecamera.hpp" />
     <ClInclude Include="FileWatcher\FileWatcher.h" />
     <ClInclude Include="FileWatcher\FileWatcherImpl.h" />
@@ -255,6 +257,7 @@
     <ClInclude Include="frameprofiler.hpp" />
     <ClInclude Include="glhelperconfig.hpp" />
     <ClInclude Include="outputwindow.hpp" />
+    <ClInclude Include="patheditor.hpp" />
     <ClInclude Include="rendering\frustumoutlines.hpp" />
     <ClInclude Include="rendering\hdrimage.hpp" />
     <ClInclude Include="rendering\renderer.hpp" />
@@ -271,6 +274,7 @@
     <ClInclude Include="Time\Time.h" />
     <ClInclude Include="utilities\assert.hpp" />
     <ClInclude Include="utilities\color.hpp" />
+    <ClInclude Include="utilities\filedialog.hpp" />
     <ClInclude Include="utilities\flagoperators.hpp" />
     <ClInclude Include="utilities\logger.hpp" />
     <ClInclude Include="utilities\loggerinit.hpp" />

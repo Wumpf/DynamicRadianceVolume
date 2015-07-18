@@ -1113,9 +1113,12 @@ void Renderer::DrawScene(bool setTextures, SceneDrawSubset drawSubset)
 
 			if (setTextures)
 			{
-				mesh.diffuse->Bind(0);
-				mesh.normalmap->Bind(1);
-				mesh.roughnessMetallic->Bind(2);
+				if (mesh.diffuse)
+					mesh.diffuse->Bind(0);
+				if (mesh.normalmap)
+					mesh.normalmap->Bind(1);
+				if (mesh.roughnessMetallic)
+					mesh.roughnessMetallic->Bind(2);
 			}
 			else if (drawSubset == SceneDrawSubset::ALPHATESTED_ONLY)
 				mesh.diffuse->Bind(0);

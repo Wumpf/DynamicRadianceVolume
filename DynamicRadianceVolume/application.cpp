@@ -14,18 +14,16 @@
 #include "anttweakbarinterface.hpp"
 #include "frameprofiler.hpp"
 
+#include "patheditor.hpp"
+
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 
-#undef APIENTRY
-#include <windows.h>
-#include <shlwapi.h>
 
 
 Application::Application(int argc, char** argv) :
 	m_detachViewFromCameraUpdate(false),
 	m_tweakBarStatisticGroupSetting(" group=\"TimerStatistics\""),
-	m_pathEditTarget(PathEditTarget::CAMERA),
 	m_showTweakBars(true),
 	m_cameraFollowPath(false)
 {
@@ -60,14 +58,12 @@ Application::Application(int argc, char** argv) :
 		m_renderer->OnScreenResize(ei::UVec2(width, height));
 		m_camera->SetAspectRatio(static_cast<float>(width) / height);
 		m_mainTweakBar->SetWindowSize(width, height);
-		m_pathTweakBar->SetWindowSize(width, height);
 	});
 
 	SetupMainTweakBarBinding();
 
-	m_cameraPath = std::make_unique<HermiteSpline>();
-	m_pathTweakBarEditPath = m_cameraPath.get();
-	SetupPathTweakBar();
+	m_cameraPath = std::make_unique<CameraSpline>();
+	m_pathEditor = std::make_unique<PathEditor>(*this);
 
 	// Default settings:
 	ChangeEntityCount(1);
@@ -94,75 +90,6 @@ Application::~Application()
 	m_scene.reset();
 }
 
-std::string Application::OpenFileDialog()
-{
-	// Openfiledialog changes relative paths. Save current directory to restore it later.
-	char oldCurrentPath[MAX_PATH] = "";
-	GetCurrentDirectoryA(MAX_PATH, oldCurrentPath);
-
-	char filename[MAX_PATH] = "";
-
-	OPENFILENAMEA ofn = { 0 };
-	ofn.lStructSize = sizeof(ofn);
-	ofn.hwndOwner = m_window->GetWindowHandle();
-	ofn.lpstrFilter = "All Files (*.*)\0*.*\0Json Files (*.json)\0*.json\0Obj Model (*.obj)\0*.obj\0";
-	ofn.nFilterIndex = 1;
-	ofn.lpstrFile = filename;
-	ofn.nMaxFile = MAX_PATH;
-	ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
-	
-	if (GetOpenFileNameA(&ofn))
-	{
-		// Restore current directory
-		SetCurrentDirectoryA(oldCurrentPath);
-
-		char relativePath[MAX_PATH];
-		if (PathRelativePathToA(relativePath, oldCurrentPath, FILE_ATTRIBUTE_DIRECTORY, filename, FILE_ATTRIBUTE_NORMAL))
-			return relativePath;
-		else
-			return filename;
-	}
-	else
-	{
-		return "";
-	}
-}
-
-std::string Application::SaveFileDialog(const std::string& defaultName, const std::string& fileEnding)
-{
-	// Openfiledialog changes relative paths. Save current directory to restore it later.
-	char oldCurrentPath[MAX_PATH];
-	GetCurrentDirectoryA(MAX_PATH, oldCurrentPath);
-
-	char filename[MAX_PATH];
-	strcpy(filename, defaultName.c_str());
-
-	OPENFILENAMEA ofn = { 0 };
-	ofn.lStructSize = sizeof(ofn);
-	ofn.hwndOwner = m_window->GetWindowHandle();
-	ofn.lpstrFilter = "All Files (*.*)\0*.*\0Json Files (*.json)\0*.json\0Obj Model (*.obj)\0*.obj\0";
-	ofn.lpstrFile = filename;
-	ofn.nMaxFile = MAX_PATH;
-	ofn.Flags = OFN_EXPLORER | OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST;
-	ofn.lpstrDefExt = fileEnding.c_str();
-
-	if (GetSaveFileNameA(&ofn))
-	{
-		// Restore current directory
-		SetCurrentDirectoryA(oldCurrentPath);
-
-		char relativePath[MAX_PATH];
-		if (PathRelativePathToA(relativePath, oldCurrentPath, FILE_ATTRIBUTE_DIRECTORY, filename, FILE_ATTRIBUTE_NORMAL))
-			return relativePath;
-		else
-			return filename;
-	}
-	else
-	{
-		return "";
-	}
-}
-
 void Application::Run()
 {
 	// Main loop
@@ -185,6 +112,7 @@ void Application::Update()
 	ShaderFileWatcher::Instance().Update();
 
 	m_camera->Update(m_timeSinceLastUpdate);
+	m_pathEditor->Update(m_timeSinceLastUpdate);
 	Input();
 
 	m_scene->Update(m_timeSinceLastUpdate);
@@ -236,7 +164,7 @@ void Application::Draw()
 	if (m_showTweakBars)
 	{
 		m_mainTweakBar->Draw();
-		m_pathTweakBar->Draw();
+		m_pathEditor->Draw();
 	}
 	m_window->Present();
 
