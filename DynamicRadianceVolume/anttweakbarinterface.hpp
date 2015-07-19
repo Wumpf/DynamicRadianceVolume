@@ -32,7 +32,8 @@ public:
 		HDRCOLOR,
 	};
 
-	void Draw();
+	/// Draws all tweakbars.
+	static void Draw();
 
 	void AddButton(const std::string& name, const std::function<void()>& triggerCallback, const std::string& additionalTwDefines = "");
 	void AddReadOnly(const std::string& name, const std::function<std::string()>& getValue, const std::string& additionalTwDefines = "");

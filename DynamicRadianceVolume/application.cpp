@@ -105,6 +105,19 @@ void Application::Run()
 	}
 }
 
+void Application::StartPerfRecording()
+{
+	FrameProfiler::GetInstance().WaitForQueryResults();
+	FrameProfiler::GetInstance().Clear();
+	FrameProfiler::GetInstance().SetGPUProfilingActive(true);
+}
+void Application::StopPerfRecording(const std::string& resulftCSVFilename)
+{
+	FrameProfiler::GetInstance().SetGPUProfilingActive(false);
+	FrameProfiler::GetInstance().WaitForQueryResults();
+	FrameProfiler::GetInstance().SaveToCSV(resulftCSVFilename);
+}
+
 void Application::Update()
 {
 	m_window->PollWindowEvents();
@@ -163,8 +176,7 @@ void Application::Draw()
 		m_frustumOutlineRenderer->Draw();
 	if (m_showTweakBars)
 	{
-		m_mainTweakBar->Draw();
-		m_pathEditor->Draw();
+		AntTweakBarInterface::Draw();
 	}
 	m_window->Present();
 

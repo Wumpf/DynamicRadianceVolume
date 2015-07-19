@@ -158,7 +158,7 @@ void FrameProfiler::SaveToCSV(const std::string& filename)
 	// Data
 	for (size_t frame = 0; frame < m_recordedFrameDurations.size(); ++frame)
 	{
-		csvFile << m_recordedFrameDurations[frame] << ",";
+		csvFile << static_cast<double>(m_recordedFrameDurations[frame]) / 1000.0 / 1000.0 << ",";
 
 		for (size_t evtTypeIdx = 0; evtTypeIdx < m_eventLists.size(); ++evtTypeIdx)
 		{
@@ -166,7 +166,7 @@ void FrameProfiler::SaveToCSV(const std::string& filename)
 			
 			if (nextEvtIndex[evtTypeIdx] < events.size() && events[nextEvtIndex[evtTypeIdx]].frame == frame)
 			{
-				csvFile << events[nextEvtIndex[evtTypeIdx]].duration;
+				csvFile << static_cast<double>(events[nextEvtIndex[evtTypeIdx]].duration) / 1000.0 / 1000.0;
 				++nextEvtIndex[evtTypeIdx];
 			}
 			else

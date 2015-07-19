@@ -13,7 +13,9 @@ PathEditor::PathEditor(Application& application) :
 
 	m_recordPath(false),
 	m_recordInterval(ezTime::Seconds(0.5f)),
-	m_timeSinceLastRecord()
+	m_timeSinceLastRecord(),
+
+	m_recordingPerf(false)
 {
 	m_pathTweakBar = std::make_unique<AntTweakBarInterface>(application.GetWindow().GetGLFWWindow(), "Path", true);
 	application.GetWindow().AddResizeHandler([&](int width, int height){
@@ -54,6 +56,7 @@ PathEditor::PathEditor(Application& application) :
 	m_pathTweakBar->AddReadWrite<float>("TravelTime", [&]{ return m_pathTweakBarEditPath->GetTravelTime(); }, [&](float f){ m_pathTweakBarEditPath->SetTravelTime(f); }, "min=0 max=1000 step=0.1");
 	m_pathTweakBar->AddReadWrite<float>("Progress", [&]{ return m_pathTweakBarEditPath->GetProgress(); }, [&](float f){ m_pathTweakBarEditPath->SetProgress(f); }, "min=0 max=1 step=0.001");
 
+
 	m_pathTweakBar->AddSeperator("control");
 
 	m_pathTweakBar->AddReadOnly("# way-points", [&]{ return std::to_string(m_pathTweakBarEditPath->GetWayPoints().size()); });
@@ -65,14 +68,25 @@ PathEditor::PathEditor(Application& application) :
 	m_pathTweakBar->AddButton("Remove last way-point", [&]{ if (!m_pathTweakBarEditPath->GetWayPoints().empty()) m_pathTweakBarEditPath->GetWayPoints().pop_back(); });
 	m_pathTweakBar->AddButton("Clear way-points", [&]{ m_pathTweakBarEditPath->GetWayPoints().clear(); });
 
+	m_pathTweakBar->AddSeperator("path");
+
+	m_pathTweakBar->AddButton("Record Performance on Path", [&]{
+		if (!m_recordingPerf)
+		{
+			m_pathTweakBarEditPath->SetProgress(0.0f);
+			m_pathTweakBarEditPath->SetLooping(false);
+			if (m_pathEditTarget == PathEditTarget::CAMERA)
+				m_application.SetCameraFollowPath(true);
+			m_application.SetUIVisible(false);
+			m_application.StartPerfRecording();
+			m_recordingPerf = true;
+		}
+	});
+
 }
 
 PathEditor::~PathEditor() {}
 
-
-void PathEditor::Draw()
-{
-}
 
 void PathEditor::Update(ezTime timeSinceLastFrame)
 {
@@ -84,5 +98,12 @@ void PathEditor::Update(ezTime timeSinceLastFrame)
 			m_timeSinceLastRecord -= m_recordInterval;
 			m_pathTweakBarEditPath->GetWayPoints().push_back(CameraSpline::WayPoint{ m_application.GetCamera().GetPosition(), m_application.GetCamera().GetDirection() });
 		}
+	}
+
+	if (m_recordingPerf && m_pathTweakBarEditPath->GetProgress() >= 1.0f)
+	{
+		m_recordingPerf = false;
+		m_application.SetUIVisible(true);
+		m_application.StopPerfRecording("path_perf.csv");
 	}
 }

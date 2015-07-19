@@ -500,13 +500,13 @@ void Renderer::Draw(const Camera& camera, bool detachViewFromCameraUpdate)
 	gl::Enable(gl::Cap::FRAMEBUFFER_SRGB);
 
 	// Update data.
-	PROFILE_GPU_START(PrepareUBOs)
+	//PROFILE_GPU_START(PrepareUBOs)
 	UpdatePerFrameUBO(camera);
 	if (!detachViewFromCameraUpdate)
 		UpdateVolumeUBO(camera);
 	UpdatePerObjectUBORingBuffer();
 	PrepareLights();
-	PROFILE_GPU_END()
+	//PROFILE_GPU_END()
 
 	// Scene dependent renderings.
 	DrawSceneToGBuffer();

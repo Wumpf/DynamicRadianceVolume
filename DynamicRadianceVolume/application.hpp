@@ -31,6 +31,12 @@ public:
 	bool GetCameraFollowPath() const { return m_cameraFollowPath; }
 	void SetCameraFollowPath(bool b) { m_cameraFollowPath = b; }
 
+	bool GetUIVisible() const { return m_showTweakBars; }
+	void SetUIVisible(bool b) { m_showTweakBars = b; }
+
+	void StartPerfRecording();
+	void StopPerfRecording(const std::string& resulftCSVFilename);
+
 private:
 	void SetupMainTweakBarBinding();
 

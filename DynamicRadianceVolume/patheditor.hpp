@@ -14,7 +14,6 @@ public:
 	PathEditor(Application& application);
 	~PathEditor();
 
-	void Draw();
 	void Update(ezTime timeSinceLastFrame);
 
 private:
@@ -35,5 +34,7 @@ private:
 	bool m_recordPath;
 	ezTime m_recordInterval;
 	ezTime m_timeSinceLastRecord;
+
+	bool m_recordingPerf;
 };
 
