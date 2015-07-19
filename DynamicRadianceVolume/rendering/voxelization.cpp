@@ -41,6 +41,10 @@ Voxelization::Voxelization(unsigned int resolution) :
 	m_shaderVoxelBlend->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/voxelblend.comp");
 	m_shaderVoxelBlend->CreateProgram();
 
+	m_shaderVoxelMipMap = new gl::ShaderObject("voxel mipmap");
+	m_shaderVoxelMipMap->AddShaderFromFile(gl::ShaderObject::ShaderType::COMPUTE, "shader/voxelmipmap.comp");
+	m_shaderVoxelMipMap->CreateProgram();
+
 	SetResolution(resolution);
 }
 
@@ -140,6 +144,7 @@ void Voxelization::VoxelizeScene(Renderer& renderer)
 		{
 			PROFILE_GPU_SCOPED(VoxelBlendMipMap);
 
+			// Blend
 			m_voxelSceneTextureTarget->Bind(0);
 			m_voxelSceneTexture->BindImage(0, gl::Texture::ImageAccess::READ_WRITE);
 			m_shaderVoxelBlend->Activate();
@@ -147,8 +152,25 @@ void Voxelization::VoxelizeScene(Renderer& renderer)
 			GL_CALL(glDispatchCompute, m_voxelSceneTexture->GetWidth() / 8, m_voxelSceneTexture->GetHeight() / 8, m_voxelSceneTexture->GetDepth() / 8);
 
 
+			// Mipmap
+			m_shaderVoxelMipMap->Activate();
+			m_samplerLinearMipNearest.BindSampler(0);
+			m_voxelSceneTexture->Bind(0);
+			unsigned int targetResolution = GetResolution();
 			glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
-			m_voxelSceneTexture->GenMipMaps();
+			for (GLsizei readLevel = 0; readLevel < m_voxelSceneTexture->GetNumMipLevels()-1; ++readLevel)
+			{
+				targetResolution /= 2;
+
+				GL_CALL(glUniform1f, 0, 1.0f / static_cast<float>(targetResolution));
+				GL_CALL(glTextureParameteri, m_voxelSceneTexture->GetInternHandle(), GL_TEXTURE_BASE_LEVEL, readLevel);
+				m_voxelSceneTexture->BindImage(0, gl::Texture::ImageAccess::WRITE, readLevel+1);
+
+				unsigned int threadBlockCount = ei::max<unsigned int>(1, targetResolution / 8);
+				GL_CALL(glDispatchCompute, threadBlockCount, threadBlockCount, threadBlockCount);
+			}
+			GL_CALL(glTextureParameteri, m_voxelSceneTexture->GetInternHandle(), GL_TEXTURE_BASE_LEVEL, 0);
+
 		}
 	}
 }

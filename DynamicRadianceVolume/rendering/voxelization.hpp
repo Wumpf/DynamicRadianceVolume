@@ -48,6 +48,7 @@ private:
 	AutoReloadShaderPtr m_shaderVoxelize;
 	AutoReloadShaderPtr m_shaderVoxelDebug;
 	AutoReloadShaderPtr m_shaderVoxelBlend;
+	AutoReloadShaderPtr m_shaderVoxelMipMap;
 
 	std::unique_ptr<gl::Texture3D> m_voxelSceneTextureTarget;
 	std::unique_ptr<gl::Texture3D> m_voxelSceneTexture;
