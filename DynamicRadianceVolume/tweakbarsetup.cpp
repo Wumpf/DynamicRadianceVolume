@@ -137,7 +137,7 @@ void Application::ChangeLightCount(unsigned int lightCount)
 			[=](float f){ m_scene->GetLights()[i].shadowBias = f; }, groupSetting + " label=\"Shadow Bias\" min=0.00 max=1.0 step=0.00001");
 
 		m_mainTweakBar->AddReadWrite<int>(namePrefix + "IndirectShadowLod", [=](){ return m_scene->GetLights()[i].indirectShadowComputationLod; },
-			[=](int j){ m_scene->GetLights()[i].indirectShadowComputationLod = j; }, groupSetting + " label=\"Ind. Shadow Lod\" min=0 max=4 step=1");
+			[=](int j){ m_scene->GetLights()[i].indirectShadowComputationLod = j; }, groupSetting + " label=\"Ind. Shadow Lod\" min=0 max=8 step=1");
 
 		m_mainTweakBar->SetGroupProperties(lightGroup, "Lights", lightGroup, false);
 	}
@@ -232,6 +232,9 @@ void Application::SetupMainTweakBarBinding()
 
 		m_mainTweakBar->AddReadOnly("Total Frame (µs)", []{ return FrameProfiler::GetInstance().GetFrameDurations().empty() ? "" : std::to_string(FrameProfiler::GetInstance().GetFrameDurations().back() / 1000.0); }, m_tweakBarStatisticGroupSetting);
 		m_mainTweakBar->AddReadOnly("#Recorded", []{ return std::to_string(FrameProfiler::GetInstance().GetFrameDurations().size()); }, m_tweakBarStatisticGroupSetting);
+
+		m_mainTweakBar->AddReadWrite<bool>("Display Average", [&]{ return m_displayStatAverages; }, [&](bool b){ m_displayStatAverages = b; RepopulateTweakBarStatistics(); }, m_tweakBarStatisticGroupSetting);
+
 		m_mainTweakBar->AddSeperator("GPU Queries:", m_tweakBarStatisticGroupSetting);
 
 		m_mainTweakBar->SetGroupProperties(m_tweakBarStatisticGroupSetting.substr(m_tweakBarStatisticGroupSetting.find('=') + 1), "", "Timer Stats", false);
@@ -274,5 +277,45 @@ void Application::SetupMainTweakBarBinding()
 
 		std::function<void(const int&)> changeLightCount = std::bind(&Application::ChangeLightCount, this, std::placeholders::_1);
 		m_mainTweakBar->AddReadWrite<int>("Light Count", [&](){ return static_cast<int>(m_scene->GetLights().size()); }, changeLightCount, " min=1 max=16 step=1 group=Lights");
+	}
+}
+
+void Application::RepopulateTweakBarStatistics()
+{
+	// Remove old entries.
+	for (const std::string& entry : m_tweakBarStatisticEntries)
+		m_mainTweakBar->Remove(entry);
+	m_tweakBarStatisticEntries.clear();
+
+
+	// Add
+	if (m_displayStatAverages)
+	{
+		auto entries = FrameProfiler::GetInstance().GetAverages();
+		for (size_t i = 0; i < entries.size(); ++i)
+		{
+			m_mainTweakBar->AddReadOnly(entries[i].first, [i]{
+				if (i < FrameProfiler::GetInstance().GetAverages().size())
+					return std::to_string(FrameProfiler::GetInstance().GetAverages()[i].second);
+				return std::string("");
+			}, m_tweakBarStatisticGroupSetting);
+			m_tweakBarStatisticEntries.push_back(entries[i].first);
+		}
+	}
+	else
+	{
+		for (const auto& entry : FrameProfiler::GetInstance().GetAllRecordedEvents())
+		{
+			std::string name = entry.first;
+			m_mainTweakBar->AddReadOnly(name, [name]{
+				auto it = std::find_if(FrameProfiler::GetInstance().GetAllRecordedEvents().begin(), FrameProfiler::GetInstance().GetAllRecordedEvents().end(),
+					[name](const FrameProfiler::EventList& v){ return v.first == name; });
+				if (it != FrameProfiler::GetInstance().GetAllRecordedEvents().end() && !it->second.empty())
+					return std::to_string(it->second.back().value);
+				else
+					return std::string("");
+			}, m_tweakBarStatisticGroupSetting);
+			m_tweakBarStatisticEntries.push_back(name);
+		}
 	}
 }

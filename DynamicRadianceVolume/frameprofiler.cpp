@@ -32,11 +32,13 @@ void FrameProfiler::RetrieveQueryResults()
 	for (auto it = m_openQueries.begin(); it != m_openQueries.end(); ++it)
 	{
 		evt.frame = it->frame;
-		evt.duration = std::numeric_limits<std::uint32_t>::max();
-		GL_CALL(glGetQueryObjectuiv, it->query, GL_QUERY_RESULT_NO_WAIT, &evt.duration);
+		std::uint32_t durationNS = std::numeric_limits<std::uint32_t>::max();
+		GL_CALL(glGetQueryObjectuiv, it->query, GL_QUERY_RESULT_NO_WAIT, &durationNS);
 
-		if (evt.duration != std::numeric_limits<std::uint32_t>::max())
+		if (durationNS != std::numeric_limits<std::uint32_t>::max())
 		{
+			evt.value = static_cast<float>(static_cast<double>(durationNS) / 1000.0 / 1000.0);
+
 			ReturnQueryToPool(it->query);
 
 			// Archive.
@@ -105,6 +107,27 @@ void FrameProfiler::EndQuery()
 	m_openQueries.push_back(m_activeQuery);
 }
 
+void FrameProfiler::ReportValue(const std::string& eventType, float value)
+{
+	auto archiveIt = m_eventLists.begin();
+	for (; archiveIt != m_eventLists.end(); ++archiveIt)
+	{
+		if (archiveIt->first == eventType)
+			break;
+	}
+
+	if (archiveIt == m_eventLists.end())
+	{
+		m_eventLists.emplace_back(eventType, std::vector<Event>());
+		archiveIt = m_eventLists.end() - 1;
+	}
+
+	Event evt;
+	evt.frame = static_cast<unsigned int>(m_recordedFrameDurations.size());
+	evt.value = value;
+	archiveIt->second.push_back(evt);
+}
+
 void FrameProfiler::WaitForQueryResults()
 {
 	while (m_openQueries.size())
@@ -130,6 +153,21 @@ gl::QueryId FrameProfiler::GetQueryFromPool()
 void FrameProfiler::ReturnQueryToPool(gl::QueryId unusedQuery)
 {
 	m_timerQueryPool.push_back(unusedQuery);
+}
+
+void FrameProfiler::ComputeAverages()
+{
+	m_averages.resize(m_eventLists.size());
+
+	for (size_t i = 0; i < m_eventLists.size(); ++i)
+	{
+		double avg = 0.0;
+		for (const Event& evt : m_eventLists[i].second)
+			avg += evt.value;
+
+		m_averages[i].first = m_eventLists[i].first;
+		m_averages[i].second  = static_cast<float>(avg / m_eventLists[i].second.size());
+	}
 }
 
 void FrameProfiler::SaveToCSV(const std::string& filename)
@@ -163,10 +201,10 @@ void FrameProfiler::SaveToCSV(const std::string& filename)
 		for (size_t evtTypeIdx = 0; evtTypeIdx < m_eventLists.size(); ++evtTypeIdx)
 		{
 			const auto& events = m_eventLists[evtTypeIdx].second;
-			
+
 			if (nextEvtIndex[evtTypeIdx] < events.size() && events[nextEvtIndex[evtTypeIdx]].frame == frame)
 			{
-				csvFile << static_cast<double>(events[nextEvtIndex[evtTypeIdx]].duration) / 1000.0 / 1000.0;
+				csvFile << events[nextEvtIndex[evtTypeIdx]].value;
 				++nextEvtIndex[evtTypeIdx];
 			}
 			else

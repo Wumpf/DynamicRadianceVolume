@@ -64,6 +64,10 @@ public:
 	/// Triggers glEndQuery. Note that a is at the earliest available on the next OnFrameStart. However, it may take longer.
 	void EndQuery();
 
+	/// Reports a timing/statistics/... value directly without any GPU queries etc.
+	/// Can be used for various measurements results etc.
+	void ReportValue(const std::string& eventType, float value);
+
 	/// Clears all statistics.
 	void Clear() { m_recordedFrameDurations.clear(); m_eventLists.clear(); }
 
@@ -75,8 +79,8 @@ public:
 		/// Frame in which this event occurred.
 		unsigned int frame;
 
-		/// Duration of the event in nanoseconds.
-		std::uint32_t duration;
+		/// Event value. Usually the duration of the event in nanoseconds.
+		float value;
 	};
 	typedef std::pair<std::string, std::vector<FrameProfiler::Event>> EventList;
 
@@ -85,7 +89,12 @@ public:
 	/// Retrieves event list for all event types.
 	///
 	/// Guarantees that in every list the Event::frame is ascending.
-	const std::vector<EventList>  &GetAllRecordedEvents() const		{ return m_eventLists; }
+	const std::vector<EventList>& GetAllRecordedEvents() const		{ return m_eventLists; }
+
+
+	/// Computes averages for all events over all recorded frames.
+	void ComputeAverages();
+	const std::vector<std::pair<std::string, float>>& GetAverages() const { return m_averages; }
 
 	/// Saves all statistics to a CSV file.
 	///
@@ -103,10 +112,10 @@ private:
 
 	ezStopwatch m_frameStopwatch;
 
-	unsigned int m_lastCompletedFrame;
 	std::vector<std::uint32_t> m_recordedFrameDurations;
 	std::vector<EventList> m_eventLists;
 
+	std::vector<std::pair<std::string, float>> m_averages;
 
 	bool m_gpuProfilingActive;
 

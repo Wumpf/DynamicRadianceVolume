@@ -133,28 +133,12 @@ void Application::Update()
 	m_window->SetTitle("time per frame " +
 		std::to_string(m_timeSinceLastUpdate.GetMilliseconds()) + "ms (FPS: " + std::to_string(1.0f / m_timeSinceLastUpdate.GetSeconds()) + ")");
 
+	if (m_displayStatAverages)
+		FrameProfiler::GetInstance().ComputeAverages();
+
 	if (m_tweakBarStatisticEntries.size() != FrameProfiler::GetInstance().GetAllRecordedEvents().size())
 	{
-		// Remove old entries.
-		for (const std::string& entry : m_tweakBarStatisticEntries)
-			m_mainTweakBar->Remove(entry);
-		m_tweakBarStatisticEntries.clear();
-		
-
-		// Add
-		for (const auto& entry : FrameProfiler::GetInstance().GetAllRecordedEvents())
-		{
-			std::string name = entry.first;
-			m_mainTweakBar->AddReadOnly(name, [name]{
-					auto it = std::find_if(FrameProfiler::GetInstance().GetAllRecordedEvents().begin(), FrameProfiler::GetInstance().GetAllRecordedEvents().end(),
-											[name](const FrameProfiler::EventList& v){ return v.first == name; });
-					if (it != FrameProfiler::GetInstance().GetAllRecordedEvents().end() && !it->second.empty())
-						return std::to_string(it->second.back().duration / 1000.0);
-					else
-						return std::string("");
-				}, m_tweakBarStatisticGroupSetting);
-			m_tweakBarStatisticEntries.push_back(name);
-		}
+		RepopulateTweakBarStatistics();
 	}
 
 	if (m_cameraFollowPath)
@@ -167,6 +151,8 @@ void Application::Update()
 		m_camera->SetPosition(position);
 		m_camera->SetDirection(direction);
 	}
+
+	UpdateHardwiredMeasureProcedure();
 }
 
 void Application::Draw()
@@ -223,4 +209,161 @@ void Application::Input()
 	}
 	if (m_window->WasButtonPressed(GLFW_KEY_F11))
 		m_showTweakBars = !m_showTweakBars;
+}
+
+
+#include <iostream>
+void Application::UpdateHardwiredMeasureProcedure()
+{
+	// --------------------------------------------------------------------------
+	// HACK CODE FOR MEASURING STUFF AHEAD.
+	// MEANT TO BE USED ONLY TO OBTAIN A FEW NUMBERS IN CERTAIN CONDITIONS.
+	// BEWARE, NO SECURITY MEASURES WERE TAKEN!
+	// CODE ACTS AS FILL-IN FOR MISSING SCRIPT API
+	// --------------------------------------------------------------------------
+	const unsigned int rsmResolution_start = 16;
+	const unsigned int rsmResolution_end = 256;
+	const unsigned int indirectShadowLod_start = 1;
+	const unsigned int specenvmap_start = 4;
+	const unsigned int specenvmap_end = 32;
+	auto startFkt = [&]() -> std::string
+	{
+		FrameProfiler::GetInstance().ComputeAverages();
+		auto averages = FrameProfiler::GetInstance().GetAverages();
+		std::string results = "specenv map res, rsm resolution, ";
+		for (auto avg : averages)
+			results += avg.first + ", ";
+		results += "\n";
+
+		m_scene->GetLights()[0].rsmReadLod = static_cast<unsigned int>(log2(m_scene->GetLights()[0].rsmResolution / rsmResolution_start));
+		m_scene->GetLights()[0].indirectShadowComputationLod = indirectShadowLod_start;
+		m_renderer->SetPerCacheSpecularEnvMapSize(specenvmap_start);
+
+		return results;
+	};
+	auto changeFkt = [&](bool& testing) -> std::string
+	{
+		unsigned int rsmReadResolution = static_cast<unsigned int>(m_scene->GetLights()[0].rsmResolution / pow(2, m_scene->GetLights()[0].rsmReadLod));
+
+		FrameProfiler::GetInstance().ComputeAverages();
+		auto averages = FrameProfiler::GetInstance().GetAverages();
+		std::string results = std::to_string(m_renderer->GetPerCacheSpecularEnvMapSize()) + "," + std::to_string(rsmReadResolution) + ",";
+		for (auto avg : averages)
+			results += std::to_string(avg.second) + ", ";
+		results += "\n";
+
+
+		if (m_renderer->GetPerCacheSpecularEnvMapSize() == specenvmap_end)
+		{
+			m_renderer->SetPerCacheSpecularEnvMapSize(specenvmap_start);
+
+			if (rsmReadResolution * 2 > rsmResolution_end)
+			{
+				m_scene->GetLights()[0].rsmReadLod = static_cast<unsigned int>(log2(m_scene->GetLights()[0].rsmResolution / rsmResolution_start));
+				m_scene->GetLights()[0].indirectShadowComputationLod = indirectShadowLod_start;
+				testing = false;
+			}
+			else
+			{
+				m_scene->GetLights()[0].rsmReadLod -= 1;
+				m_scene->GetLights()[0].indirectShadowComputationLod += 1;
+			}
+		}
+		else
+			m_renderer->SetPerCacheSpecularEnvMapSize(m_renderer->GetPerCacheSpecularEnvMapSize() * 2);
+
+		return results;
+	};
+
+
+
+	// ShadowLOD / RSM
+	/*const unsigned int rsmResolution_start = 16;
+	const unsigned int rsmResolution_end = 256;
+	auto startFkt = [&]() -> std::string
+	{
+		FrameProfiler::GetInstance().ComputeAverages();
+		auto averages = FrameProfiler::GetInstance().GetAverages();
+		std::string results = "rsm resolution, shadow lod, ";
+		for (auto avg : averages)
+			results += avg.first + ", ";
+		results += "\n";
+
+		m_scene->GetLights()[0].rsmReadLod = static_cast<unsigned int>(log2(m_scene->GetLights()[0].rsmResolution / rsmResolution_start));
+		m_scene->GetLights()[0].indirectShadowComputationLod = 0;
+
+		return results;
+	};
+	auto changeFkt = [&](bool& testing) -> std::string
+	{
+		unsigned int shadowReadResolution = static_cast<unsigned int>(m_scene->GetLights()[0].rsmResolution / pow(2, m_scene->GetLights()[0].rsmReadLod));
+
+		FrameProfiler::GetInstance().ComputeAverages();
+		auto averages = FrameProfiler::GetInstance().GetAverages();
+		std::string results = std::to_string(shadowReadResolution) + "," + std::to_string(m_scene->GetLights()[0].indirectShadowComputationLod) + ",";
+		for (auto avg : averages)
+			results += std::to_string(avg.second) + ", ";
+		results += "\n";
+
+
+		m_scene->GetLights()[0].indirectShadowComputationLod += 1;
+		if (log2(shadowReadResolution) < m_scene->GetLights()[0].indirectShadowComputationLod)
+		{
+			m_scene->GetLights()[0].indirectShadowComputationLod = 0;
+
+			if (shadowReadResolution * 2 > rsmResolution_end)
+			{
+				m_scene->GetLights()[0].rsmReadLod = static_cast<unsigned int>(log2(m_scene->GetLights()[0].rsmResolution / rsmResolution_start));
+				testing = false;
+			}
+			else
+			{
+				m_scene->GetLights()[0].rsmReadLod -= 1;
+			}
+		}
+
+		return results;
+	};*/
+
+	
+	// "FRAMEWORK"
+	// -------------------------------------------------------
+	const ezTime timePerTest = ezTime::Seconds(5.0f);
+	static std::string results;
+
+	static int delayframes = 2;
+	static bool testing = false;
+	static ezTime testingTimer;
+	static std::string result;
+
+	if (m_window->WasButtonPressed(GLFW_KEY_T))
+	{
+		testing = true;
+		delayframes = 2;
+		testingTimer = ezTime::Now();
+		
+		result = startFkt();
+	}
+
+
+	if (testing)
+	{
+		// switch to next test?
+		if (delayframes > 0)
+		{
+			--delayframes;
+			FrameProfiler::GetInstance().Clear();
+		}
+
+		else if (timePerTest < (ezTime::Now() - testingTimer))
+		{
+			testingTimer = ezTime::Now();
+			delayframes = 2;
+
+			result += changeFkt(testing);
+
+			if (!testing)
+				std::cout << result << std::endl;
+		}
+	}
 }

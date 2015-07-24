@@ -92,7 +92,7 @@ layout(std430, binding = 1) LIGHTCACHE_COUNTER_MODIFIER buffer LightCacheCounter
 
 
 
-#define LIGHTING_THREADS_PER_GROUP 512
+#define LIGHTING_THREADS_PER_GROUP 64
 
 
 mat3 ComputeLocalViewSpace(vec3 worldPosition)

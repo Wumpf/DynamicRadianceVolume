@@ -30,6 +30,15 @@ void main()
 	// (no area lights yet!)
 	// Note that this there is no shadowing!
 
+
+
+
+	OutputColor = textureLod(RSM_Depth, Texcoord * 2, 0 ).rgb*0.0001;
+	return;
+
+
+
+
 	OutputColor = vec3(0.0);
 
 	ivec2 rsmSamplePos = ivec2(0);
@@ -72,6 +81,6 @@ void main()
 
 
 	// Debug rsm
-	OutputColor = textureLod(RSM_Flux, Texcoord * 2, 0 ).rgb;
+	//OutputColor = textureLod(RSM_Flux, Texcoord * 2, 0 ).rgb;
 	//OutputColor = abs(UnpackNormal16I(texture(RSM_Normal, Texcoord * 2).xy));
 }

@@ -38,6 +38,8 @@ public:
 	void StopPerfRecording(const std::string& resulftCSVFilename);
 
 private:
+	void RepopulateTweakBarStatistics();
+
 	void SetupMainTweakBarBinding();
 
 	void Update();
@@ -45,6 +47,10 @@ private:
 	void Draw();
 
 	void Input();
+
+	// Updates a hard wired test procedure that may be altered on demand
+	void UpdateHardwiredMeasureProcedure();
+
 
 	void AddEntity(const std::string& filename);
 
@@ -70,4 +76,5 @@ private:
 
 	std::string m_tweakBarStatisticGroupSetting;	
 	std::vector<std::string> m_tweakBarStatisticEntries;
+	bool m_displayStatAverages;
 };

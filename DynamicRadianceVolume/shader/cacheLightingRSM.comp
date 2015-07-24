@@ -128,6 +128,9 @@ void main()
 		irradianceHBasis[i] = vec3(0);
 #endif
 
+	// Shadow value changes only every SHADOW_COMPUTATION_INTERVAL_BLOCK samples.
+	float shadowing = 1.0;
+
 	int totalNumRSMPixels = RSMReadResolution * RSMReadResolution;
 	for(uint rsmPixelIndex = 0; rsmPixelIndex < totalNumRSMPixels; rsmPixelIndex += LIGHTING_THREADS_PER_GROUP)
 	{
@@ -159,15 +162,12 @@ void main()
  		RSMCache[gl_LocalInvocationID.x] = cacheEntry;
 		barrier(); // Make sure all other threads have written their lights.
 
-		// Shadow value changes only every SHADOW_COMPUTATION_INTERVAL_BLOCK samples.
-		float shadowing = 1.0;
-
 		for(int i=0; i<LIGHTING_THREADS_PER_GROUP; ++i)
 		{
 		#ifdef INDIRECT_SHADOW
-			if(i % IndirectShadowComputationSampleInterval == 0)
+			uint localRsmPixelPos = uint(rsmPixelIndex + i);
+			if(localRsmPixelPos % IndirectShadowComputationSampleInterval == 0)
 			{
-				uint localRsmPixelPos = uint(rsmPixelIndex + i);
 				uvec2 upperLeftSampleTexel = Morton_2D_Decode_16bit(localRsmPixelPos);
 				vec2 rsmMidTexcoord = (upperLeftSampleTexel + IndirectShadowSamplingOffset) / RSMReadResolution;
 
@@ -355,21 +355,21 @@ void main()
 	#endif*/
 
 	#if defined(INDDIFFUSE_VIA_SH1) || defined(INDDIFFUSE_VIA_SH2)
-		LightCacheEntries[gl_GlobalInvocationID.x].SH1neg1 += SH1neg1;
-		LightCacheEntries[gl_GlobalInvocationID.x].SH00_r += SH00.r;
-		LightCacheEntries[gl_GlobalInvocationID.x].SH10 += SH10;
-		LightCacheEntries[gl_GlobalInvocationID.x].SH00_g += SH00.g;
-		LightCacheEntries[gl_GlobalInvocationID.x].SH1pos1 += SH1pos1;
-		LightCacheEntries[gl_GlobalInvocationID.x].SH00_b += SH00.b;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH1neg1 = SH1neg1;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH00_r = SH00.r;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH10 = SH10;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH00_g = SH00.g;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH1pos1 = SH1pos1;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH00_b = SH00.b;
 
 		#ifdef INDDIFFUSE_VIA_SH2
-		LightCacheEntries[gl_GlobalInvocationID.x].SH2neg2 += SH2neg2;
-		LightCacheEntries[gl_GlobalInvocationID.x].SH20_r += SH20.r;
-		LightCacheEntries[gl_GlobalInvocationID.x].SH2neg1 += SH2neg1;
-		LightCacheEntries[gl_GlobalInvocationID.x].SH20_g += SH20.g;
-		LightCacheEntries[gl_GlobalInvocationID.x].SH2pos1 += SH2pos1;
-		LightCacheEntries[gl_GlobalInvocationID.x].SH20_b += SH20.b;
-		LightCacheEntries[gl_GlobalInvocationID.x].SH2pos2 += SH2pos2;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH2neg2 = SH2neg2;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH20_r = SH20.r;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH2neg1 = SH2neg1;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH20_g = SH20.g;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH2pos1 = SH2pos1;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH20_b = SH20.b;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH2pos2 = SH2pos2;
 		#endif
 	#endif
 

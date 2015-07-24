@@ -8,8 +8,8 @@ out vec3 OutputColor;
 #include "utils.glsl"
 #include "globalubos.glsl"
 
-#define OUTPUT_POS
-//#define OUTPUT_NORMAL
+//#define OUTPUT_POS
+#define OUTPUT_NORMAL
 //#define OUTPUT_DIFFUSE
 //#define OUTPUT_SPECPROPS
 

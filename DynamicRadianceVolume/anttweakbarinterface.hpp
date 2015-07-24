@@ -193,12 +193,8 @@ inline void AntTweakBarInterface::AddReadWrite(const std::string& name, const st
 template<typename T>
 inline void AntTweakBarInterface::AddReadWrite(const std::string& name, T& variable, const std::string& twDefines, AntTweakBarInterface::TypeHint typeHint)
 {
-	TwType type = forceType;
-	if (type == TW_TYPE_UNDEF)
-		type = AntTweakBarInterface::GetTwType<T>();
-
 	EntryReadWriteVar<T>* entry = new EntryReadWriteVar<T>(variable);
-	entry->type = forceType;
+	entry->type = GetTwType<T>(typeHint);
 	entry->name = name;
 	entry->type = AntTweakBarInterface::GetTwType<T>(typeHint);
 	m_entries.push_back(entry);

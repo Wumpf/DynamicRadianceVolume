@@ -700,9 +700,11 @@ void Renderer::PrepareLights()
 		float indirectShadowComputationBlockSize = static_cast<float>(1 << light.indirectShadowComputationLod);
 		uboView["IndirectShadowComputationBlockSize"].Set(indirectShadowComputationBlockSize);
 		std::int32_t indirectShadowComputationSampleInterval = static_cast<int>(indirectShadowComputationBlockSize * indirectShadowComputationBlockSize);
+		Assert(indirectShadowComputationBlockSize <= rsmReadResolution, "Shadow sample interval can not be larger than the RSM.");
+		
 		uboView["IndirectShadowComputationSampleInterval"].Set(indirectShadowComputationSampleInterval);
-		static const unsigned cacheLightingThreadsPerGroup = 512; // See lightcache.glsl
-		Assert(cacheLightingThreadsPerGroup % indirectShadowComputationSampleInterval == 0, "cacheLightingThreadsPerGroup needs to be a multiple of indirectShadowComputationSampleInterval!"); // See cacheLightingRSM.comp shadow computation.
+
+		
 		uboView["IndirectShadowComputationSuperValWidth"].Set(sqrtf(valAreaFactor) * indirectShadowComputationBlockSize);
 		uboView["IndirectShadowSamplingOffset"].Set(0.5f + sqrtf(2.0f) * indirectShadowComputationBlockSize / 2.0f);
 
@@ -950,6 +952,7 @@ void Renderer::AllocateCaches()
 		const void* counterData = m_lightCacheCounter->Map(gl::Buffer::MapType::READ, gl::Buffer::MapWriteFlag::NONE);
 		m_lastNumLightCaches = reinterpret_cast<const int*>(counterData)[3];
 		m_lightCacheCounter->Unmap();
+		FrameProfiler::GetInstance().ReportValue("CacheCount", static_cast<float>(m_lastNumLightCaches));
 	}
 
 	// Clear cache counter and atlas. No need to clear the cache buffer itself!
