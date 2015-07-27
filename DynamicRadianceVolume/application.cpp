@@ -184,9 +184,11 @@ void Application::Input()
 		auto screenSize = m_window->GetFramebufferSize();
 		char* pixels = new char[3 * screenSize.x * screenSize.y];
 
-		glReadPixels(0, 0, screenSize.x, screenSize.y, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+		GL_CALL(glPixelStorei, GL_UNPACK_ALIGNMENT, 1);
+		GL_CALL(glPixelStorei, GL_PACK_ALIGNMENT, 1);
+		GL_CALL(glReadPixels, 0, 0, screenSize.x, screenSize.y, GL_RGB, GL_UNSIGNED_BYTE, pixels);
 
-		time_t t = time(0);   // get time now
+		time_t t; time(&t);   // get time now
 		struct tm* now = localtime(&t);
 		std::string date = UIntToMinLengthString(now->tm_mon + 1, 2) + "." + UIntToMinLengthString(now->tm_mday, 2) + " " +
 							UIntToMinLengthString(now->tm_hour, 2) + ";" + UIntToMinLengthString(now->tm_min, 2) + ";" + std::to_string(now->tm_sec) + " ";
@@ -213,6 +215,7 @@ void Application::Input()
 
 
 #include <iostream>
+#include <array>
 void Application::UpdateHardwiredMeasureProcedure()
 {
 	// --------------------------------------------------------------------------
@@ -221,7 +224,112 @@ void Application::UpdateHardwiredMeasureProcedure()
 	// BEWARE, NO SECURITY MEASURES WERE TAKEN!
 	// CODE ACTS AS FILL-IN FOR MISSING SCRIPT API
 	// --------------------------------------------------------------------------
-	const unsigned int rsmResolution_start = 16;
+
+	// Voxel resolution
+	const unsigned int voxelResolution_start = 32;
+	const unsigned int voxelResolution_end = 512;
+	auto startFkt = [&]() -> std::string
+	{
+		FrameProfiler::GetInstance().ComputeAverages();
+		auto averages = FrameProfiler::GetInstance().GetAverages();
+		std::string results = "voxel resolution, shadow lod, ";
+		for (auto avg : averages)
+			results += avg.first + ", ";
+		results += "\n";
+
+		m_scene->GetLights()[0].rsmReadLod = static_cast<unsigned int>(log2(m_scene->GetLights()[0].rsmResolution / 64));
+		m_scene->GetLights()[0].indirectShadowComputationLod = 6;
+		m_renderer->SetVoxelVolumeResultion(voxelResolution_start);
+
+		return results;
+	};
+	auto changeFkt = [&](bool& testing) -> std::string
+	{
+		unsigned int shadowReadResolution = static_cast<unsigned int>(m_scene->GetLights()[0].rsmResolution / pow(2, m_scene->GetLights()[0].rsmReadLod));
+
+		FrameProfiler::GetInstance().ComputeAverages();
+		auto averages = FrameProfiler::GetInstance().GetAverages();
+		std::string results = std::to_string(m_renderer->GetVoxelVolumeResultion()) + "," + std::to_string(m_scene->GetLights()[0].indirectShadowComputationLod) + ",";
+		for (auto avg : averages)
+			results += std::to_string(avg.second) + ", ";
+		results += "\n";
+
+		
+		if (m_renderer->GetVoxelVolumeResultion() >= voxelResolution_end)
+		{
+			if (m_scene->GetLights()[0].indirectShadowComputationLod == 0)
+			{
+				m_scene->GetLights()[0].indirectShadowComputationLod = 2;
+				m_renderer->SetVoxelVolumeResultion(128);
+				testing = false;
+			}
+			else
+			{
+				m_renderer->SetVoxelVolumeResultion(voxelResolution_start);
+				m_scene->GetLights()[0].indirectShadowComputationLod -= 1;
+			}
+		}
+		else
+		{
+			m_renderer->SetVoxelVolumeResultion(m_renderer->GetVoxelVolumeResultion() * 2);
+		}
+
+		return results;
+	};
+
+	// Resolutions
+	/*const std::vector<ei::UVec2> resolutions({ ei::UVec2(640, 480), ei::UVec2(800, 600), 
+												ei::UVec2(1024, 768), ei::UVec2(1280, 720),
+												ei::UVec2(1280, 1024), ei::UVec2(1366, 768),
+												ei::UVec2(1600, 900), ei::UVec2(1680, 1050),
+												ei::UVec2(1920, 1080), ei::UVec2(1920, 1200),
+												ei::UVec2(1920, 1080), ei::UVec2(2560, 1440),
+												ei::UVec2(3840, 2160), ei::UVec2(7680, 4320) });
+	static int currentRes = 0;
+	auto startFkt = [&]() -> std::string
+	{
+		FrameProfiler::GetInstance().ComputeAverages();
+		auto averages = FrameProfiler::GetInstance().GetAverages();
+		std::string results = "resolution, mpix, ";
+		for (auto avg : averages)
+			results += avg.first + ", ";
+		results += "\n";
+
+		currentRes = 0;
+		m_renderer->OnScreenResize(resolutions[currentRes]);
+
+		return results;
+	};
+	auto changeFkt = [&](bool& testing) -> std::string
+	{
+		FrameProfiler::GetInstance().ComputeAverages();
+		auto averages = FrameProfiler::GetInstance().GetAverages();
+		std::string results = std::to_string(resolutions[currentRes].x) + "x" + std::to_string(resolutions[currentRes].y) + "," + 
+							std::to_string(static_cast<double>(resolutions[currentRes].y * resolutions[currentRes].x) / 1000000.0) + ",";
+		for (auto avg : averages)
+			results += std::to_string(avg.second) + ", ";
+		results += "\n";
+
+		
+
+		++currentRes;
+		if (currentRes == resolutions.size())
+		{
+			testing = false;
+			m_renderer->OnScreenResize(ei::UVec2(1920, 1080));
+			m_camera->SetAspectRatio(1920.0f / 1080.0f);
+		}
+		else
+		{
+			m_renderer->OnScreenResize(resolutions[currentRes]);
+			m_camera->SetAspectRatio(static_cast<float>(resolutions[currentRes].x) / resolutions[currentRes].y);
+		}
+
+		return results;
+	};*/
+
+	// Specular EnvMap
+	/*const unsigned int rsmResolution_start = 16;
 	const unsigned int rsmResolution_end = 256;
 	const unsigned int indirectShadowLod_start = 1;
 	const unsigned int specenvmap_start = 4;
@@ -273,7 +381,7 @@ void Application::UpdateHardwiredMeasureProcedure()
 			m_renderer->SetPerCacheSpecularEnvMapSize(m_renderer->GetPerCacheSpecularEnvMapSize() * 2);
 
 		return results;
-	};
+	};*/
 
 
 
@@ -328,7 +436,7 @@ void Application::UpdateHardwiredMeasureProcedure()
 	
 	// "FRAMEWORK"
 	// -------------------------------------------------------
-	const ezTime timePerTest = ezTime::Seconds(5.0f);
+	const ezTime timePerTest = ezTime::Seconds(4.0f);
 	static std::string results;
 
 	static int delayframes = 2;

@@ -216,9 +216,11 @@
     <ClCompile Include="patheditor.cpp">
       <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="utilities\filedialog.cpp" />
     <ClCompile Include="camera\cameraspline.cpp">
       <Filter>source\camera</Filter>
+    </ClCompile>
+    <ClCompile Include="utilities\filedialog.cpp">
+      <Filter>source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
