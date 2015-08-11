@@ -45,21 +45,44 @@ void main()
 		float totalIntensity = 0.0f;
 
 		vec3 rayMarchStep = rayDirection * stepSize / voxelSizeInWorldLod;
+		ivec3 lastFetch = ivec3(-1);
 
-		// Simple raycast
+		// Simple raycast - an actual stepping through the volume would be much better of course.
 		vec3 voxelVolumeSize = vec3(textureSize(VoxelScene, lod));
 		while(all(greaterThanEqual(voxelHitPos, vec3(0))) && 
 			  all(lessThan(voxelHitPos, voxelVolumeSize)))
 		{
 			// Check current voxel.
 			ivec3 voxelCoord = ivec3(voxelHitPos + vec3(0.5));
-			float voxelIntensity = texelFetch(VoxelScene, voxelCoord, lod).r;	
-			totalIntensity += voxelIntensity;
-			FragColor += vec4(mod(voxelCoord/32.0, vec3(1.0)), 1.0) * voxelIntensity;
-
-			if(totalIntensity >= 1.0)
+			if(voxelCoord != lastFetch)
 			{
-				break;
+				lastFetch = voxelCoord;
+				float voxelIntensity = texelFetch(VoxelScene, voxelCoord, lod).r;	
+				totalIntensity += voxelIntensity;
+				
+				FragColor = vec4(mod(voxelCoord/256.0, vec3(1.0)), 1.0) * voxelIntensity;
+				vec3 midDist = abs(vec3(voxelCoord) - voxelHitPos);//  - vec3(0.5);
+				//float d = pow(abs(midDist.x) + abs(midDist.y) + abs(midDist.z), 10);
+				//FragColor.xyz += vec3(d) * 0.05 * voxelIntensity; //vec3(pow(min(min(midDist.x, midDist.y),midDist.z), 1.0));
+				
+				// Quick'n dirty!
+				float midmid = midDist.x;
+				if(midDist.y < midDist.z && midDist.y > midDist.x)
+					midmid = midDist.y;
+				else if(midDist.y < midDist.x && midDist.y > midDist.z)
+					midmid = midDist.y;
+				else if(midDist.z < midDist.y && midDist.z > midDist.x)
+					midmid = midDist.z;
+				else if(midDist.z < midDist.x && midDist.z > midDist.y)
+					midmid = midDist.z;
+
+				FragColor.xyz += vec3(pow(midmid, 10) * 500);
+				
+
+				if(totalIntensity >= 0.98)
+				{
+					break;
+				}
 			}
 
 			voxelHitPos += rayMarchStep * stepSize;

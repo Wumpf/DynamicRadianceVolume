@@ -158,9 +158,6 @@ private:
 	/// \attention You might also want to call UpdateConstantUBO()
 	void AllocateCacheData();
 
-	/// Creates given number of caches volume cascades with given resolution.
-	void CreateAdressVolumeCascades(unsigned int numCascades, unsigned int resolution);
-
 	unsigned int RoundSizeToUBOAlignment(unsigned int size) const  { return size + (m_UBOAlignment - size % m_UBOAlignment) % m_UBOAlignment; }
 
 	void UpdateConstantUBO();
@@ -197,7 +194,7 @@ private:
 	void ApplyCaches();
 
 	/// Applies direct light to caches (mainly for debug purposes)
-	void LightCachesDirect();
+	//void LightCachesDirect();
 	/// Applies indirect light to caches (the way its meant to be used)
 	void LightCachesRSM();
 
@@ -306,8 +303,6 @@ private:
 
 		/// Binds FBO for filling the RSM.
 		void BindFBO_RSM();
-		/// Binds FBO for high Res Depth - does nothing and returns false if there is no highres depth.
-		bool BindFBO_HighResDepth();
 
 		gl::Texture2D& GetFlux() 			{ return *flux; }
 		gl::Texture2D& GetNormal()			{ return *normal; }

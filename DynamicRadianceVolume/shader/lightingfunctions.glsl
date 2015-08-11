@@ -1,4 +1,4 @@
-
+//#define DIFFUSE_ONLY
 
 float ComputeSpotFalloff(float cosToLight)
 {
@@ -26,6 +26,10 @@ float ComputeSpotFalloff(vec3 toLight)
 
 float RoughnessToBlinnExponent(float roughness)
 {
+#ifdef DIFFUSE_ONLY
+	return 0.0;
+#endif
+
 	//roughness = 1.0 - roughness;
 	float rsq = roughness * roughness;
 	return 2 / (rsq * rsq + 0.0005); // similar to http://graphicrants.blogspot.de/2013/08/specular-brdf-reference.html
@@ -36,6 +40,11 @@ float BlinnNormalization(float blinnExponent)
 }
 void ComputeMaterialColors(vec3 baseColor, float metallic, out vec3 diffuseColor, out vec3 specularColor)
 {
+#ifdef DIFFUSE_ONLY
+	diffuseColor = baseColor;
+	specularColor = vec3(0.0);
+#endif
+
 	diffuseColor = mix(baseColor, vec3(0.02), metallic);	// Almost dark for Metalic values
 	specularColor = mix(vec3(0.04), baseColor, metallic); 	// Greyish for specular. 0.04 is about the the default for everything except metall http://blog.selfshadow.com/publications/s2014-shading-course/hoffman/s2014_pbs_physics_math_slides.pdf
 }

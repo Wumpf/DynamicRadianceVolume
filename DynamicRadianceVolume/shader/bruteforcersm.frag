@@ -6,7 +6,7 @@
 #include "lightingfunctions.glsl"
 
 layout(binding=4) uniform sampler2D RSM_Flux;
-layout(binding=5) uniform sampler2D RSM_Depth;
+layout(binding=5) uniform sampler2D RSM_DepthLinSq;
 layout(binding=6) uniform isampler2D RSM_Normal;
 
 in vec2 Texcoord;
@@ -33,8 +33,8 @@ void main()
 
 
 
-	OutputColor = textureLod(RSM_Depth, Texcoord * 2, 0 ).rgb*0.0001;
-	return;
+	//OutputColor = textureLod(RSM_Flux, Texcoord, 0).rgb;
+//	return;
 
 
 
@@ -47,9 +47,11 @@ void main()
 		rsmSamplePos.y = 0;
 		for(; rsmSamplePos.y<RSMReadResolution; ++rsmSamplePos.y)
 		{
-			float lightDepth = texelFetch(RSM_Depth, rsmSamplePos, 0).r;
-			vec4 valPosition = vec4((rsmSamplePos + vec2(0.5)) / RSMReadResolution * 2.0 - vec2(1.0), lightDepth, 1.0) * InverseLightViewProjection;
-			valPosition.xyz /= valPosition.w;
+			
+			float lightDepth = texelFetch(RSM_DepthLinSq, rsmSamplePos, 0).r;
+			vec4 rsmClipSpace = vec4((rsmSamplePos + vec2(0.5)) / RSMReadResolution * 2.0 - vec2(1.0), 0.0, 1.0) * InverseLightViewProjection;
+			vec3 valPosition = LightPosition + normalize(rsmClipSpace.xyz / rsmClipSpace.w - LightPosition) * lightDepth;
+
 
 			// Direction and distance to light.
 			vec3 toVal = valPosition.xyz - worldPosition;
@@ -70,8 +72,8 @@ void main()
 			float valToLightDistSq = dot(valToLight, valToLight); // todo: Compute directly from lightDepth
 			float valArea = valToLightDistSq * ValAreaFactor;
 			float fluxToIntensity = saturate(dot(valNormal, -toVal));
-			//float fluxToIrradiance = fluxToIntensity * cosTheta / (lightDistanceSq + valArea);
-			float fluxToIrradiance = fluxToIntensity * cosTheta / (lightDistanceSq); // VPL instead of VAL
+			float fluxToIrradiance = fluxToIntensity * cosTheta / (lightDistanceSq + valArea);
+		//	float fluxToIrradiance = fluxToIntensity * cosTheta / (lightDistanceSq); // VPL instead of VAL
 
 			vec3 irradiance = valTotalExitantFlux * fluxToIrradiance;
 
