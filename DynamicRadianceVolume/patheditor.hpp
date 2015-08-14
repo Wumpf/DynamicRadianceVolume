@@ -1,7 +1,9 @@
 #pragma once
 
 #include <memory>
+#include <string>
 #include "Time/Time.h"
+
 
 class CameraSpline;
 class AntTweakBarInterface;
@@ -36,5 +38,11 @@ private:
 	ezTime m_timeSinceLastRecord;
 
 	bool m_recordingPerf;
+
+
+	bool m_captureActive;
+	float m_captureFramerate;
+	std::string m_captureOutputFolder;
+	unsigned int m_captureFrameCounter;
 };
 

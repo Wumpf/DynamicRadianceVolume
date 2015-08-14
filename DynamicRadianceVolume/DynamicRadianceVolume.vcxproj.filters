@@ -386,9 +386,6 @@
     <ClInclude Include="..\dependencies\stb\stb_image.h">
       <Filter>dependencies\stb</Filter>
     </ClInclude>
-    <ClInclude Include="..\dependencies\stb\stb_image_write.h">
-      <Filter>dependencies\stb</Filter>
-    </ClInclude>
     <ClInclude Include="..\dependencies\epsilon\include\ei\2dtypes.hpp">
       <Filter>dependencies\epsilon\include</Filter>
     </ClInclude>

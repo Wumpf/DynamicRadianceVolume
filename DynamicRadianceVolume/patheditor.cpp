@@ -15,7 +15,11 @@ PathEditor::PathEditor(Application& application) :
 	m_recordInterval(ezTime::Seconds(0.5f)),
 	m_timeSinceLastRecord(),
 
-	m_recordingPerf(false)
+	m_recordingPerf(false),
+
+	m_captureActive(false),
+	m_captureFramerate(60.0f),
+	m_captureOutputFolder("capture")
 {
 	m_pathTweakBar = std::make_unique<AntTweakBarInterface>(application.GetWindow().GetGLFWWindow(), "Path", true);
 	application.GetWindow().AddResizeHandler([&](int width, int height){
@@ -83,6 +87,24 @@ PathEditor::PathEditor(Application& application) :
 		}
 	});
 
+
+	m_pathTweakBar->AddSeperator("capture");
+	m_pathTweakBar->AddButton("Start Frame Capture", [&] {
+		m_captureActive = true;
+		m_pathTweakBarEditPath->SetProgress(0.0f);
+		m_pathTweakBarEditPath->SetLooping(false);
+		if (m_pathEditTarget == PathEditTarget::CAMERA)
+			m_application.SetCameraFollowPath(true);
+		m_application.SetUIVisible(false);
+		m_recordingPerf = false;
+		m_captureFrameCounter = 0;
+
+		// No frame delay!
+		glFlush();
+		glFinish(); 
+	});
+	m_pathTweakBar->AddReadWrite<float>("Framerate", [&] { return m_captureFramerate; }, [&](float f) { m_captureFramerate = f; }, "min=1 max=60 step=1.0");
+	m_pathTweakBar->AddReadWrite<std::string>("Output Folder", [&] { return m_captureOutputFolder; }, [&](const std::string& s) { m_captureOutputFolder = s; });
 }
 
 PathEditor::~PathEditor() {}
@@ -100,10 +122,25 @@ void PathEditor::Update(ezTime timeSinceLastFrame)
 		}
 	}
 
-	if (m_recordingPerf && m_pathTweakBarEditPath->GetProgress() >= 1.0f)
+	if(m_captureActive)
 	{
+		m_application.SaveScreenshot(m_captureOutputFolder + "//" + std::to_string(m_captureFrameCounter) + ".jpeg", Application::ScreenshotFormat::JPEG);
+		++m_captureFrameCounter;
+	}
+
+	if (m_pathTweakBarEditPath->GetProgress() >= 1.0f)
+	{
+		if (m_recordingPerf)
+		{
+			m_application.StopPerfRecording("path_perf.csv");
+		}
+		if (m_captureActive)
+		{
+			m_application.SetOverrideFrametime(-1.0f);
+		}
+
 		m_recordingPerf = false;
+		m_captureActive = false;
 		m_application.SetUIVisible(true);
-		m_application.StopPerfRecording("path_perf.csv");
 	}
 }

@@ -1,8 +1,13 @@
-#include "application.hpp"
-
-#include <algorithm>
-
+#undef NOMINMAX
 #include "outputwindow.hpp"
+
+#include <Gdiplus.h>
+#undef min
+#undef max
+
+
+#include "application.hpp"
+#include <algorithm>
 
 #include "rendering/renderer.hpp"
 #include "rendering/frustumoutlines.hpp"
@@ -16,17 +21,24 @@
 
 #include "patheditor.hpp"
 
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include <stb_image_write.h>
-
+#include <cvt/wstring>
+#include <locale>
+#include <codecvt>
 
 
 Application::Application(int argc, char** argv) :
 	m_detachViewFromCameraUpdate(false),
 	m_tweakBarStatisticGroupSetting(" group=\"TimerStatistics\""),
 	m_showTweakBars(true),
-	m_cameraFollowPath(false)
+	m_cameraFollowPath(false),
+
+	m_overrideFrametime(1.0f / 60.0f)
 {
+	Gdiplus::GdiplusStartupInput gdiplusStartupInput;
+	ULONG_PTR gdiplusToken;
+	GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
+
+
 	// Logger init.
 	Logger::g_logger.Initialize(new Logger::FilePolicy("log.txt"));
 
@@ -96,9 +108,16 @@ void Application::Run()
 	ezStopwatch mainLoopStopWatch;
 	while (m_window->IsWindowAlive())
 	{
-		m_timeSinceLastUpdate = mainLoopStopWatch.GetRunningTotal();
-		mainLoopStopWatch.StopAndReset();
-		mainLoopStopWatch.Resume();
+		if (m_overrideFrametime < 0.0f)
+		{
+			m_timeSinceLastUpdate = mainLoopStopWatch.GetRunningTotal();
+			mainLoopStopWatch.StopAndReset();
+			mainLoopStopWatch.Resume();
+		}
+		else
+		{
+			m_timeSinceLastUpdate = ezTime::Seconds(m_overrideFrametime);
+		}
 
 		Update();
 		Draw();
@@ -169,6 +188,7 @@ void Application::Draw()
 	FrameProfiler::GetInstance().OnFrameEnd();
 }
 
+
 static std::string UIntToMinLengthString(int _number, int _minDigits)
 {
 	int zeros = std::max(0, _minDigits - static_cast<int>(ceil(log10(_number + 1))));
@@ -177,37 +197,94 @@ static std::string UIntToMinLengthString(int _number, int _minDigits)
 }
 
 
+int GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
+{
+	UINT  num = 0;          // number of image encoders
+	UINT  size = 0;         // size of the image encoder array in bytes
+
+	Gdiplus::ImageCodecInfo* pImageCodecInfo = nullptr;
+
+	Gdiplus::GetImageEncodersSize(&num, &size);
+	if (size == 0)
+		return -1;  // Failure
+
+	pImageCodecInfo = static_cast<Gdiplus::ImageCodecInfo*>(malloc(size));
+	if (pImageCodecInfo == nullptr)
+		return -1;  // Failure
+
+	GetImageEncoders(num, size, pImageCodecInfo);
+
+	for (UINT j = 0; j < num; ++j)
+	{
+		if (wcscmp(pImageCodecInfo[j].MimeType, format) == 0)
+		{
+			*pClsid = pImageCodecInfo[j].Clsid;
+			free(pImageCodecInfo);
+			return j;  // Success
+		}
+	}
+
+	free(pImageCodecInfo);
+	return -1;  // Failure
+}
+
+void Application::SaveScreenshot(const std::string& filename, ScreenshotFormat format)
+{
+	auto screenSize = m_window->GetFramebufferSize();
+	char* pixels = new char[3 * screenSize.x * screenSize.y];
+
+	GL_CALL(glPixelStorei, GL_UNPACK_ALIGNMENT, 1);
+	GL_CALL(glPixelStorei, GL_PACK_ALIGNMENT, 1);
+	GL_CALL(glReadPixels, 0, 0, screenSize.x, screenSize.y, GL_BGR, GL_UNSIGNED_BYTE, pixels);
+
+	// Create gdiplus bitmap
+	BITMAPINFO bmi;
+	memset(&bmi, 0, sizeof(bmi));
+	bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+	bmi.bmiHeader.biWidth = screenSize.x;
+	bmi.bmiHeader.biHeight = screenSize.y;
+	bmi.bmiHeader.biPlanes = 1;
+	bmi.bmiHeader.biCompression = BI_RGB;
+	bmi.bmiHeader.biBitCount = 24;
+	Gdiplus::Bitmap* myImage = new Gdiplus::Bitmap(&bmi, pixels);
+
+	// Format converter.
+	std::wstring formatString = L"image/png";
+	switch (format)
+	{
+	case ScreenshotFormat::JPEG:
+		formatString = L"image/jpeg";
+		break;
+	}
+	CLSID clsid;
+	GetEncoderClsid(formatString.c_str(), &clsid);
+
+	// Save.
+	Gdiplus::EncoderParameters encoderParameters;
+	encoderParameters.Count = 1;
+	encoderParameters.Parameter[0].Guid = Gdiplus::EncoderQuality;
+	encoderParameters.Parameter[0].Type = Gdiplus::EncoderParameterValueTypeLong;
+	encoderParameters.Parameter[0].NumberOfValues = 1;
+	ULONG quality = 95; // jpeg quality
+	encoderParameters.Parameter[0].Value = &quality;
+	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+	myImage->Save(converter.from_bytes(filename).c_str(), &clsid, &encoderParameters);
+
+
+	delete[] pixels;
+}
+
+
 void Application::Input()
 {
 	if (m_window->WasButtonPressed(GLFW_KEY_F10))
 	{
-		auto screenSize = m_window->GetFramebufferSize();
-		char* pixels = new char[3 * screenSize.x * screenSize.y];
-
-		GL_CALL(glPixelStorei, GL_UNPACK_ALIGNMENT, 1);
-		GL_CALL(glPixelStorei, GL_PACK_ALIGNMENT, 1);
-		GL_CALL(glReadPixels, 0, 0, screenSize.x, screenSize.y, GL_RGB, GL_UNSIGNED_BYTE, pixels);
-
 		time_t t; time(&t);   // get time now
 		struct tm* now = localtime(&t);
 		std::string date = UIntToMinLengthString(now->tm_mon + 1, 2) + "." + UIntToMinLengthString(now->tm_mday, 2) + " " +
 							UIntToMinLengthString(now->tm_hour, 2) + ";" + UIntToMinLengthString(now->tm_min, 2) + ";" + std::to_string(now->tm_sec) + " ";
 		std::string filename = "../screenshots/" + date + " screenshot.png";
-
-		// Flip on y axis
-		for (unsigned int y = 0; y < screenSize.y / 2; ++y)
-		{
-			for (unsigned int x = 0; x < screenSize.x; ++x)
-			{
-				unsigned int flippedY = screenSize.y - y - 1;
-				std::swap(pixels[(x + y * screenSize.x) * 3 + 0], pixels[(x + flippedY * screenSize.x) * 3 + 0]);
-				std::swap(pixels[(x + y * screenSize.x) * 3 + 1], pixels[(x + flippedY * screenSize.x) * 3 + 1]);
-				std::swap(pixels[(x + y * screenSize.x) * 3 + 2], pixels[(x + flippedY * screenSize.x) * 3 + 2]);
-			}
-		}
-		stbi_write_png(filename.c_str(), screenSize.x, screenSize.y, 3, pixels, screenSize.x*3);
-		
-		delete[] pixels;
+		SaveScreenshot(filename);
 	}
 	if (m_window->WasButtonPressed(GLFW_KEY_F11))
 		m_showTweakBars = !m_showTweakBars;

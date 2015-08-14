@@ -160,24 +160,24 @@ void Application::SetupMainTweakBarBinding()
 	{
 		std::vector<TwEnumVal> renderModeVals =
 		{
-			TwEnumVal{ (int)Renderer::Mode::RSM_BRUTEFORCE, "RSM Bruteforce (slow!)" },
-			TwEnumVal{ (int)Renderer::Mode::DYN_RADIANCE_VOLUME, "Dyn. Cache Volume" },
-			TwEnumVal{ (int)Renderer::Mode::DYN_RADIANCE_VOLUME_DEBUG, "Dyn. Cache Volume Debug" },
-			TwEnumVal{ (int)Renderer::Mode::GBUFFER_DEBUG, "GBuffer Debug" },
-			TwEnumVal{ (int)Renderer::Mode::DIRECTONLY, "DirectLight only" },
+			TwEnumVal{ static_cast<int>(Renderer::Mode::RSM_BRUTEFORCE), "RSM Bruteforce (slow!)" },
+			TwEnumVal{ static_cast<int>(Renderer::Mode::DYN_RADIANCE_VOLUME), "Dyn. Cache Volume" },
+			TwEnumVal{ static_cast<int>(Renderer::Mode::DYN_RADIANCE_VOLUME_DEBUG), "Dyn. Cache Volume Debug" },
+			TwEnumVal{ static_cast<int>(Renderer::Mode::GBUFFER_DEBUG), "GBuffer Debug" },
+			TwEnumVal{ static_cast<int>(Renderer::Mode::DIRECTONLY), "DirectLight only" },
 			//TwEnumVal{ (int)Renderer::Mode::DIRECTONLY_CACHE, "DirectLight only - via Cache" },
-			TwEnumVal{ (int)Renderer::Mode::VOXELVIS, "Voxelization Display" },
-			TwEnumVal{ (int)Renderer::Mode::AMBIENTOCCLUSION, "VCT AO" },
+			TwEnumVal{ static_cast<int>(Renderer::Mode::VOXELVIS), "Voxelization Display" },
+			TwEnumVal{ static_cast<int>(Renderer::Mode::AMBIENTOCCLUSION), "VCT AO" },
 		};
 		m_mainTweakBar->AddEnumType("RenderModeType", renderModeVals);
-		m_mainTweakBar->AddEnum("Render Mode", "RenderModeType", [&](){ return (int)m_renderer->GetMode(); }, [&](int mode){ return m_renderer->SetMode(static_cast<Renderer::Mode>(mode)); });
+		m_mainTweakBar->AddEnum("Render Mode", "RenderModeType", [&](){ return static_cast<int>(m_renderer->GetMode()); }, [&](int mode){ return m_renderer->SetMode(static_cast<Renderer::Mode>(mode)); });
 		m_mainTweakBar->AddReadWrite<bool>("IndirectShadow", [&](){ return m_renderer->GetIndirectShadow(); }, [&](bool b){ return m_renderer->SetIndirectShadow(b); }, " label=\"Indirect Shadow\"");
 		m_mainTweakBar->AddReadWrite<bool>("IndirectSpecular", [&](){ return m_renderer->GetIndirectSpecular(); }, [&](bool b){ return m_renderer->SetIndirectSpecular(b); }, " label=\"Indirect Specular\"");
 
 		std::vector<TwEnumVal> indirectDiffuseModeVals =
 		{
-			TwEnumVal{ (int)Renderer::IndirectDiffuseMode::SH1, "0/1 Band SH" },
-			TwEnumVal{ (int)Renderer::IndirectDiffuseMode::SH2, "0/1/2 Band SH" },
+			TwEnumVal{ static_cast<int>(Renderer::IndirectDiffuseMode::SH1), "0/1 Band SH" },
+			TwEnumVal{ static_cast<int>(Renderer::IndirectDiffuseMode::SH2), "0/1/2 Band SH" },
 		};
 		m_mainTweakBar->AddEnumType("IndirectDiffuseModeType", indirectDiffuseModeVals);
 		m_mainTweakBar->AddEnum("Indirect Diffuse Mode", "IndirectDiffuseModeType", [&](){ return (int)m_renderer->GetIndirectDiffuseMode(); }, [&](int mode){ return m_renderer->SetIndirectDiffuseMode(static_cast<Renderer::IndirectDiffuseMode>(mode)); });

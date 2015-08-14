@@ -37,6 +37,18 @@ public:
 	void StartPerfRecording();
 	void StopPerfRecording(const std::string& resulftCSVFilename);
 
+	/// If -1, no frametime will be enforced
+	/// Otherwise, each frame will be handled as if it took forcedFrametime. This overwrites the frame time measurement.
+	void SetOverrideFrametime(float forcedFrametime) { m_overrideFrametime = forcedFrametime; }
+
+	enum class ScreenshotFormat
+	{
+		PNG,
+		JPEG
+	};
+	void SaveScreenshot(const std::string& filename, ScreenshotFormat format = ScreenshotFormat::PNG);
+
+
 private:
 	void RepopulateTweakBarStatistics();
 
@@ -51,8 +63,6 @@ private:
 	// Updates a hard wired test procedure that may be altered on demand
 	void UpdateHardwiredMeasureProcedure();
 
-
-	void AddEntity(const std::string& filename);
 
 	void ChangeEntityCount(unsigned int entityCount);
 	void ChangeLightCount(unsigned int lightCount);
@@ -77,4 +87,6 @@ private:
 	std::string m_tweakBarStatisticGroupSetting;	
 	std::vector<std::string> m_tweakBarStatisticEntries;
 	bool m_displayStatAverages;
+
+	float m_overrideFrametime;
 };
