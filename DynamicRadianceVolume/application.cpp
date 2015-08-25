@@ -32,7 +32,7 @@ Application::Application(int argc, char** argv) :
 	m_showTweakBars(true),
 	m_cameraFollowPath(false),
 
-	m_overrideFrametime(1.0f / 60.0f)
+	m_overrideFrametime(-1.0f)
 {
 	Gdiplus::GdiplusStartupInput gdiplusStartupInput;
 	ULONG_PTR gdiplusToken;
@@ -176,7 +176,7 @@ void Application::Update()
 
 void Application::Draw()
 {
-	m_renderer->Draw(*m_camera, m_detachViewFromCameraUpdate);
+	m_renderer->Draw(*m_camera, m_detachViewFromCameraUpdate, static_cast<float>(m_timeSinceLastUpdate.GetSeconds()));
 	if (m_detachViewFromCameraUpdate)
 		m_frustumOutlineRenderer->Draw();
 	if (m_showTweakBars)

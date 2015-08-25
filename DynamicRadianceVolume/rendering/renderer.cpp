@@ -46,7 +46,9 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 	m_showCAVCascades(false),
 	m_CAVCascadeTransitionSize(2.0f),
 	m_indirectShadow(true),
-	m_indirectSpecular(false)
+	m_indirectSpecular(false),
+
+	m_passedTime(0.0f)
 {
 	glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &m_UBOAlignment);
 	LOG_INFO("Uniform buffer alignment is " << m_UBOAlignment);
@@ -334,6 +336,9 @@ void Renderer::UpdatePerFrameUBO(const Camera& camera)
 	mappedMemory["InverseViewProjection"].Set(ei::invert(viewProjection));
 	mappedMemory["CameraPosition"].Set(camera.GetPosition());
 	mappedMemory["CameraDirection"].Set(camera.GetDirection());
+	mappedMemory["PassedTime"].Set(m_passedTime);//static_cast<float>(ezTime::Now().GetSeconds()));
+	
+
 
 	m_uboPerFrame->Unmap();
 }
@@ -493,8 +498,10 @@ void Renderer::SetScene(const std::shared_ptr<const Scene>& scene)
 		UpdateConstantUBO();
 }
 
-void Renderer::Draw(const Camera& camera, bool detachViewFromCameraUpdate)
+void Renderer::Draw(const Camera& camera, bool detachViewFromCameraUpdate, float timeSinceLastFrame)
 {
+	m_passedTime += timeSinceLastFrame;
+
 	// All SRGB frame buffer textures should be do a conversion on writing to them.
 	// This also applies to the backbuffer.
 	gl::Enable(gl::Cap::FRAMEBUFFER_SRGB);
@@ -658,7 +665,6 @@ void Renderer::PrepareLights()
 	{
 		const Light& light = m_scene->GetLights()[lightIndex];
 		Assert(light.type == Light::Type::SPOT, "Only spot lights are supported so far!");
-
 
 		void* blockMemory = nullptr;
 		size_t blockIndex = 0;

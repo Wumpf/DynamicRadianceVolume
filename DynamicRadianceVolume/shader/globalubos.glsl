@@ -39,6 +39,7 @@ layout(binding = 1, shared) uniform PerFrame
 	mat4 InverseViewProjection;
 	vec3 CameraPosition;
 	vec3 CameraDirection;
+	float PassedTime;
 };
 
 

@@ -26,6 +26,11 @@ void Scene::Update(ezTime timeSinceLastUpdate)
 	{
 		it.Update(timeSinceLastUpdate);
 	}
+	for (auto& it : m_lights)
+	{
+		it.Update(timeSinceLastUpdate);
+	}
+
 	UpdateBoundingbox();
 }
 

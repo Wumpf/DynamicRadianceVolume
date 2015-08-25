@@ -196,6 +196,7 @@
     <ClCompile Include="rendering\hdrimage.cpp" />
     <ClCompile Include="rendering\renderer.cpp" />
     <ClCompile Include="rendering\voxelization.cpp" />
+    <ClCompile Include="scene\light.cpp" />
     <ClCompile Include="scene\model.cpp" />
     <ClCompile Include="scene\scene.cpp" />
     <ClCompile Include="scene\sceneentity.cpp" />

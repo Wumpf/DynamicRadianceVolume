@@ -222,6 +222,9 @@
     <ClCompile Include="utilities\filedialog.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="scene\light.cpp">
+      <Filter>source\scene</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="outputwindow.hpp">

@@ -96,6 +96,7 @@ PathEditor::PathEditor(Application& application) :
 		if (m_pathEditTarget == PathEditTarget::CAMERA)
 			m_application.SetCameraFollowPath(true);
 		m_application.SetUIVisible(false);
+		m_application.SetOverrideFrametime(1.0f / m_captureFramerate);
 		m_recordingPerf = false;
 		m_captureFrameCounter = 0;
 
