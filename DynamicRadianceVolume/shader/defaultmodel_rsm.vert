@@ -1,6 +1,7 @@
 #version 450 core
 
 #include "globalubos.glsl"
+#include "meshdeform.glsl"
 
 // Vertex input.
 layout(location = 0) in vec3 inPosition;
@@ -18,11 +19,12 @@ out vec2 Texcoord;
 
 void main(void)
 {
-	Position = (vec4(inPosition, 1.0) * World).xyz;
+	vec3 worldPosition = (vec4(inPosition, 1.0) * World).xyz;
+	Position = WorldPosDeform(worldPosition);
 	gl_Position = vec4(Position, 1.0) * LightViewProjection;
 
 	// Simple pass through
-	Normal = (vec4(inNormal, 0.0) * World).xyz;
+	Normal = NormalDeform((vec4(inNormal, 0.0) * World).xyz, worldPosition);
 	Tangent = (vec4(inTangent, 0.0) * World).xyz;
 	BitangentHandedness = inBitangentHandedness;
 	Texcoord = inTexcoord;

@@ -51,6 +51,7 @@ void main()
 	// Normal with normalmapping.
 	vec3 normalMapNormal = texture(Normalmap, Texcoord).xyz;
 	normalMapNormal.xy = normalMapNormal.xy * 2.0 - 1.0;
+	normalMapNormal = normalize(normalMapNormal);
 
 	vec3 vnormal = normalize(Normal);
 	vec3 vtangent = normalize(Tangent.xyz);
