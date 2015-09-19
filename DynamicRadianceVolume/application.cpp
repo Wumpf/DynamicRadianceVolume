@@ -171,7 +171,7 @@ void Application::Update()
 		m_camera->SetDirection(direction);
 	}
 
-	UpdateHardwiredMeasureProcedure();
+	//UpdateHardwiredMeasureProcedure();
 }
 
 void Application::Draw()
@@ -302,8 +302,46 @@ void Application::UpdateHardwiredMeasureProcedure()
 	// CODE ACTS AS FILL-IN FOR MISSING SCRIPT API
 	// --------------------------------------------------------------------------
 
+	// Light Count
+	const unsigned int lightCount_start= 8;
+	const unsigned int lightCount_end = 1;
+	auto startFkt = [&]() -> std::string
+	{
+		FrameProfiler::GetInstance().ComputeAverages();
+		auto averages = FrameProfiler::GetInstance().GetAverages();
+		std::string results = "light count, total time, ";
+		for (auto avg : averages)
+			results += avg.first + ", ";
+		results += "\n";
+
+		return results;
+	};
+	auto changeFkt = [&](bool& testing) -> std::string
+	{
+		double avgFrametime = 0.0;
+		const std::vector<std::uint32_t>& frameDurations = FrameProfiler::GetInstance().GetFrameDurations();
+		for(std::uint32_t d : frameDurations)
+			avgFrametime += d / 1000.0 / 1000.0;
+		avgFrametime /= frameDurations.size();
+
+		FrameProfiler::GetInstance().ComputeAverages();
+		auto averages = FrameProfiler::GetInstance().GetAverages();
+		std::string results = std::to_string(m_scene->GetLights().size()) + ", " + std::to_string(avgFrametime) + ", ";
+		for (auto avg : averages)
+			results += std::to_string(avg.second) + ", ";
+		results += "\n";
+
+		if (m_scene->GetLights().size() > 1)
+			m_scene->GetLights().pop_back();
+		else
+			testing = false;
+
+		return results;
+	};
+
+
 	// Voxel resolution
-	const unsigned int voxelResolution_start = 32;
+	/*const unsigned int voxelResolution_start = 32;
 	const unsigned int voxelResolution_end = 512;
 	auto startFkt = [&]() -> std::string
 	{
@@ -355,7 +393,7 @@ void Application::UpdateHardwiredMeasureProcedure()
 	};
 
 	// Resolutions
-	/*const std::vector<ei::UVec2> resolutions({ ei::UVec2(640, 480), ei::UVec2(800, 600), 
+	const std::vector<ei::UVec2> resolutions({ ei::UVec2(640, 480), ei::UVec2(800, 600), 
 												ei::UVec2(1024, 768), ei::UVec2(1280, 720),
 												ei::UVec2(1280, 1024), ei::UVec2(1366, 768),
 												ei::UVec2(1600, 900), ei::UVec2(1680, 1050),
@@ -513,7 +551,7 @@ void Application::UpdateHardwiredMeasureProcedure()
 	
 	// "FRAMEWORK"
 	// -------------------------------------------------------
-	const ezTime timePerTest = ezTime::Seconds(4.0f);
+	const ezTime timePerTest = ezTime::Seconds(2.0f);
 	static std::string results;
 
 	static int delayframes = 2;
