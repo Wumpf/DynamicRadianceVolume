@@ -390,6 +390,27 @@ void AntTweakBarInterface::LoadReadWriteValuesToJSON(const std::string& jsonFile
 	file >> elementQueue[0];
 
 
+	std::vector<std::pair<Json::Value, Json::Value>> deferredElements;
+
+	auto setValue = [this](const Json::Value& element, EntryBase* entry)
+	{
+		if (element.isBool())
+			SetRWEntryValue<bool>(static_cast<EntryReadWrite*>(entry), element.asBool());
+		else if (element.isInt())
+			SetRWEntryValue<std::int32_t, float>(static_cast<EntryReadWrite*>(entry), element.asInt());
+		else if (element.isDouble())
+			SetRWEntryValue<float, std::int32_t>(static_cast<EntryReadWrite*>(entry), element.asFloat());
+		else if (element.isString())
+			SetRWEntryValue<std::string>(static_cast<EntryReadWrite*>(entry), element.asString());
+		else if (element.isArray() && element.size() == 3 && element[0].isNumeric() && element[1].isNumeric() && element[2].isNumeric())
+			SetRWEntryValue<ei::Vec3>(static_cast<EntryReadWrite*>(entry), ei::Vec3(element[0].asFloat(), element[1].asFloat(), element[2].asFloat()));
+		else if (element.isArray() && element.size() == 4 && element[0].isNumeric() && element[1].isNumeric() && element[2].isNumeric() && element[3].isNumeric())
+			SetRWEntryValue<ei::Quaternion>(static_cast<EntryReadWrite*>(entry), ei::Quaternion(element[0].asFloat(), element[1].asFloat(), element[2].asFloat(), element[3].asFloat()));
+		else
+			LOG_WARNING("Unkown json attribute type.");
+	};
+
+	// Regular list.
 	while (!elementQueue.empty())
 	{
 		Json::Value jsonValue = elementQueue.front();
@@ -409,23 +430,24 @@ void AntTweakBarInterface::LoadReadWriteValuesToJSON(const std::string& jsonFile
 								dynamic_cast<EntryReadWrite*>(entry) != nullptr;
 					});
 				if (entryIt == m_entries.end())
-					continue;
-				
-				if (childIt->isBool())
-					SetRWEntryValue<bool>(static_cast<EntryReadWrite*>(*entryIt), childIt->asBool());
-				else if (childIt->isInt())
-					SetRWEntryValue<std::int32_t, float>(static_cast<EntryReadWrite*>(*entryIt), childIt->asInt());
-				else if (childIt->isDouble())
-					SetRWEntryValue<float, std::int32_t>(static_cast<EntryReadWrite*>(*entryIt), childIt->asFloat());
-				else if (childIt->isString())
-					SetRWEntryValue<std::string>(static_cast<EntryReadWrite*>(*entryIt), childIt->asString());
-				else if (childIt->isArray() && childIt->size() == 3 && (*childIt)[0].isNumeric() && (*childIt)[1].isNumeric() && (*childIt)[2].isNumeric())
-					SetRWEntryValue<ei::Vec3>(static_cast<EntryReadWrite*>(*entryIt), ei::Vec3((*childIt)[0].asFloat(), (*childIt)[1].asFloat(), (*childIt)[2].asFloat()));
-				else if (childIt->isArray() && childIt->size() == 4 && (*childIt)[0].isNumeric() && (*childIt)[1].isNumeric() && (*childIt)[2].isNumeric() && (*childIt)[3].isNumeric())
-					SetRWEntryValue<ei::Quaternion>(static_cast<EntryReadWrite*>(*entryIt), ei::Quaternion((*childIt)[0].asFloat(), (*childIt)[1].asFloat(), (*childIt)[2].asFloat(), (*childIt)[3].asFloat()));
+				{
+					deferredElements.push_back(std::make_pair(childIt.key(), *childIt));
+				}
 				else
-					LOG_WARNING("Unkown json attribute type at \"" << childIt.key().asCString() << "\"");
+					setValue(*childIt, *entryIt);
 			}
 		}
+	}
+
+	// Deferred list.
+	for(const auto& it : deferredElements)
+	{
+		auto entryIt = std::find_if(m_entries.begin(), m_entries.end(), [&](EntryBase* entry)
+		{
+			return entry->name == it.first.asString() &&
+				dynamic_cast<EntryReadWrite*>(entry) != nullptr;
+		});
+		if (entryIt != m_entries.end())
+			setValue(it.second, *entryIt);
 	}
 }
