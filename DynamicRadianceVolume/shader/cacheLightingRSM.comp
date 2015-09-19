@@ -325,8 +325,8 @@ void main()
 					radianceOut *= specularEnvMapBaseNormalization;
 					cacheSpecEnvmapTexelCoord += cacheSpecularEnvmapOffset;
 					memoryBarrierImage();
-					vec3 oldradianceIn = imageLoad(CacheSpecularEnvmap, cacheSpecEnvmapTexelCoord).rgb;
-					imageStore(CacheSpecularEnvmap, cacheSpecEnvmapTexelCoord, vec4(oldradianceIn + radianceOut, 0.0));
+					vec3 oldradianceOut = imageLoad(CacheSpecularEnvmap, cacheSpecEnvmapTexelCoord).rgb;
+					imageStore(CacheSpecularEnvmap, cacheSpecEnvmapTexelCoord, vec4(oldradianceOut + radianceOut, 0.0));
 				#else
 					// Normalization is applied deferred.
 					int idx = cacheSpecEnvmapTexelCoord.x + cacheSpecEnvmapTexelCoord.y * SPECULARENVMAP_PERCACHESIZE;
@@ -355,21 +355,21 @@ void main()
 	#endif*/
 
 	#if defined(INDDIFFUSE_VIA_SH1) || defined(INDDIFFUSE_VIA_SH2)
-		LightCacheEntries[gl_GlobalInvocationID.x].SH1neg1 = SH1neg1;
-		LightCacheEntries[gl_GlobalInvocationID.x].SH00_r = SH00.r;
-		LightCacheEntries[gl_GlobalInvocationID.x].SH10 = SH10;
-		LightCacheEntries[gl_GlobalInvocationID.x].SH00_g = SH00.g;
-		LightCacheEntries[gl_GlobalInvocationID.x].SH1pos1 = SH1pos1;
-		LightCacheEntries[gl_GlobalInvocationID.x].SH00_b = SH00.b;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH1neg1 += SH1neg1;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH00_r += SH00.r;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH10 += SH10;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH00_g += SH00.g;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH1pos1 += SH1pos1;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH00_b += SH00.b;
 
 		#ifdef INDDIFFUSE_VIA_SH2
-		LightCacheEntries[gl_GlobalInvocationID.x].SH2neg2 = SH2neg2;
-		LightCacheEntries[gl_GlobalInvocationID.x].SH20_r = SH20.r;
-		LightCacheEntries[gl_GlobalInvocationID.x].SH2neg1 = SH2neg1;
-		LightCacheEntries[gl_GlobalInvocationID.x].SH20_g = SH20.g;
-		LightCacheEntries[gl_GlobalInvocationID.x].SH2pos1 = SH2pos1;
-		LightCacheEntries[gl_GlobalInvocationID.x].SH20_b = SH20.b;
-		LightCacheEntries[gl_GlobalInvocationID.x].SH2pos2 = SH2pos2;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH2neg2 += SH2neg2;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH20_r += SH20.r;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH2neg1 += SH2neg1;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH20_g += SH20.g;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH2pos1 += SH2pos1;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH20_b += SH20.b;
+		LightCacheEntries[gl_GlobalInvocationID.x].SH2pos2 += SH2pos2;
 		#endif
 	#endif
 

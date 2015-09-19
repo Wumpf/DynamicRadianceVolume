@@ -95,7 +95,7 @@ Renderer::Renderer(const std::shared_ptr<const Scene>& scene, const ei::UVec2& r
 
 	// For cache debugging
 	m_cacheDebugIndirectDrawBuffer = std::make_unique<gl::Buffer>(sizeof(std::uint32_t) * 5, gl::Buffer::IMMUTABLE);
-	m_debugSphereModel = Model::FromFile("../models/sphere.obj");
+	m_debugSphereModel = Model::FromFile("../models/sphere.json");
 
 	// General GL settings
 	gl::Enable(gl::Cap::DEPTH_TEST);
@@ -538,21 +538,25 @@ void Renderer::Draw(const Camera& camera, bool detachViewFromCameraUpdate, float
 	//case Mode::DIRECTONLY_CACHE:
 	case Mode::DYN_RADIANCE_VOLUME_DEBUG:
 	case Mode::DYN_RADIANCE_VOLUME:
+		//m_lightCacheBuffer->ClearToZero(); // As of 19.09.2015 the Nvidia driver can apparently glClearNamedBufferData AND glClearNamedBufferSubData do only if the buffer is not too large.
+
 		if (m_indirectShadow)
 			m_voxelization->VoxelizeScene(*this);
 
 		m_uboRing_PerObject->CompleteFrame();
 
 		if (!detachViewFromCameraUpdate)
+		{
 			AllocateCaches();
 
-	/*	if (m_mode == Mode::DIRECTONLY_CACHE)
-			LightCachesDirect();
-		else */
-		{
-			LightCachesRSM();
-			if (m_indirectSpecular)
-				PrepareSpecularEnvmaps();
+			/*	if (m_mode == Mode::DIRECTONLY_CACHE)
+					LightCachesDirect();
+				else */
+			{
+				LightCachesRSM();
+				if (m_indirectSpecular)
+					PrepareSpecularEnvmaps();
+			}
 		}
 
 		m_HDRBackbuffer->Bind(true);
